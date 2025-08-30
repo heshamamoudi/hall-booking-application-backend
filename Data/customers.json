@@ -1,0 +1,26 @@
+[
+  {
+    "AppUserId": 1,
+    "NumberOfOrders": 0,
+    "SelectedAddressId": 0,
+    "CreditMoney": 0,
+    "Confirmed": true,
+    "Active": true
+  },
+  {
+    "AppUserId": 2,
+    "NumberOfOrders": 0,
+    "SelectedAddressId": 0,
+    "CreditMoney": 0,
+    "Confirmed": true,
+    "Active": true
+  },
+  {
+    "AppUserId": 3,
+    "NumberOfOrders": 0,
+    "SelectedAddressId": 0,
+    "CreditMoney": 0,
+    "Confirmed": true,
+    "Active": true
+  }
+]

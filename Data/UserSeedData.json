@@ -1,0 +1,71 @@
+[
+  {
+    "UserName": "hesham8",
+    "Email": "hesham8@example.com",
+    "PhoneNumber": "697477818",
+    "Customer": {
+      "PhoneNumber": "697477818",
+      "CreditMoney": 11,
+      "NumberOfOrders": 1,
+      "SelectedAddressId": 0,
+      "Addresses": [
+        {
+          "AddressName": "hesham8"
+        }
+      ],
+      "Cards": [
+        {
+          "CardNumber": "12345678910",
+          "CardHolder": "hesham8",
+          "Expiration": "2000-01-01T12:00:00"
+        }
+      ]
+    }
+  },
+  {
+    "UserName": "Hesham1",
+    "Email": "Hesham1@example.com",
+    "PhoneNumber": "697477812",
+    "Customer": {
+      "PhoneNumber": "697477812",
+      "CreditMoney": 11,
+      "NumberOfOrders": 1,
+      "SelectedAddressId": 0,
+      "Addresses": [
+        {
+          "AddressName": "Hesham1"
+        }
+      ],
+      "Cards": [
+        {
+          "CardNumber": "12345678910",
+          "CardHolder": "Hesham1",
+          "Expiration": "2000-01-01T12:00:00"
+        }
+      ]
+    }
+  },
+  {
+    "UserName": "Hesham2",
+    "Email": "Hesham2@example.com",
+    "PhoneNumber": "697477811",
+    "Customer": {
+      "PhoneNumber": "697477811",
+      "CreditMoney": 11,
+      "NumberOfOrders": 1,
+      "SelectedAddressId": 0,
+      "Addresses": [
+        {
+          "AddressName": "Hesham2"
+        }
+      ],
+      "Cards": [
+        {
+          "CardNumber": "12345678910",
+          "CardHolder": "Hesham2",
+          "Expiration": "2000-01-01T12:00:00"
+        }
+      ]
+    }
+  }
+]

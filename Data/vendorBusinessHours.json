@@ -1,0 +1,100 @@
+[
+  {
+    "VendorId": 1,
+    "DayOfWeek": 0,
+    "OpenTime": "09:00:00",
+    "CloseTime": "18:00:00",
+    "IsClosed": false
+  },
+  {
+    "VendorId": 1,
+    "DayOfWeek": 1,
+    "OpenTime": "09:00:00",
+    "CloseTime": "18:00:00",
+    "IsClosed": false
+  },
+  {
+    "VendorId": 1,
+    "DayOfWeek": 2,
+    "OpenTime": "09:00:00",
+    "CloseTime": "18:00:00",
+    "IsClosed": false
+  },
+  {
+    "VendorId": 1,
+    "DayOfWeek": 3,
+    "OpenTime": "09:00:00",
+    "CloseTime": "18:00:00",
+    "IsClosed": false
+  },
+  {
+    "VendorId": 1,
+    "DayOfWeek": 4,
+    "OpenTime": "09:00:00",
+    "CloseTime": "18:00:00",
+    "IsClosed": false
+  },
+  {
+    "VendorId": 1,
+    "DayOfWeek": 5,
+    "OpenTime": "10:00:00",
+    "CloseTime": "14:00:00",
+    "IsClosed": false
+  },
+  {
+    "VendorId": 1,
+    "DayOfWeek": 6,
+    "OpenTime": "00:00:00",
+    "CloseTime": "00:00:00",
+    "IsClosed": true
+  },
+  {
+    "VendorId": 2,
+    "DayOfWeek": 0,
+    "OpenTime": "10:00:00",
+    "CloseTime": "19:00:00",
+    "IsClosed": false
+  },
+  {
+    "VendorId": 2,
+    "DayOfWeek": 1,
+    "OpenTime": "10:00:00",
+    "CloseTime": "19:00:00",
+    "IsClosed": false
+  },
+  {
+    "VendorId": 2,
+    "DayOfWeek": 2,
+    "OpenTime": "10:00:00",
+    "CloseTime": "19:00:00",
+    "IsClosed": false
+  },
+  {
+    "VendorId": 2,
+    "DayOfWeek": 3,
+    "OpenTime": "10:00:00",
+    "CloseTime": "19:00:00",
+    "IsClosed": false
+  },
+  {
+    "VendorId": 2,
+    "DayOfWeek": 4,
+    "OpenTime": "10:00:00",
+    "CloseTime": "19:00:00",
+    "IsClosed": false
+  },
+  {
+    "VendorId": 2,
+    "DayOfWeek": 5,
+    "OpenTime": "11:00:00",
+    "CloseTime": "16:00:00",
+    "IsClosed": false
+  },
+  {
+    "VendorId": 2,
+    "DayOfWeek": 6,
+    "OpenTime": "00:00:00",
+    "CloseTime": "00:00:00",
+    "IsClosed": true
+  }
+]

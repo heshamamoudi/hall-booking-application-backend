@@ -1,0 +1,202 @@
+[
+  {
+    "name": "Grand Hall",
+    "commercialRegisteration": 1234567890,
+    "vat": 987654321,
+    "description": "A luxurious wedding hall with elegant decor and spacious interiors. Perfect for large gatherings and memorable celebrations.",
+    "bothWeekDays": 4500.0,
+    "bothWeekEnds": 6500.0,
+    "maleWeekDays": 4000.0,
+    "maleWeekEnds": 6000.0,
+    "maleMin": 100,
+    "maleMax": 500,
+    "maleActive": true,
+    "femaleWeekDays": 4200.0,
+    "femaleWeekEnds": 6200.0,
+    "femaleMin": 100,
+    "femaleMax": 500,
+    "femaleActive": true,
+    "gender": 3,
+    "logo": "https://example.com/logo.png",
+    "averageRating": 4.5,
+    "mediaFiles": [
+      {
+        "mediaType": "image",
+        "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXvPL97vZCfh6uo8fZh1n89bEBN6GbQUOXAg&s",
+        "index": 0,
+        "gender": 1
+      },
+      {
+        "mediaType": "image",
+        "url": "https://cdn0.weddingwire.com/vendor/770580/3_2/640/jpg/9436-muse-ballroom-interior-sus8234-c2-1_51_2085077-165455121178901.jpeg",
+        "index": 1,
+        "gender": 3
+      },
+      {
+        "mediaType": "image",
+        "url": "https://www.brides.com/thmb/vxOI5_-FVe1xRsf8q-eYLzpBpEU=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/reception-tables-0c5a3a7b3a1f4d61a3c6a83c86bbb0dc.jpg",
+        "index": 2,
+        "gender": 2
+      }
+    ],
+    "contacts": [
+      {
+        "name": "John Doe",
+        "email": "john@example.com",
+        "phone": "123456789"  
+      },
+      {
+        "name": "Jane Smith",
+        "email": "jane@example.com",
+        "phone": "987654321"  
+      }
+    ],
+    "location": {
+      "altitude": 21.5,
+      "latitude": 21.543333,
+      "longitude": 39.172778,
+      "city": "Jeddah",
+      "address": "Al Hamra District, King Abdullah Road"
+    },
+    "packages": [
+      {
+        "name": "Basic Package",
+        "description": "Basic services package including standard decoration and basic catering options.",
+        "price": 1000.0
+      },
+      {
+        "name": "Silver Package",
+        "description": "Silver services package with enhanced decoration and premium catering options.",
+        "price": 2000.0
+      },
+      {
+        "name": "Gold Package",
+        "description": "Gold services package with luxury decoration, premium catering, and photography services.",
+        "price": 3000.0
+      }
+    ],
+    "services": [
+      {
+        "name": "Catering",
+        "arabicName": "تموين",
+        "description": "Full catering service with various menu options.",
+        "isActive": true
+      },
+      {
+        "name": "Photoshoot",
+        "arabicName": "تصوير",
+        "description": "Professional photography services for your special day.",
+        "isActive": true
+      },
+      {
+        "name": "Decoration",
+        "arabicName": "ديكور",
+        "description": "Custom decoration services to match your theme.",
+        "isActive": true
+      }
+    ]
+  },
+  {
+    "name": "Royal Palace",
+    "commercialRegisteration": 2345678901,
+    "vat": 876543210,
+    "description": "An exquisite wedding venue with royal decor and state-of-the-art facilities. Ideal for upscale weddings and events.",
+    "bothWeekDays": 5500.0,
+    "bothWeekEnds": 7500.0,
+    "maleWeekDays": 5000.0,
+    "maleWeekEnds": 7000.0,
+    "maleMin": 150,
+    "maleMax": 600,
+    "maleActive": true,
+    "femaleWeekDays": 5200.0,
+    "femaleWeekEnds": 7200.0,
+    "femaleMin": 150,
+    "femaleMax": 600,
+    "femaleActive": true,
+    "gender": 3,
+    "logo": "https://example.com/royal_logo.png",
+    "averageRating": 4.8,
+    "mediaFiles": [
+      {
+        "mediaType": "image",
+        "url": "https://www.weddingsutra.com/images/Vendor_Images/Venues/taj-lands-end/taj-lands-end-01.jpg",
+        "index": 0,
+        "gender": 3
+      },
+      {
+        "mediaType": "image",
+        "url": "https://www.brides.com/thmb/g-aP5kCnKyDeUZJrxhKhSXf-_X8=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/BRI-weddings-at-the-plaza-hotel-tout-3f4a083e1e8b4560ac5a78aa239e43d8.jpg",
+        "index": 1,
+        "gender": 2
+      },
+      {
+        "mediaType": "image",
+        "url": "https://media.cntraveler.com/photos/5d0a8aa6302df48434d3d0d7/16:9/w_2560,c_limit/The-Plaza-Hotel_2019_The-Grand-Ballroom_Wedding_Courtesy-The-Plaza-Hotel.jpg",
+        "index": 2,
+        "gender": 1
+      }
+    ],
+    "contacts": [
+      {
+        "name": "Ahmed Ali",
+        "email": "ahmed@royalpalace.com",
+        "phone": "555123456"  
+      },
+      {
+        "name": "Sara Mohammed",
+        "email": "sara@royalpalace.com",
+        "phone": "555654321"  
+      }
+    ],
+    "location": {
+      "altitude": 22.0,
+      "latitude": 21.485811,
+      "longitude": 39.185219,
+      "city": "Jeddah",
+      "address": "Al Andalus District, Prince Sultan Road"
+    },
+    "packages": [
+      {
+        "name": "Royal Basic",
+        "description": "Entry-level package with elegant decoration and quality catering.",
+        "price": 2000.0
+      },
+      {
+        "name": "Royal Premium",
+        "description": "Premium package with luxury decoration and gourmet catering.",
+        "price": 3500.0
+      },
+      {
+        "name": "Royal Elite",
+        "description": "Elite package with extravagant decoration, gourmet catering, and complete photography services.",
+        "price": 5000.0
+      }
+    ],
+    "services": [
+      {
+        "name": "Gourmet Catering",
+        "arabicName": "تموين فاخر",
+        "description": "Gourmet catering service with international cuisine options.",
+        "isActive": true
+      },
+      {
+        "name": "Professional Photography",
+        "arabicName": "تصوير احترافي",
+        "description": "Complete photography and videography services.",
+        "isActive": true
+      },
+      {
+        "name": "Luxury Decoration",
+        "arabicName": "ديكور فاخر",
+        "description": "Customized luxury decoration services.",
+        "isActive": true
+      },
+      {
+        "name": "Valet Parking",
+        "arabicName": "خدمة صف السيارات",
+        "description": "Complimentary valet parking for all guests.",
+        "isActive": true
+      }
+    ]
+  }
+]

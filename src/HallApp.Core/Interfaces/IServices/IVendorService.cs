@@ -1,0 +1,27 @@
+using HallApp.Core.Entities.VendorEntities;
+
+namespace HallApp.Core.Interfaces.IServices;
+
+public interface IVendorService
+{
+    Task<Vendor> CreateVendorAsync(Vendor vendor);
+    Task<Vendor> UpdateVendorAsync(int id, Vendor vendor);
+    Task<bool> DeleteVendorAsync(int id);
+    Task<Vendor?> GetVendorByIdAsync(int id);
+    Task<IEnumerable<Vendor>> GetVendorsAsync(object vendorParams);
+    Task<List<Vendor>> GetVendorsByTypeAsync(int typeId);
+    Task<List<Vendor>> GetVendorsByManagerAsync(int managerId);
+    Task<List<Vendor>> SearchVendorsAsync(string searchTerm);
+    
+    // Validation methods
+    Task<bool> IsNameUniqueAsync(string name, int? excludeId = null);
+    Task<bool> IsEmailUniqueAsync(string email, int? excludeId = null);
+    Task<bool> IsPhoneUniqueAsync(string phone, int? excludeId = null);
+    
+    // Vendor Type methods
+    Task<List<VendorType>> GetVendorTypesAsync();
+    Task<VendorType> GetVendorTypeByIdAsync(int id);
+    Task<VendorType> CreateVendorTypeAsync(VendorType vendorType);
+    Task<VendorType> UpdateVendorTypeAsync(VendorType vendorType);
+    Task<bool> DeleteVendorTypeAsync(int id);
+}

@@ -1,0 +1,101 @@
+[
+  {
+    "Name": "Premium Wedding Package",
+    "Description": "Complete catering service for weddings with premium menu options",
+    "ServiceType": "Wedding",
+    "Price": 15000.00,
+    "VendorId": 2,
+    "VendorTypeId": 1,
+    "ImageUrl": "https://images.unsplash.com/photo-1555244162-803834f70033?ixlib=rb-4.0.3",
+    "IsAvailable": true,
+    "SortOrder": 1
+  },
+  {
+    "Name": "Corporate Event Catering",
+    "Description": "Professional catering services for corporate events and meetings",
+    "ServiceType": "Corporate",
+    "Price": 10000.00,
+    "VendorId": 2,
+    "VendorTypeId": 1,
+    "ImageUrl": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3",
+    "IsAvailable": true,
+    "SortOrder": 2
+  },
+  {
+    "Name": "Gourmet Catering Package",
+    "Description": "Premium gourmet catering with international cuisine options",
+    "ServiceType": "Premium",
+    "Price": 12000.00,
+    "VendorId": 3,
+    "VendorTypeId": 1,
+    "ImageUrl": "https://images.unsplash.com/photo-1528605248644-14dd04022da1?ixlib=rb-4.0.3",
+    "IsAvailable": true,
+    "SortOrder": 1
+  },
+  {
+    "Name": "Wedding Photography Package",
+    "Description": "Complete wedding photography coverage including pre-wedding shoot",
+    "ServiceType": "Wedding",
+    "Price": 8000.00,
+    "VendorId": 4,
+    "VendorTypeId": 2,
+    "ImageUrl": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3",
+    "IsAvailable": true,
+    "SortOrder": 1
+  },
+  {
+    "Name": "Event Photography",
+    "Description": "Professional photography services for special events",
+    "ServiceType": "Event",
+    "Price": 5000.00,
+    "VendorId": 4,
+    "VendorTypeId": 2,
+    "ImageUrl": "https://images.unsplash.com/photo-1554048612-b6a482bc67e5?ixlib=rb-4.0.3",
+    "IsAvailable": true,
+    "SortOrder": 2
+  },
+  {
+    "Name": "Luxury Wedding Decoration",
+    "Description": "Premium decoration services for wedding venues",
+    "ServiceType": "Wedding",
+    "Price": 12000.00,
+    "VendorId": 1,
+    "VendorTypeId": 3,
+    "ImageUrl": "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-4.0.3",
+    "IsAvailable": true,
+    "SortOrder": 1
+  },
+  {
+    "Name": "Corporate Event Decor",
+    "Description": "Professional decoration services for corporate events",
+    "ServiceType": "Corporate",
+    "Price": 8000.00,
+    "VendorId": 1,
+    "VendorTypeId": 3,
+    "ImageUrl": "https://images.unsplash.com/photo-1519225421980-715cb0215aed?ixlib=rb-4.0.3",
+    "IsAvailable": true,
+    "SortOrder": 2
+  },
+  {
+    "Name": "DJ and Sound System",
+    "Description": "Professional DJ services with high-quality sound system",
+    "ServiceType": "Entertainment",
+    "Price": 6000.00,
+    "VendorId": 5,
+    "VendorTypeId": 4,
+    "ImageUrl": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?ixlib=rb-4.0.3",
+    "IsAvailable": true,
+    "SortOrder": 1
+  },
+  {
+    "Name": "Live Band Performance",
+    "Description": "Live music performance by professional musicians",
+    "ServiceType": "Entertainment",
+    "Price": 9000.00,
+    "VendorId": 5,
+    "VendorTypeId": 4,
+    "ImageUrl": "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?ixlib=rb-4.0.3",
+    "IsAvailable": true,
+    "SortOrder": 2
+  }
+]

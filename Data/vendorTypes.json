@@ -1,0 +1,79 @@
+[
+  {
+    "Name": "Catering Service",
+    "Description": "Provides food and beverage services for events and celebrations",
+    "RequiresHallBooking": true,
+    "AllowsMultipleBookings": true,
+    "MaxSimultaneousBookings": 3,
+    "RequiresTimeSlot": true,
+    "DefaultDuration": 240,
+    "SortOrder": 1,
+    "IsActive": true
+  },
+  {
+    "Name": "Photography",
+    "Description": "Professional photography services for capturing memorable moments",
+    "RequiresHallBooking": true,
+    "AllowsMultipleBookings": false,
+    "MaxSimultaneousBookings": 1,
+    "RequiresTimeSlot": true,
+    "DefaultDuration": 180,
+    "SortOrder": 2,
+    "IsActive": true
+  },
+  {
+    "Name": "Videography",
+    "Description": "Professional video recording and editing services",
+    "RequiresHallBooking": true,
+    "AllowsMultipleBookings": false,
+    "MaxSimultaneousBookings": 1,
+    "RequiresTimeSlot": true,
+    "DefaultDuration": 180,
+    "SortOrder": 3,
+    "IsActive": true
+  },
+  {
+    "Name": "Decor & Design",
+    "Description": "Event decoration and design services",
+    "RequiresHallBooking": true,
+    "AllowsMultipleBookings": false,
+    "MaxSimultaneousBookings": 1,
+    "RequiresTimeSlot": true,
+    "DefaultDuration": 300,
+    "SortOrder": 4,
+    "IsActive": true
+  },
+  {
+    "Name": "Music & Entertainment",
+    "Description": "Live music, DJs, and entertainment services",
+    "RequiresHallBooking": true,
+    "AllowsMultipleBookings": true,
+    "MaxSimultaneousBookings": 2,
+    "RequiresTimeSlot": true,
+    "DefaultDuration": 240,
+    "SortOrder": 5,
+    "IsActive": true
+  },
+  {
+    "Name": "Wedding Planning",
+    "Description": "Comprehensive wedding planning and coordination services",
+    "RequiresHallBooking": false,
+    "AllowsMultipleBookings": false,
+    "MaxSimultaneousBookings": 1,
+    "RequiresTimeSlot": false,
+    "DefaultDuration": null,
+    "SortOrder": 6,
+    "IsActive": true
+  },
+  {
+    "Name": "Floral Design",
+    "Description": "Custom floral arrangements and decorations",
+    "RequiresHallBooking": true,
+    "AllowsMultipleBookings": true,
+    "MaxSimultaneousBookings": 2,
+    "RequiresTimeSlot": true,
+    "DefaultDuration": 120,
+    "SortOrder": 7,
+    "IsActive": true
+  }
+]
