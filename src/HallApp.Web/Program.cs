@@ -53,11 +53,11 @@ app.ConfigureEndpoints();
 await app.Services.SetupDatabaseAsync();
 
 // Configure URLs
-if (!app.Urls.Any())
-{
-    app.Urls.Add("http://localhost:5236");
-    app.Urls.Add("http://0.0.0.0:5236");
-}
+//if (!app.Urls.Any())
+//{
+//    app.Urls.Add("http://localhost:5236");
+//    app.Urls.Add("http://0.0.0.0:5236");
+//}
 
 // Log startup information
 var logger = app.Services.GetService<ILogger<Program>>();
