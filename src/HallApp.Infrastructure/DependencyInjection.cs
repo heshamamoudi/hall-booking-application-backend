@@ -9,18 +9,12 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        // Database
+        // Database - Auto-detect provider based on connection string
         services.AddDbContext<DataContext>(opt =>
         {
-            opt.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), 
-                sqlServerOptions => 
-                {
-                    sqlServerOptions.EnableRetryOnFailure(
-                        maxRetryCount: 5,
-                        maxRetryDelay: TimeSpan.FromSeconds(30),
-                        errorNumbersToAdd: null);
-                    sqlServerOptions.CommandTimeout(60);
-                });
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            opt.ConfigureDatabase(connectionString);
+            
             // Configure global query splitting behavior
             opt.ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.MultipleCollectionIncludeWarning));
         });

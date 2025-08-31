@@ -25,18 +25,31 @@ railway up
 railway add postgresql
 ```
 
-## 4. Update Connection String
-Update your DataContext to use PostgreSQL instead of SQL Server:
+## 4. Set Environment Variables
+In Railway dashboard, add these variables (see .env.template):
 
-```csharp
-// In DataContext.cs, replace UseSqlServer with:
-optionsBuilder.UseNpgsql(connectionString);
-```
-
-## 5. Environment Variables
-Set these in Railway dashboard:
+**Required:**
 - `ASPNETCORE_ENVIRONMENT=Production`
 - `ConnectionStrings__DefaultConnection=${{Postgres.DATABASE_URL}}`
+- `JWT__SecretKey=your-32-char-secret-key-here`
+- `JWT__Issuer=HallBookingApp`
+- `JWT__Audience=hallbookingapp`
+- `ASPNETCORE_URLS=http://0.0.0.0:$PORT`
+
+**Optional:**
+- `CORS__AllowedOrigins=https://yourdomain.com`
+
+## 5. Update Database Provider
+Install PostgreSQL NuGet package and update DataContext:
+
+```bash
+dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL
+```
+
+```csharp
+// In Startup.cs/Program.cs, replace UseSqlServer with:
+optionsBuilder.UseNpgsql(connectionString);
+```
 
 ## 6. Your API will be live at:
 `https://your-project-name.up.railway.app`

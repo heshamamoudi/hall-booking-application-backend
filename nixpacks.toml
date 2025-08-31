@@ -4,8 +4,8 @@ nixPkgs = ['dotnet-sdk_8']
 [phases.build]
 cmds = [
     'dotnet restore',
-    'dotnet publish src/HallApp.Web/HallApp.Web.csproj -c Release -o out'
+    'dotnet publish src/HallApp.Web/HallApp.Web.csproj -c Release -o /app/publish'
 ]
 
 [start]
-cmd = 'dotnet out/HallApp.Web.dll'
+cmd = 'dotnet /app/publish/HallApp.Web.dll --urls=http://0.0.0.0:$PORT'

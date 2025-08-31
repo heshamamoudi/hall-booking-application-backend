@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "dotnet src/HallApp.Web/HallApp.Web.dll",
+    "startCommand": "dotnet /app/publish/HallApp.Web.dll --urls=http://0.0.0.0:$PORT",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
