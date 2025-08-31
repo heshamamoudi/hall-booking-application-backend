@@ -40,7 +40,10 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod();
     });
 });
-
+Console.WriteLine("ENV: ConnectionStrings__DefaultConnection = " + 
+    Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection"));
+    var connectionFromConfig = builder.Configuration.GetConnectionString("DefaultConnection");
+Console.WriteLine("CONFIG: DefaultConnection = " + connectionFromConfig);
 var app = builder.Build();
 
 // Configure middleware pipeline using extension
@@ -60,6 +63,7 @@ await app.Services.SetupDatabaseAsync();
 //}
 
 // Log startup information
+
 var logger = app.Services.GetService<ILogger<Program>>();
 logger?.LogInformation("Server starting on: {Urls}", string.Join(", ", app.Urls));
 
