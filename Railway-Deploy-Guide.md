@@ -39,17 +39,12 @@ In Railway dashboard, add these variables (see .env.template):
 **Optional:**
 - `CORS__AllowedOrigins=https://yourdomain.com`
 
-## 5. Update Database Provider
-Install PostgreSQL NuGet package and update DataContext:
+## 5. Database Auto-Detection
+The DatabaseProviderFactory automatically detects your database:
+- **SQL Server**: For local development (your current setup)
+- **PostgreSQL**: For Railway deployment (auto-detected from connection string)
 
-```bash
-dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL
-```
-
-```csharp
-// In Startup.cs/Program.cs, replace UseSqlServer with:
-optionsBuilder.UseNpgsql(connectionString);
-```
+**No code changes needed!** The factory switches providers based on connection string format.
 
 ## 6. Your API will be live at:
 `https://your-project-name.up.railway.app`

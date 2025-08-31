@@ -1,11 +1,15 @@
+[variables]
+DOTNET_ROOT = "/nix/store/dotnet"
+
 [phases.setup]
-nixPkgs = ['dotnet-sdk_8']
+nixPkgs = ["dotnet-sdk_8", "dotnet-aspnetcore_8"]
 
 [phases.build]
 cmds = [
-    'dotnet restore',
-    'dotnet publish src/HallApp.Web/HallApp.Web.csproj -c Release -o /app/publish'
+    "dotnet --info",
+    "dotnet restore",
+    "dotnet publish src/HallApp.Web/HallApp.Web.csproj -c Release -o out"
 ]
 
 [start]
-cmd = 'dotnet /app/publish/HallApp.Web.dll --urls=http://0.0.0.0:$PORT'
+cmd = "dotnet out/HallApp.Web.dll"
