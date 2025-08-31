@@ -3,7 +3,9 @@ using HallApp.Web.Controllers.Common;
 using HallApp.Application.Common.Models;
 using HallApp.Application.DTOs.Customer;
 using HallApp.Core.Interfaces.IServices;
+using HallApp.Core.Interfaces;
 using HallApp.Core.Entities;
+using HallApp.Core.Entities.CustomerEntities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,11 +19,13 @@ namespace HallApp.Web.Controllers.Customer
     public class CustomerController : BaseApiController
     {
         private readonly ICustomerService _customerService;
+        private readonly IAddressService _addressService;
         private readonly IMapper _mapper;
 
-        public CustomerController(ICustomerService customerService, IMapper mapper)
+        public CustomerController(ICustomerService customerService, IAddressService addressService, IMapper mapper)
         {
             _customerService = customerService;
+            _addressService = addressService;
             _mapper = mapper;
         }
 
@@ -204,6 +208,154 @@ namespace HallApp.Web.Controllers.Customer
                 version = "1.0"
             };
             return Success(status, "API Status");
+        }
+
+        /// <summary>
+        /// Get all addresses for a customer
+        /// </summary>
+        /// <param name="customerId">Customer ID</param>
+        /// <returns>List of customer addresses</returns>
+        [Authorize(Roles = "Customer")]
+        [HttpGet("{customerId:int}/addresses")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<AddressDto>>>> GetCustomerAddresses(int customerId)
+        {
+            try
+            {
+                // Verify customer ownership
+                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (customer == null || customer.Id != customerId)
+                {
+                    return Error<IEnumerable<AddressDto>>("Access denied", 403);
+                }
+
+                var addresses = await _addressService.GetAddressesByCustomerIdAsync(customerId);
+                var addressDtos = _mapper.Map<IEnumerable<AddressDto>>(addresses);
+                return Success(addressDtos, "Addresses retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<AddressDto>>($"Failed to retrieve addresses: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Add a new address for a customer
+        /// </summary>
+        /// <param name="customerId">Customer ID</param>
+        /// <param name="addressDto">Address data</param>
+        /// <returns>Created address</returns>
+        [Authorize(Roles = "Customer")]
+        [HttpPost("{customerId:int}/addresses")]
+        public async Task<ActionResult<ApiResponse<AddressDto>>> CreateAddress(int customerId, [FromBody] AddressDto addressDto)
+        {
+            try
+            {
+                // Verify customer ownership
+                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (customer == null || customer.Id != customerId)
+                {
+                    return Error<AddressDto>("Access denied", 403);
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    return Error<AddressDto>("Invalid address data", 400);
+                }
+
+                var address = _mapper.Map<Address>(addressDto);
+                address.CustomerId = customerId;
+                address.Id = 0; // Ensure new entity
+
+                var createdAddress = await _addressService.CreateAddressAsync(address);
+                var createdAddressDto = _mapper.Map<AddressDto>(createdAddress);
+                return Success(createdAddressDto, "Address created successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<AddressDto>($"Failed to create address: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Update an address for a customer
+        /// </summary>
+        /// <param name="customerId">Customer ID</param>
+        /// <param name="addressId">Address ID</param>
+        /// <param name="addressDto">Updated address data</param>
+        /// <returns>Updated address</returns>
+        [Authorize(Roles = "Customer")]
+        [HttpPut("{customerId:int}/addresses/{addressId:int}")]
+        public async Task<ActionResult<ApiResponse<AddressDto>>> UpdateAddress(int customerId, int addressId, [FromBody] AddressDto addressDto)
+        {
+            try
+            {
+                // Verify customer ownership
+                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (customer == null || customer.Id != customerId)
+                {
+                    return Error<AddressDto>("Access denied", 403);
+                }
+
+                var addresses = await _addressService.GetAddressesByCustomerIdAsync(customerId);
+                var existingAddress = addresses.FirstOrDefault(a => a.Id == addressId);
+                
+                if (existingAddress == null)
+                {
+                    return Error<AddressDto>("Address not found", 404);
+                }
+
+                // Update address properties
+                existingAddress.Street = addressDto.Street1 ?? existingAddress.Street;
+                existingAddress.City = addressDto.City ?? existingAddress.City;
+                existingAddress.State = addressDto.Street2 ?? existingAddress.State;
+                existingAddress.ZipCode = addressDto.ZipCode.ToString();
+
+                // Handle main address setting
+                if (addressDto.IsMain && !existingAddress.IsMain)
+                {
+                    await _addressService.SetMainAddressAsync(customerId, addressId);
+                }
+
+                var updatedAddress = await _addressService.UpdateAddressAsync(existingAddress);
+                var updatedAddressDto = _mapper.Map<AddressDto>(updatedAddress);
+                return Success(updatedAddressDto, "Address updated successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<AddressDto>($"Failed to update address: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Delete an address for a customer
+        /// </summary>
+        /// <param name="customerId">Customer ID</param>
+        /// <param name="addressId">Address ID</param>
+        /// <returns>Success response</returns>
+        [Authorize(Roles = "Customer")]
+        [HttpDelete("{customerId:int}/addresses/{addressId:int}")]
+        public async Task<ActionResult<ApiResponse<string>>> DeleteAddress(int customerId, int addressId)
+        {
+            try
+            {
+                // Verify customer ownership
+                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (customer == null || customer.Id != customerId)
+                {
+                    return Error<string>("Access denied", 403);
+                }
+
+                var result = await _addressService.DeleteAddressAsync(customerId, addressId);
+                if (!result)
+                {
+                    return Error<string>("Cannot delete address", 400);
+                }
+                return Success<string>("Address deleted successfully", "Address deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<string>($"Failed to delete address: {ex.Message}", 500);
+            }
         }
     }
 }

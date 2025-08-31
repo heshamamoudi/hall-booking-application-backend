@@ -27,8 +27,23 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IVendorAvailabilityRepository, VendorAvailabilityRepository>();
         services.AddScoped<IVendorManagerRepository, VendorManagerRepository>();
 
-        // Register services
+        // Register services with validation
         services.AddScoped<ITokenService, TokenService>();
+        
+        // Validate that all required service interfaces and implementations exist
+        try 
+        {
+            services.AddScoped<IHallService, HallService>();
+            services.AddScoped<IVendorService, VendorService>();
+            services.AddScoped<ICustomerService, CustomerService>();
+            services.AddScoped<IAddressService, AddressService>();
+            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IVendorManagerService, VendorManagerService>();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Failed to register application services. Check that all service interfaces and implementations are available.", ex);
+        }
 
         // Add security headers service
         services.AddAntiforgery(options => {
@@ -39,7 +54,11 @@ public static class ApplicationServiceExtensions
             options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
         });
 
-        services.AddAutoMapper(typeof(Program).Assembly);
+        // AutoMapper configuration - ensure we scan all assemblies with profiles
+        services.AddAutoMapper(
+            typeof(HallApp.Application.Helpers.AutoMapperProfiles).Assembly,
+            typeof(Program).Assembly
+        );
 
         return services;
     }

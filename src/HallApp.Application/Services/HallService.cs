@@ -87,7 +87,7 @@ public class HallService : IHallService
         return new List<Hall>();
     }
 
-    public async Task<List<Hall>> GetHallsByPriceRangeAsync(decimal minPrice, decimal maxPrice)
+    public async Task<List<Hall>> GetHallsByPriceRangeAsync(double minPrice, double maxPrice)
     {
         // Placeholder - implementation depends on actual repository methods
         return new List<Hall>();

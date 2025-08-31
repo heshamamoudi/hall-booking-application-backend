@@ -48,9 +48,10 @@ public class UserRepository : IUserRepository
 
     public async Task RegisterOrUpdateTokenAsync(AppUser user, string token, string refreshToken)
     {
-        // Update the user's refresh token properties
+        // Update the user's refresh token properties with Georgian timezone
         user.RefreshToken = refreshToken;
-        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7); // Set refresh token to expire in 7 days
+        var georgianTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Georgia Standard Time");
+        user.RefreshTokenExpiryTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow.AddDays(7), georgianTimeZone);
         
         // Update the access token in the UserTokens table
         var existingToken = await _context.UserTokens

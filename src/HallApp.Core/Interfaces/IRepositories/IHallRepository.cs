@@ -11,5 +11,5 @@ public interface IHallRepository : IGenericRepository<Hall>
     Task<IEnumerable<Hall>> GetHallsByLocationAsync(string city, string state);
     Task<bool> IsHallNameUniqueAsync(string name, int? excludeId = null);
     Task<IEnumerable<Hall>> GetHallsByGenderAsync(int gender);
-    Task<IEnumerable<Hall>> GetHallsByPriceRangeAsync(decimal minPrice, decimal maxPrice);
+    Task<IEnumerable<Hall>> GetHallsByPriceRangeAsync(double minPrice, double maxPrice);
 }

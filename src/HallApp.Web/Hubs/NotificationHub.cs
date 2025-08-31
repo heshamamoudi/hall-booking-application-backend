@@ -1,6 +1,8 @@
 using HallApp.Core.Entities.NotificationEntities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace HallApp.Web.Hubs;
 
@@ -10,27 +12,20 @@ public class NotificationHub : Hub
     [Authorize]
     public override async Task OnConnectedAsync()
     {
-        // Log claims for debugging
-        var claims = Context.User?.Claims;
-        if (claims != null)
+        // Get user ID from claims instead of Context.UserIdentifier
+        var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier) 
+                         ?? Context.User?.FindFirst(JwtRegisteredClaimNames.NameId)
+                         ?? Context.User?.FindFirst(JwtRegisteredClaimNames.Sub);
+
+        if (userIdClaim == null || string.IsNullOrEmpty(userIdClaim.Value))
         {
-            Console.WriteLine("JWT Claims:");
-            foreach (var claim in claims)
-            {
-                Console.WriteLine($"Type: {claim.Type}, Value: {claim.Value}");
-            }
+            Console.WriteLine("Warning: User ID not found in claims. SignalR notifications disabled for this connection.");
+            return; // Don't throw error, just skip group assignment
         }
 
-        var userId = Context.UserIdentifier; // Should now be populated
-        Console.WriteLine($"UserIdentifier: {userId}");
-
-        if (string.IsNullOrEmpty(userId))
-        {
-            Console.WriteLine("Error: UserIdentifier is null or empty.");
-            throw new ArgumentException("UserIdentifier is null or empty");
-        }
-
-        Console.WriteLine($"User connected with UserIdentifier: {userId}");
+        var userId = userIdClaim.Value;
+        Console.WriteLine($"User connected with UserID: {userId}");
+        
         await Groups.AddToGroupAsync(Context.ConnectionId, userId);
         await base.OnConnectedAsync();
     }

@@ -16,17 +16,20 @@ namespace HallApp.Web.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;
         private readonly ITokenService _tokenService;
+        private readonly ICustomerService _customerService;
         private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             UserManager<AppUser> userManager,
             SignInManager<AppUser> signInManager,
             ITokenService tokenService,
+            ICustomerService customerService,
             ILogger<AuthController> logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _tokenService = tokenService;
+            _customerService = customerService;
             _logger = logger;
         }
 
@@ -64,7 +67,7 @@ namespace HallApp.Web.Controllers
                     LastName = registerDto.LastName,
                     PhoneNumber = registerDto.PhoneNumber,
                     Gender = registerDto.Gender ?? "NotSpecified", // Provide default value if not specified
-                    DOB = registerDto.DOB ?? DateTime.MinValue,
+                    DOB = registerDto.DOB ?? new DateTime(1900, 1, 1),
                     Created = DateTime.UtcNow,
                     Updated = DateTime.UtcNow
                 };
@@ -78,6 +81,17 @@ namespace HallApp.Web.Controllers
 
                 // Always assign Customer role for public registration
                 await _userManager.AddToRoleAsync(user, "Customer");
+
+                // Create Customer entity linked to AppUser
+                var customer = new HallApp.Core.Entities.CustomerEntities.Customer
+                {
+                    AppUserId = user.Id,
+                    CreditMoney = 0,
+                    Active = true,
+                    Confirmed = false
+                };
+
+                await _customerService.CreateCustomerAsync(customer);
 
                 // Generate tokens
                 var accessToken = await _tokenService.CreateToken(user);
@@ -144,7 +158,7 @@ namespace HallApp.Web.Controllers
                     LastName = registerDto.LastName,
                     PhoneNumber = registerDto.PhoneNumber,
                     Gender = registerDto.Gender ?? "NotSpecified",
-                    DOB = registerDto.DOB ?? DateTime.MinValue,
+                    DOB = registerDto.DOB ?? new DateTime(1900, 1, 1),
                     Created = DateTime.UtcNow,
                     Updated = DateTime.UtcNow
                 };
@@ -163,9 +177,10 @@ namespace HallApp.Web.Controllers
                 var accessToken = await _tokenService.CreateToken(user);
                 var refreshToken = await _tokenService.CreateRefreshToken(user);
 
-                // Store refresh token
+                // Store refresh token with Georgian timezone
                 user.RefreshToken = refreshToken;
-                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+                var georgianTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Georgia Standard Time");
+                user.RefreshTokenExpiryTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow.AddDays(7), georgianTimeZone);
                 await _userManager.UpdateAsync(user);
 
                 var response = new AuthResponseDto
@@ -328,7 +343,8 @@ namespace HallApp.Web.Controllers
                 if (user != null)
                 {
                     user.RefreshToken = null;
-                    user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(-1);
+                    var georgianTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Georgia Standard Time");
+                    user.RefreshTokenExpiryTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow.AddDays(-1), georgianTimeZone);
                     await _userManager.UpdateAsync(user);
                 }
 
@@ -371,7 +387,7 @@ namespace HallApp.Web.Controllers
                     LastName = createUserDto.LastName,
                     PhoneNumber = createUserDto.PhoneNumber,
                     Gender = createUserDto.Gender,
-                    DOB = createUserDto.DOB ?? DateTime.MinValue,
+                    DOB = createUserDto.DOB ?? new DateTime(1900, 1, 1),
                     Created = DateTime.UtcNow,
                     Updated = DateTime.UtcNow
                 };

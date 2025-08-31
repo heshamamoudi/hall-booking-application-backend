@@ -27,7 +27,9 @@ public class TokenService : ITokenService
     {
         var claims = new List<Claim>{
             new Claim(JwtRegisteredClaimNames.NameId, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName)
+            new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),  // Add for SignalR
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString())  // Standard subject claim
         };
 
         // Add roles to claims
@@ -40,7 +42,9 @@ public class TokenService : ITokenService
         {
             Subject = new ClaimsIdentity(claims),
             Expires = DateTime.Now.AddHours(1),  // Token expiry time - shorter for access tokens
-            SigningCredentials = creds
+            SigningCredentials = creds,
+            Audience = _config["JWT:Audience"] ?? "hallbookingapp",
+            Issuer = _config["JWT:Issuer"] ?? "hallbookingapi"
         };
 
         var tokenHandler = new JwtSecurityTokenHandler();
@@ -64,7 +68,9 @@ public class TokenService : ITokenService
         {
             Subject = new ClaimsIdentity(claims),
             Expires = DateTime.Now.AddDays(7),  // Refresh tokens last longer
-            SigningCredentials = creds
+            SigningCredentials = creds,
+            Audience = _config["JWT:Audience"] ?? "hallbookingapp",
+            Issuer = _config["JWT:Issuer"] ?? "hallbookingapi"
         };
 
         var tokenHandler = new JwtSecurityTokenHandler();

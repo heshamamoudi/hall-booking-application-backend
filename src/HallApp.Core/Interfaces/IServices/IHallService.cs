@@ -16,7 +16,7 @@ namespace HallApp.Core.Interfaces.IServices
         Task<List<Hall>> SearchHallsAsync(string searchTerm);
         Task<List<Hall>> GetHallsByLocationAsync(string location);
         Task<List<Hall>> GetHallsByCapacityAsync(int minCapacity, int maxCapacity);
-        Task<List<Hall>> GetHallsByPriceRangeAsync(decimal minPrice, decimal maxPrice);
+        Task<List<Hall>> GetHallsByPriceRangeAsync(double minPrice, double maxPrice);
         Task<List<Hall>> GetPopularHallsAsync();
         Task<List<Hall>> GetRecommendedHallsAsync(string customerId);
         Task<Hall?> ToggleHallStatusAsync(int hallId);

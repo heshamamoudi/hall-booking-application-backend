@@ -346,7 +346,7 @@ namespace HallApp.Web.Controllers.Admin
                     return Error<HallDto>($"Invalid data: {errors}", 400);
                 }
 
-                var hallEntity = _mapper.Map<Hall>(hallCreateDto);
+                var hallEntity = _mapper.Map<HallApp.Core.Entities.ChamperEntities.Hall>(hallCreateDto);
                 var createdHall = await _hallService.CreateHallAsync(hallEntity);
                 var hallDto = _mapper.Map<HallDto>(createdHall);
 
@@ -379,15 +379,15 @@ namespace HallApp.Web.Controllers.Admin
                     return Error<HallDto>($"Invalid data: {errors}", 400);
                 }
 
-                Hall updatedHallEntity;
+                HallApp.Core.Entities.ChamperEntities.Hall updatedHallEntity;
                 if (IsAdmin)
                 {
-                    var hallEntity = _mapper.Map<Hall>(hallUpdateDto);
+                    var hallEntity = _mapper.Map<HallApp.Core.Entities.ChamperEntities.Hall>(hallUpdateDto);
                     updatedHallEntity = await _hallService.UpdateHallAsync(hallEntity);
                 }
                 else if (IsHallManager)
                 {
-                    var hallEntity = _mapper.Map<Hall>(hallUpdateDto);
+                    var hallEntity = _mapper.Map<HallApp.Core.Entities.ChamperEntities.Hall>(hallUpdateDto);
                     updatedHallEntity = await _hallService.UpdateHallAsync(hallEntity);
                 }
                 else

@@ -110,7 +110,7 @@ public class HallRepository : GenericRepository<Hall>, IHallRepository
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<Hall>> GetHallsByPriceRangeAsync(decimal minPrice, decimal maxPrice)
+    public async Task<IEnumerable<Hall>> GetHallsByPriceRangeAsync(double minPrice, double maxPrice)
     {
         return await _context.Halls
             .Where(h => h.Active && 

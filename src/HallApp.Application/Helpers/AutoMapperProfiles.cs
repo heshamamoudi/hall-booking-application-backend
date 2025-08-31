@@ -9,6 +9,13 @@ using HallApp.Application.DTOs.Auth;
 using HallApp.Application.DTOs.Vendor;
 using HallApp.Application.DTOs.HallManager;
 using HallApp.Core.Entities.ChamperEntities;
+using HallApp.Application.DTOs.Champer.Hall;
+using HallApp.Application.DTOs.Champer.HallManager;
+using HallApp.Application.DTOs.Champer.Contact;
+using HallApp.Application.DTOs.Champer.Location;
+using HallApp.Application.DTOs.Champer.Media;
+using HallApp.Application.DTOs.Champer.Package;
+using HallApp.Application.DTOs.Champer.Service;
 
 namespace HallApp.Application.Helpers;
 
@@ -124,6 +131,30 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.Bookings, opt => opt.Ignore())
             .ForMember(dest => dest.Reviews, opt => opt.Ignore())
             .ForMember(dest => dest.Favorites, opt => opt.Ignore());
+
+        // Address mappings
+        CreateMap<Address, AddressDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.AddressName, opt => opt.MapFrom(src => src.Street)) // Map Street to AddressName
+            .ForMember(dest => dest.City, opt => opt.MapFrom(src => src.City))
+            .ForMember(dest => dest.Street1, opt => opt.MapFrom(src => src.Street))
+            .ForMember(dest => dest.Street2, opt => opt.MapFrom(src => src.State)) // Map State to Street2
+            .ForMember(dest => dest.PostalCode, opt => opt.MapFrom(src => string.IsNullOrEmpty(src.ZipCode) ? 0 : int.Parse(src.ZipCode)))
+            .ForMember(dest => dest.ZipCode, opt => opt.MapFrom(src => string.IsNullOrEmpty(src.ZipCode) ? 0 : int.Parse(src.ZipCode)))
+            .ForMember(dest => dest.IsMain, opt => opt.MapFrom(src => src.IsMain))
+            .ForMember(dest => dest.CustomerId, opt => opt.MapFrom(src => src.CustomerId))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => DateTime.UtcNow));
+
+        CreateMap<AddressDto, Address>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.Street, opt => opt.MapFrom(src => src.Street1 ?? src.AddressName))
+            .ForMember(dest => dest.City, opt => opt.MapFrom(src => src.City))
+            .ForMember(dest => dest.State, opt => opt.MapFrom(src => src.Street2 ?? ""))
+            .ForMember(dest => dest.ZipCode, opt => opt.MapFrom(src => src.ZipCode.ToString()))
+            .ForMember(dest => dest.IsMain, opt => opt.MapFrom(src => src.IsMain))
+            .ForMember(dest => dest.CustomerId, opt => opt.MapFrom(src => src.CustomerId))
+            .ForMember(dest => dest.Customer, opt => opt.Ignore());
 
         // User Profile DTO mappings
         CreateMap<AppUser, UserProfileDto>()
@@ -254,5 +285,130 @@ public class AutoMapperProfiles : Profile
                 
                 return (appUser, vendorManager);
             });
+
+        // Hall mappings
+        CreateMap<Hall, HallDto>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.CommercialRegisteration, opt => opt.MapFrom(src => src.CommercialRegisteration))
+            .ForMember(dest => dest.Vat, opt => opt.MapFrom(src => src.Vat))
+            .ForMember(dest => dest.BothWeekDays, opt => opt.MapFrom(src => src.BothWeekDays))
+            .ForMember(dest => dest.BothWeekEnds, opt => opt.MapFrom(src => src.BothWeekEnds))
+            .ForMember(dest => dest.MaleWeekDays, opt => opt.MapFrom(src => src.MaleWeekDays))
+            .ForMember(dest => dest.MaleWeekEnds, opt => opt.MapFrom(src => src.MaleWeekEnds))
+            .ForMember(dest => dest.MaleMin, opt => opt.MapFrom(src => src.MaleMin))
+            .ForMember(dest => dest.MaleMax, opt => opt.MapFrom(src => src.MaleMax))
+            .ForMember(dest => dest.MaleActive, opt => opt.MapFrom(src => src.MaleActive))
+            .ForMember(dest => dest.FemaleWeekDays, opt => opt.MapFrom(src => src.FemaleWeekDays))
+            .ForMember(dest => dest.FemaleWeekEnds, opt => opt.MapFrom(src => src.FemaleWeekEnds))
+            .ForMember(dest => dest.FemaleMin, opt => opt.MapFrom(src => src.FemaleMin))
+            .ForMember(dest => dest.FemaleMax, opt => opt.MapFrom(src => src.FemaleMax))
+            .ForMember(dest => dest.FemaleActive, opt => opt.MapFrom(src => src.FemaleActive))
+            .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
+            .ForMember(dest => dest.Media, opt => opt.MapFrom(src => src.Logo))
+            .ForMember(dest => dest.MediaFiles, opt => opt.MapFrom(src => src.MediaFiles))
+            .ForMember(dest => dest.Managers, opt => opt.MapFrom(src => src.Managers))
+            .ForMember(dest => dest.Contacts, opt => opt.MapFrom(src => src.Contacts))
+            .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
+            .ForMember(dest => dest.Packages, opt => opt.MapFrom(src => src.Packages))
+            .ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.Services))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated));
+
+        CreateMap<HallDto, Hall>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.CommercialRegisteration, opt => opt.MapFrom(src => src.CommercialRegisteration))
+            .ForMember(dest => dest.Vat, opt => opt.MapFrom(src => src.Vat))
+            .ForMember(dest => dest.BothWeekDays, opt => opt.MapFrom(src => src.BothWeekDays))
+            .ForMember(dest => dest.BothWeekEnds, opt => opt.MapFrom(src => src.BothWeekEnds))
+            .ForMember(dest => dest.MaleWeekDays, opt => opt.MapFrom(src => src.MaleWeekDays))
+            .ForMember(dest => dest.MaleWeekEnds, opt => opt.MapFrom(src => src.MaleWeekEnds))
+            .ForMember(dest => dest.MaleMin, opt => opt.MapFrom(src => src.MaleMin))
+            .ForMember(dest => dest.MaleMax, opt => opt.MapFrom(src => src.MaleMax))
+            .ForMember(dest => dest.MaleActive, opt => opt.MapFrom(src => src.MaleActive))
+            .ForMember(dest => dest.FemaleWeekDays, opt => opt.MapFrom(src => src.FemaleWeekDays))
+            .ForMember(dest => dest.FemaleWeekEnds, opt => opt.MapFrom(src => src.FemaleWeekEnds))
+            .ForMember(dest => dest.FemaleMin, opt => opt.MapFrom(src => src.FemaleMin))
+            .ForMember(dest => dest.FemaleMax, opt => opt.MapFrom(src => src.FemaleMax))
+            .ForMember(dest => dest.FemaleActive, opt => opt.MapFrom(src => src.FemaleActive))
+            .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
+            .ForMember(dest => dest.Logo, opt => opt.MapFrom(src => src.Media))
+            .ForMember(dest => dest.MediaFiles, opt => opt.MapFrom(src => src.MediaFiles))
+            .ForMember(dest => dest.Managers, opt => opt.MapFrom(src => src.Managers))
+            .ForMember(dest => dest.Contacts, opt => opt.MapFrom(src => src.Contacts))
+            .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
+            .ForMember(dest => dest.Packages, opt => opt.MapFrom(src => src.Packages))
+            .ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.Services))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
+            .ForMember(dest => dest.Description, opt => opt.Ignore())
+            .ForMember(dest => dest.Reviews, opt => opt.Ignore())
+            .ForMember(dest => dest.AverageRating, opt => opt.Ignore())
+            .ForMember(dest => dest.Active, opt => opt.Ignore());
+
+        CreateMap<HallCreateDto, Hall>()
+            .ForMember(dest => dest.ID, opt => opt.Ignore())
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.CommercialRegisteration, opt => opt.MapFrom(src => src.CommercialRegisteration))
+            .ForMember(dest => dest.Vat, opt => opt.MapFrom(src => src.Vat))
+            .ForMember(dest => dest.BothWeekDays, opt => opt.MapFrom(src => src.BothWeekDays))
+            .ForMember(dest => dest.BothWeekEnds, opt => opt.MapFrom(src => src.BothWeekEnds))
+            .ForMember(dest => dest.MaleWeekDays, opt => opt.MapFrom(src => src.MaleWeekDays))
+            .ForMember(dest => dest.MaleWeekEnds, opt => opt.MapFrom(src => src.MaleWeekEnds))
+            .ForMember(dest => dest.MaleMin, opt => opt.MapFrom(src => src.MaleMin))
+            .ForMember(dest => dest.MaleMax, opt => opt.MapFrom(src => src.MaleMax))
+            .ForMember(dest => dest.MaleActive, opt => opt.MapFrom(src => src.MaleActive))
+            .ForMember(dest => dest.FemaleWeekDays, opt => opt.MapFrom(src => src.FemaleWeekDays))
+            .ForMember(dest => dest.FemaleWeekEnds, opt => opt.MapFrom(src => src.FemaleWeekEnds))
+            .ForMember(dest => dest.FemaleMin, opt => opt.MapFrom(src => src.FemaleMin))
+            .ForMember(dest => dest.FemaleMax, opt => opt.MapFrom(src => src.FemaleMax))
+            .ForMember(dest => dest.FemaleActive, opt => opt.MapFrom(src => src.FemaleActive))
+            .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+            .ForMember(dest => dest.MediaFiles, opt => opt.MapFrom(src => src.MediaFiles))
+            .ForMember(dest => dest.Contacts, opt => opt.MapFrom(src => src.Contacts))
+            .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
+            .ForMember(dest => dest.Packages, opt => opt.MapFrom(src => src.Packages))
+            .ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.Services))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.Logo, opt => opt.Ignore())
+            .ForMember(dest => dest.Managers, opt => opt.Ignore())
+            .ForMember(dest => dest.Reviews, opt => opt.Ignore())
+            .ForMember(dest => dest.AverageRating, opt => opt.Ignore())
+            .ForMember(dest => dest.Active, opt => opt.MapFrom(src => true));
+
+        CreateMap<HallUpdateDto, Hall>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.CommercialRegisteration, opt => opt.MapFrom(src => src.CommercialRegisteration))
+            .ForMember(dest => dest.Vat, opt => opt.MapFrom(src => src.Vat))
+            .ForMember(dest => dest.BothWeekDays, opt => opt.MapFrom(src => src.BothWeekDays))
+            .ForMember(dest => dest.BothWeekEnds, opt => opt.MapFrom(src => src.BothWeekEnds))
+            .ForMember(dest => dest.MaleWeekDays, opt => opt.MapFrom(src => src.MaleWeekDays))
+            .ForMember(dest => dest.MaleWeekEnds, opt => opt.MapFrom(src => src.MaleWeekEnds))
+            .ForMember(dest => dest.MaleMin, opt => opt.MapFrom(src => src.MaleMin))
+            .ForMember(dest => dest.MaleMax, opt => opt.MapFrom(src => src.MaleMax))
+            .ForMember(dest => dest.MaleActive, opt => opt.MapFrom(src => src.MaleActive))
+            .ForMember(dest => dest.FemaleWeekDays, opt => opt.MapFrom(src => src.FemaleWeekDays))
+            .ForMember(dest => dest.FemaleWeekEnds, opt => opt.MapFrom(src => src.FemaleWeekEnds))
+            .ForMember(dest => dest.FemaleMin, opt => opt.MapFrom(src => src.FemaleMin))
+            .ForMember(dest => dest.FemaleMax, opt => opt.MapFrom(src => src.FemaleMax))
+            .ForMember(dest => dest.FemaleActive, opt => opt.MapFrom(src => src.FemaleActive))
+            .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+            .ForMember(dest => dest.MediaFiles, opt => opt.MapFrom(src => src.MediaFiles))
+            .ForMember(dest => dest.Contacts, opt => opt.MapFrom(src => src.Contacts))
+            .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
+            .ForMember(dest => dest.Packages, opt => opt.MapFrom(src => src.Packages))
+            .ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.Services))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
+            .ForMember(dest => dest.Logo, opt => opt.Ignore())
+            .ForMember(dest => dest.Managers, opt => opt.Ignore())
+            .ForMember(dest => dest.Reviews, opt => opt.Ignore())
+            .ForMember(dest => dest.AverageRating, opt => opt.Ignore())
+            .ForMember(dest => dest.Active, opt => opt.Ignore())
+            .ForMember(dest => dest.Created, opt => opt.Ignore());
     }
 }

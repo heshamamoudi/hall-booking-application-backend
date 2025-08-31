@@ -16,19 +16,19 @@ public class Hall
 
     public long Vat { get; set; }
     // Properties for both
-    public decimal BothWeekDays { get; set; }
-    public decimal BothWeekEnds { get; set; }
+    public double BothWeekDays { get; set; }
+    public double BothWeekEnds { get; set; }
 
     // Properties for Male
-    public decimal MaleWeekDays { get; set; }
-    public decimal MaleWeekEnds { get; set; }
+    public double MaleWeekDays { get; set; }
+    public double MaleWeekEnds { get; set; }
     public int MaleMin { get; set; }
     public int MaleMax { get; set; }
     public bool MaleActive { get; set; } = false;
 
     // Properties for Female
-    public decimal FemaleWeekDays { get; set; }
-    public decimal FemaleWeekEnds { get; set; }
+    public double FemaleWeekDays { get; set; }
+    public double FemaleWeekEnds { get; set; }
     public int FemaleMin { get; set; }
     public int FemaleMax { get; set; }
     public bool FemaleActive { get; set; } = false;
