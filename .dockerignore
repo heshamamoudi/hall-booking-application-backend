@@ -1,9 +1,0 @@
-.git
-.gitignore
-bin
-obj
-.vscode
-.env
-*.md
-*.db
-node_modules
