@@ -2,7 +2,7 @@ namespace HallApp.Web.Managers;
 
 public static class NotificationConnectionManager
 {
-    private static readonly Dictionary<int, string> _connections = [];
+    private static readonly Dictionary<int, string> _connections = new Dictionary<int, string>();
 
     public static void AddConnection(int userId, string connectionId)
     {
