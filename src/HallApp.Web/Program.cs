@@ -40,10 +40,12 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod();
     });
 });
-Console.WriteLine("ENV: ConnectionStrings__DefaultConnection = " + 
-    Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection"));
-    var connectionFromConfig = builder.Configuration.GetConnectionString("DefaultConnection");
-Console.WriteLine("CONFIG: DefaultConnection = " + connectionFromConfig);
+var env = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+var config = builder.Configuration.GetConnectionString("DefaultConnection");
+
+Console.WriteLine($"ENV: {env}");
+Console.WriteLine($"CONFIG: {config}");
+
 var app = builder.Build();
 
 // Configure middleware pipeline using extension

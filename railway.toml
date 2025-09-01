@@ -6,5 +6,6 @@ builder = "Dockerfile"
 [deploy]
 startCommand = "dotnet HallApp.Web.dll"
 
+# Optional: Set fallback env for local dev
 [env]
 ASPNETCORE_ENVIRONMENT = "Production"
