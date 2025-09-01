@@ -32,13 +32,20 @@ namespace HallApp.Web.Controllers
         /// </summary>
         [HttpGet("/health")]
         [ApiExplorerSettings(IgnoreApi = true)]
-        public IActionResult HealthCheck()
+        public IActionResult HealthCheck([FromServices] IConfiguration configuration)
         {
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            var hasConnection = !string.IsNullOrEmpty(connectionString);
+            
             return Ok(new
             {
                 Status = "Healthy",
                 Timestamp = DateTime.UtcNow,
-                Environment = _env.EnvironmentName
+                Environment = _env.EnvironmentName,
+                HasConnectionString = hasConnection,
+                DatabaseProvider = connectionString?.Contains("postgresql") == true ? "PostgreSQL" : "SQL Server",
+                Port = Environment.GetEnvironmentVariable("PORT"),
+                AspNetCoreEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
             });
         }
 

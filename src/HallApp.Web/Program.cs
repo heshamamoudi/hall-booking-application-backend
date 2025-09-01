@@ -40,11 +40,22 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod();
     });
 });
+// Debug environment variables for Railway deployment
 var env = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
 var config = builder.Configuration.GetConnectionString("DefaultConnection");
+var port = Environment.GetEnvironmentVariable("PORT");
+var aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
 
-Console.WriteLine($"ENV: {env}");
-Console.WriteLine($"CONFIG: {config}");
+Console.WriteLine($"🔍 ENV ConnectionString: {env}");
+Console.WriteLine($"🔍 CONFIG ConnectionString: {config}");
+Console.WriteLine($"🔍 PORT: {port}");
+Console.WriteLine($"🔍 ASPNETCORE_URLS: {aspnetcoreUrls}");
+
+// Configure Kestrel to listen on Railway's port
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 var app = builder.Build();
 
