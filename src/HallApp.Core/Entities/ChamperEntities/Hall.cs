@@ -36,7 +36,7 @@ public class Hall
     public int Gender { get; set; }
 
     public string Logo { get; set; }
-    public List<HallMedia> MediaFiles { get; set; } = [];
+    public List<HallMedia> MediaFiles { get; set; } = new List<HallMedia>();
     public string Description { get; set; }
     public List<HallManager> Managers { get; set; }
     public List<Contact> Contacts { get; set; }
