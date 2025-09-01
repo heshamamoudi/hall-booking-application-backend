@@ -1,0 +1,10 @@
+# railway.toml
+
+[build]
+builder = "Dockerfile"
+
+[deploy]
+startCommand = "dotnet HallApp.Web.dll"
+
+[env]
+ASPNETCORE_ENVIRONMENT = "Production"
