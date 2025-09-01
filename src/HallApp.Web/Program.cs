@@ -72,10 +72,15 @@ Console.WriteLine($"   JWT:Issuer = {builder.Configuration["JWT:Issuer"]}");
 Console.WriteLine($"   JWT:Audience = {builder.Configuration["JWT:Audience"]}");
 Console.WriteLine($"   JWT:ExpiryInHours = {builder.Configuration["JWT:ExpiryInHours"]}");
 
-// Configure Kestrel to listen on Railway's port
+// Configure Kestrel to listen on Railway's port (Nixpacks deployment)
 if (!string.IsNullOrEmpty(port))
 {
     builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+else
+{
+    // Fallback for local development
+    builder.WebHost.UseUrls("http://0.0.0.0:5000");
 }
 
 var app = builder.Build();
