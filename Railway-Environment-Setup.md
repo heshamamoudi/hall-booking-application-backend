@@ -11,11 +11,14 @@ ConnectionStrings__DefaultConnection = ${{Postgres.DATABASE_URL}}
 
 ### JWT Configuration
 ```bash
-JWT__SecretKey = HallBookingApp2024!SecretKey@Production#Railway$Deploy%
+# CRITICAL: Replace with actual 32+ character secret key, NOT the placeholder!
+JWT__SecretKey = HallBookingApp2024SecretKey!@#$%^&*()ProductionRailway123456789
 JWT__Issuer = HallBookingApp
 JWT__Audience = hallbookingapp
 JWT__ExpiryInHours = 1
 ```
+
+**⚠️ IMPORTANT:** Your current Railway value is the placeholder text. **You MUST update it** with a real secret!
 
 ### ASP.NET Core Configuration
 ```bash

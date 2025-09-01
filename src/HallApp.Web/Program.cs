@@ -6,6 +6,7 @@ using HallApp.Infrastructure.Data;
 using HallApp.Infrastructure.Data.Seed;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Collections;
 
 var builder = WebApplication.CreateBuilder(args);
 
