@@ -44,12 +44,32 @@ builder.Services.AddCors(options =>
 var env = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
 var config = builder.Configuration.GetConnectionString("DefaultConnection");
 var port = Environment.GetEnvironmentVariable("PORT");
-var aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+var jwtSecret = Environment.GetEnvironmentVariable("JWT__SecretKey");
+var jwtSecretConfig = builder.Configuration["JWT:SecretKey"];
 
 Console.WriteLine($"🔍 ENV ConnectionString: {env}");
 Console.WriteLine($"🔍 CONFIG ConnectionString: {config}");
 Console.WriteLine($"🔍 PORT: {port}");
-Console.WriteLine($"🔍 ASPNETCORE_URLS: {aspnetcoreUrls}");
+Console.WriteLine($"🔍 JWT Secret ENV: {(string.IsNullOrEmpty(jwtSecret) ? "NULL/MISSING" : "PRESENT")}");
+Console.WriteLine($"🔍 JWT Secret CONFIG: {(string.IsNullOrEmpty(jwtSecretConfig) ? "NULL/MISSING" : "PRESENT")}");
+
+// List all environment variables starting with JWT
+Console.WriteLine("🔍 All JWT Environment Variables:");
+foreach (DictionaryEntry envVar in Environment.GetEnvironmentVariables())
+{
+    var key = envVar.Key.ToString();
+    if (key.StartsWith("JWT"))
+    {
+        Console.WriteLine($"   {key} = {envVar.Value}");
+    }
+}
+
+// List all configuration keys related to JWT
+Console.WriteLine("🔍 Configuration JWT Values:");
+Console.WriteLine($"   JWT:SecretKey = {(string.IsNullOrEmpty(builder.Configuration["JWT:SecretKey"]) ? "NULL/MISSING" : "PRESENT")}");
+Console.WriteLine($"   JWT:Issuer = {builder.Configuration["JWT:Issuer"]}");
+Console.WriteLine($"   JWT:Audience = {builder.Configuration["JWT:Audience"]}");
+Console.WriteLine($"   JWT:ExpiryInHours = {builder.Configuration["JWT:ExpiryInHours"]}");
 
 // Configure Kestrel to listen on Railway's port
 if (!string.IsNullOrEmpty(port))

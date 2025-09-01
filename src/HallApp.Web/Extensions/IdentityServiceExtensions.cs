@@ -46,15 +46,21 @@ namespace HallApp.Web.Extensions
             })
             .AddJwtBearer(options =>
             {
+                var jwtSecretKey = config["JWT:SecretKey"];
+                if (string.IsNullOrEmpty(jwtSecretKey))
+                {
+                    throw new InvalidOperationException("JWT:SecretKey configuration is required but not found. Check your environment variables.");
+                }
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     // Always validate the signing key
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["TokenKey"])),
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
                     
                     // OWASP recommends validating issuer and audience
                     ValidateIssuer = true,
-                    ValidIssuer = config["JWT:Issuer"] ?? "hallbookingapi",
+                    ValidIssuer = config["JWT:Issuer"] ?? "HallBookingApp",
                     ValidateAudience = true,
                     ValidAudience = config["JWT:Audience"] ?? "hallbookingapp",
                     

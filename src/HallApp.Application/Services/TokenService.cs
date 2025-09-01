@@ -19,7 +19,12 @@ public class TokenService : ITokenService
     {
         _config = config;
         _userManager = userManager;
-        _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["TokenKey"]));
+        var jwtSecretKey = _config["JWT:SecretKey"];
+        if (string.IsNullOrEmpty(jwtSecretKey))
+        {
+            throw new InvalidOperationException("JWT:SecretKey configuration is required but not found. Check your environment variables.");
+        }
+        _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey));
     }
 
     // Method to create a token
