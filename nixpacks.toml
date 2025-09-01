@@ -1,6 +1,6 @@
 # nixpacks.toml
 [phases.setup]
-nixPkgs = ["dotnet-sdk_8", "dotnet-aspnetcore_8"]
+nixPkgs = ["dotnet-sdk_8"]
 
 [phases.build]
 cmds = [
