@@ -121,35 +121,35 @@ public class VendorRepository : GenericRepository<Vendor>, IVendorRepository
         return await SaveAllAsync();
     }
 
-    public async Task<bool> IsNameUniqueAsync(string name, int? excludeId = null)
+    public async Task<bool> IsNameUniqueAsync(string name, int excludeId = 0)
     {
         var query = _context.Vendors.AsQueryable();
-        if (excludeId.HasValue)
+        if (excludeId != 0)
         {
             query = query.Where(v => v.Id != excludeId);
         }
         return !await query.AnyAsync(v => v.Name.ToLower() == name.ToLower());
     }
 
-    public async Task<bool> IsEmailUniqueAsync(string email, int? excludeId = null)
+    public async Task<bool> IsEmailUniqueAsync(string email, int excludeId = 0)
     {
         var query = _context.Vendors.AsQueryable();
-        if (excludeId.HasValue)
+        if (excludeId != 0)
         {
             query = query.Where(v => v.Id != excludeId);
         }
         return !await query.AnyAsync(v => v.Email.ToLower() == email.ToLower());
     }
 
-    public async Task<bool> IsPhoneUniqueAsync(string phone, int? excludeId = null)
+    public async Task<bool> IsPhoneUniqueAsync(string phone, int excludeId = 0)
     {
         if (string.IsNullOrEmpty(phone))
             return false;
 
         var query = _context.Vendors.AsQueryable();
 
-        if (excludeId.HasValue)
-            query = query.Where(v => v.Id != excludeId.Value);
+        if (excludeId != 0)
+            query = query.Where(v => v.Id != excludeId);
 
         return !await query.AnyAsync(v => v.Phone == phone);
     }

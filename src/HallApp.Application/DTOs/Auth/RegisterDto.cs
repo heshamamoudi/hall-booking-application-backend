@@ -26,9 +26,9 @@ namespace HallApp.Application.DTOs.Auth
         public string LastName { get; set; } = string.Empty;
 
         [Phone]
-        public string? PhoneNumber { get; set; }
+        public string PhoneNumber { get; set; } = string.Empty;
 
-        public string? Gender { get; set; }
+        public string Gender { get; set; } = string.Empty;
 
         public DateTime? DOB { get; set; }
     }
@@ -57,9 +57,9 @@ namespace HallApp.Application.DTOs.Auth
         public string LastName { get; set; } = string.Empty;
 
         [Phone]
-        public string? PhoneNumber { get; set; }
+        public string PhoneNumber { get; set; } = string.Empty;
 
-        public string? Gender { get; set; }
+        public string Gender { get; set; } = string.Empty;
 
         public DateTime? DOB { get; set; }
 

@@ -10,10 +10,10 @@ namespace HallApp.Core.Interfaces.IServices
     {
         // Core CRUD operations
         Task<HallManager> CreateHallManagerAsync(HallManager hallManager);
-        Task<HallManager?> UpdateHallManagerAsync(HallManager hallManager);
+        Task<HallManager> UpdateHallManagerAsync(HallManager hallManager);
         Task<bool> DeleteHallManagerAsync(int hallManagerId);
-        Task<HallManager?> GetHallManagerByIdAsync(int hallManagerId);
-        Task<HallManager?> GetHallManagerByAppUserIdAsync(int appUserId);
+        Task<HallManager> GetHallManagerByIdAsync(int hallManagerId);
+        Task<HallManager> GetHallManagerByAppUserIdAsync(int appUserId);
         Task<List<HallManager>> GetAllHallManagersAsync();
         
         // Business domain operations
@@ -23,8 +23,8 @@ namespace HallApp.Core.Interfaces.IServices
         Task<bool> UpdateCompanyInfoAsync(int hallManagerId, string companyName, string registrationNumber);
         
         // Validation methods
-        Task<bool> IsCommercialRegistrationUniqueAsync(string registrationNumber, int? excludeId = null);
-        Task<bool> IsCompanyNameUniqueAsync(string companyName, int? excludeId = null);
+        Task<bool> IsCommercialRegistrationUniqueAsync(string registrationNumber, int excludeId = 0);
+        Task<bool> IsCompanyNameUniqueAsync(string companyName, int excludeId = 0);
         
         // Business relationships
         Task<int> GetHallManagerHallCountAsync(int hallManagerId);

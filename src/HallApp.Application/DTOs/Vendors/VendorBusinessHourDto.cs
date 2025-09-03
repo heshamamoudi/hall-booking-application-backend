@@ -1,4 +1,3 @@
-#nullable enable
 using System.ComponentModel.DataAnnotations;
 
 namespace HallApp.Application.DTOs.Vendors;
@@ -12,7 +11,7 @@ public class VendorBusinessHourDto
     public TimeSpan CloseTime { get; set; }
     public bool IsClosed { get; set; }
     public bool IsOpen => !IsClosed;
-    public string? SpecialNote { get; set; }
+    public string SpecialNote { get; set; } = string.Empty;
 }
 
 public class CreateVendorBusinessHourDto
@@ -28,5 +27,5 @@ public class CreateVendorBusinessHourDto
     public bool IsClosed { get; set; }
     
     [StringLength(200)]
-    public string? SpecialNote { get; set; }
+    public string SpecialNote { get; set; } = string.Empty;
 }

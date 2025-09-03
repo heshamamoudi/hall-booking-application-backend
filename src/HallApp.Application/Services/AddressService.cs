@@ -21,12 +21,12 @@ public class AddressService : IAddressService
         return await _unitOfWork.AddressRepository.GetAddressesByCustomerIdAsync(customerId);
     }
 
-    public async Task<Address?> GetAddressByIdAsync(int addressId)
+    public async Task<Address> GetAddressByIdAsync(int addressId)
     {
         return await _unitOfWork.AddressRepository.GetByIdAsync(addressId);
     }
 
-    public async Task<Address?> GetMainAddressByCustomerIdAsync(int customerId)
+    public async Task<Address> GetMainAddressByCustomerIdAsync(int customerId)
     {
         return await _unitOfWork.AddressRepository.GetMainAddressByCustomerIdAsync(customerId);
     }
@@ -45,7 +45,7 @@ public class AddressService : IAddressService
         return address;
     }
 
-    public async Task<Address?> UpdateAddressAsync(Address address)
+    public async Task<Address> UpdateAddressAsync(Address address)
     {
         _unitOfWork.AddressRepository.Update(address);
         await _unitOfWork.Complete();

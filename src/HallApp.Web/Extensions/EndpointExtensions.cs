@@ -20,7 +20,8 @@ namespace HallApp.Web.Extensions
 
             // Map controllers and SignalR hub
             app.MapControllers();
-            app.MapHub<HallApp.Web.Hubs.NotificationHub>("/notificationsHub");
+            app.MapHub<HallApp.Web.Hubs.NotificationHub>("/notificationsHub")
+                .RequireAuthorization(); // Ensure hub requires authentication
 
             // Handle 404s for API routes
             app.MapGet("api/{**catchAll}", (string catchAll, ILoggerFactory loggerFactory) => 

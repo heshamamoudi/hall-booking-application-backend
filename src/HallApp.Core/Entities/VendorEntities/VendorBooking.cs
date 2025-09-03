@@ -30,4 +30,7 @@ public class VendorBooking : BaseEntity
     public decimal Amount { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    
+    // Navigation property for grouped services
+    public List<VendorBookingService> Services { get; set; } = new();
 }

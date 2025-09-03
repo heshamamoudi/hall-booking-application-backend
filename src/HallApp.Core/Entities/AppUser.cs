@@ -5,7 +5,6 @@ using HallApp.Core.Entities.NotificationEntities;
 
 namespace HallApp.Core.Entities;
 
-#nullable enable
 public class AppUser : IdentityUser<int>
 {
     public string FirstName { get; set; } = string.Empty;
@@ -19,7 +18,7 @@ public class AppUser : IdentityUser<int>
     public bool IsRestaurantManager => UserRoles.Any(ur => ur.Role.Name == "RestaurantManager");
 
     // Navigation properties
-    public HallManager? HallManager { get; set; }
+    public HallManager HallManager { get; set; } = new();
     public List<Notification> Notifications { get; set; } = new List<Notification>();
 
     [DataType(DataType.Date)]
@@ -29,7 +28,6 @@ public class AppUser : IdentityUser<int>
     public bool Active { get; set; } = false;
     
     // Refresh token properties
-    public string? RefreshToken { get; set; }
+    public string RefreshToken { get; set; } = string.Empty;
     public DateTime RefreshTokenExpiryTime { get; set; }
 }
-#nullable disable

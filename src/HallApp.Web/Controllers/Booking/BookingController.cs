@@ -1,14 +1,17 @@
 using AutoMapper;
-using HallApp.Web.Controllers.Common;
 using HallApp.Application.Common.Models;
 using HallApp.Application.DTOs.Booking;
 using HallApp.Application.DTOs.Booking.Registers;
 using HallApp.Application.DTOs.Booking.Updaters;
-using HallApp.Core.Entities.BookingEntities;
-using BookingEntity = HallApp.Core.Entities.BookingEntities.Booking;
+using HallApp.Application.DTOs.Vendors;
 using HallApp.Core.Interfaces.IServices;
+using HallApp.Core.Entities.BookingEntities;
+using HallApp.Core.Entities.VendorEntities;
+using HallApp.Web.Controllers.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using BookingEntity = HallApp.Core.Entities.BookingEntities.Booking;
 
 namespace HallApp.Web.Controllers.Booking
 {
@@ -20,17 +23,612 @@ namespace HallApp.Web.Controllers.Booking
     public class BookingController : BaseApiController
     {
         private readonly IBookingService _bookingService;
-        private readonly INotificationService _notificationService;
         private readonly IMapper _mapper;
+        private readonly IServiceItemService _serviceItemService;
+        private readonly INotificationService _notificationService;
 
-        public BookingController(
-            IBookingService bookingService, 
-            IMapper mapper, 
-            INotificationService notificationService)
+        public BookingController(IBookingService bookingService, IMapper mapper, IServiceItemService serviceItemService, INotificationService notificationService)
         {
             _bookingService = bookingService;
             _mapper = mapper;
+            _serviceItemService = serviceItemService;
             _notificationService = notificationService;
+        }
+
+        /// <summary>
+        /// Create new booking with vendor services (Customer only)
+        /// </summary>
+        /// <param name="bookingDto">Booking registration data with vendor services</param>
+        /// <returns>Created booking details</returns>
+        [Authorize(Roles = "Customer")]
+        [HttpPost("with-services")]
+        public async Task<ActionResult<ApiResponse<BookingDto>>> CreateBookingWithServices([FromBody] BookingRequestDto bookingDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                    return Error<BookingDto>($"Invalid booking data: {errors}", 400);
+                }
+
+                // Set the customer ID from the authenticated user
+                bookingDto.CustomerId = UserId;
+
+                // Calculate total cost for hall booking
+                var eventStart = bookingDto.EventDate.Add(bookingDto.StartTime);
+                var eventEnd = bookingDto.EventDate.Add(bookingDto.EndTime);
+                var totalCost = await _bookingService.CalculateBookingCostAsync(bookingDto.HallId, eventStart, eventEnd);
+
+                // Create booking entity from DTO
+                var bookingEntity = new BookingEntity
+                {
+                    HallId = bookingDto.HallId,
+                    CustomerId = bookingDto.CustomerId,
+                    BookingDate = bookingDto.EventDate,
+                    EventDate = bookingDto.EventDate,
+                    StartTime = bookingDto.StartTime,
+                    EndTime = bookingDto.EndTime,
+                    EventType = bookingDto.EventType ?? "Event",
+                    GuestCount = bookingDto.ExpectedGuestCount,
+                    Status = "Pending", // Awaiting hall approval
+                    Comments = bookingDto.SpecialRequests,
+                    TotalPrice = (double)totalCost,
+                    IsBookingConfirmed = false,
+                    IsVisitCompleted = false,
+                    Created = DateTime.UtcNow
+                };
+
+                var booking = await _bookingService.CreateBookingAsync(bookingEntity);
+                if (booking == null)
+                {
+                    return Error<BookingDto>("Failed to create booking", 500);
+                }
+
+                // Create VendorBookings grouped by vendor
+                if (bookingDto.SelectedServices?.Any() == true)
+                {
+                    var servicesByVendor = bookingDto.SelectedServices.GroupBy(s => s.VendorId);
+                    
+                    foreach (var vendorGroup in servicesByVendor)
+                    {
+                        var vendorId = vendorGroup.Key;
+                        var services = vendorGroup.ToList();
+                        
+                        // Calculate total amount for this vendor's services
+                        decimal vendorTotalAmount = 0;
+                        var vendorBookingServices = new List<VendorBookingService>();
+                        
+                        foreach (var service in services)
+                        {
+                            // Get actual service price from ServiceItem
+                            var serviceItem = await _serviceItemService.GetServiceItemByIdAsync(service.ServiceItemId);
+                            decimal servicePrice = serviceItem?.Price ?? 0;
+                            decimal serviceTotalPrice = servicePrice * service.Quantity;
+                            vendorTotalAmount += serviceTotalPrice;
+                            
+                            Console.WriteLine($"Service {service.ServiceItemId}: Price={servicePrice}, Qty={service.Quantity}, Total={serviceTotalPrice}");
+                            
+                            vendorBookingServices.Add(new VendorBookingService
+                            {
+                                ServiceItemId = service.ServiceItemId,
+                                Quantity = service.Quantity,
+                                SpecialInstructions = service.SpecialInstructions,
+                                UnitPrice = servicePrice,
+                                TotalPrice = serviceTotalPrice,
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow
+                            });
+                        }
+                        
+                        // Create single VendorBooking for this vendor
+                        var vendorBooking = new VendorBooking
+                        {
+                            VendorId = vendorId,
+                            BookingId = booking.Id,
+                            StartTime = bookingDto.EventDate.Add(bookingDto.StartTime),
+                            EndTime = bookingDto.EventDate.Add(bookingDto.EndTime),
+                            Status = "Pending",
+                            TotalAmount = vendorTotalAmount,
+                            ServiceDate = bookingDto.EventDate,
+                            Services = vendorBookingServices,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        
+                        booking.VendorBookings.Add(vendorBooking);
+                    }
+                    
+                    // Update booking with vendor bookings
+                    await _bookingService.UpdateBookingAsync(booking);
+                }
+
+                // Send notification to customer
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _notificationService.CreateNotificationAsync(
+                            booking.CustomerId,
+                            "Booking Created - Awaiting Approval",
+                            $"Your booking for {bookingDto.EventDate:yyyy-MM-dd} has been created and is awaiting hall approval. Booking ID: {booking.Id}",
+                            "Booking"
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Notification error: {ex.Message}");
+                    }
+                });
+
+                var bookingResponseDto = _mapper.Map<BookingDto>(booking);
+                return Success(bookingResponseDto, "Booking created successfully - awaiting hall approval");
+            }
+            catch (Exception ex)
+            {
+                return Error<BookingDto>($"Failed to create booking: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get booking approval status (Customer only)
+        /// </summary>
+        /// <param name="bookingId">Booking ID</param>
+        /// <returns>Booking approval status</returns>
+        [Authorize(Roles = "Customer")]
+        [HttpGet("{bookingId:int}/approval-status")]
+        public async Task<ActionResult<ApiResponse<object>>> GetBookingApprovalStatus(int bookingId)
+        {
+            try
+            {
+                var booking = await _bookingService.GetBookingByIdAsync(bookingId);
+                if (booking == null || booking.CustomerId != UserId)
+                {
+                    return Error<object>("Booking not found", 404);
+                }
+
+                // Create approval status response with grouped vendor bookings
+                var approvals = new List<object>();
+                
+                // Hall approval
+                approvals.Add(new {
+                    id = 0,
+                    bookingId = booking.Id,
+                    type = "hall",
+                    hallId = booking.HallId,
+                    vendorId = (int?)null,
+                    vendorName = (string)null,
+                    status = booking.Status == "Pending" ? "pending" : 
+                            booking.Status.StartsWith("Hall") && booking.Status != "HallRejected" ? "approved" : 
+                            booking.Status == "HallRejected" ? "rejected" : "pending",
+                    createdAt = booking.CreatedAt,
+                    approvedAt = booking.Status.StartsWith("Hall") && booking.Status != "HallRejected" ? booking.UpdatedAt : (DateTime?)null,
+                    servicesCount = 0
+                });
+                
+                // Vendor approvals (now grouped by vendor)
+                foreach (var vendorBooking in booking.VendorBookings)
+                {
+                    approvals.Add(new {
+                        id = vendorBooking.Id,
+                        bookingId = booking.Id,
+                        type = "vendor",
+                        hallId = (int?)null,
+                        vendorId = vendorBooking.VendorId,
+                        vendorName = vendorBooking.Vendor?.Name ?? $"Vendor {vendorBooking.VendorId}",
+                        status = vendorBooking.Status.ToLower(),
+                        createdAt = vendorBooking.CreatedAt,
+                        approvedAt = vendorBooking.ApprovedAt,
+                        rejectedAt = vendorBooking.RejectedAt,
+                        servicesCount = vendorBooking.Services.Count,
+                        totalAmount = vendorBooking.TotalAmount
+                    });
+                }
+                
+                return Success((object)new {
+                    bookingId = booking.Id,
+                    status = booking.Status,
+                    approvals = approvals
+                });
+            }
+            catch (Exception ex)
+            {
+                return Error<object>($"Failed to get approval status: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get alternative halls for rejected booking (Customer only)
+        /// </summary>
+        /// <param name="bookingId">Booking ID</param>
+        /// <param name="eventDate">Event date</param>
+        /// <returns>Available alternative halls</returns>
+        [Authorize(Roles = "Customer")]
+        [HttpGet("{bookingId:int}/alternative-halls")]
+        public async Task<ActionResult<ApiResponse<object>>> GetAlternativeHalls(int bookingId, [FromQuery] string eventDate)
+        {
+            try
+            {
+                var booking = await _bookingService.GetBookingByIdAsync(bookingId);
+                if (booking == null || booking.CustomerId != UserId)
+                {
+                    return Error<object>("Booking not found", 404);
+                }
+
+                if (!DateTime.TryParse(eventDate, out var parsedDate))
+                {
+                    return Error<object>("Invalid event date format", 400);
+                }
+
+                // TODO: Implement alternative halls service when hall service is available
+                var alternativeHalls = new List<object>();
+                
+                return Success((object)new {
+                    alternativeHalls = alternativeHalls,
+                    message = "No alternative halls available at the moment"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Error<object>($"Failed to get alternative halls: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Approve booking by hall manager (HallManager role only)
+        /// </summary>
+        /// <param name="bookingId">Booking ID</param>
+        /// <param name="approved">Approval status</param>
+        /// <returns>Updated booking details</returns>
+        [Authorize(Roles = "HallManager")]
+        [HttpPost("{bookingId:int}/hall-approval")]
+        public async Task<ActionResult<ApiResponse<BookingDto>>> ApproveBookingByHall(int bookingId, [FromBody] bool approved)
+        {
+            try
+            {
+                if (bookingId <= 0)
+                {
+                    return Error<BookingDto>("Invalid booking ID", 400);
+                }
+
+                var booking = await _bookingService.GetBookingByIdAsync(bookingId);
+                if (booking == null)
+                {
+                    return Error<BookingDto>("Booking not found", 404);
+                }
+
+                if (approved)
+                {
+                    // Hall approves booking
+                    booking.Status = "HallApproved";
+                    booking.IsBookingConfirmed = false; // Still need vendor approvals
+                    
+                    // Notify customer
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _notificationService.CreateNotificationAsync(
+                                booking.CustomerId,
+                                "Hall Approved Your Booking",
+                                $"Great news! The hall has approved your booking for {booking.BookingDate:yyyy-MM-dd}. Vendors will now process their approvals.",
+                                "Booking"
+                            );
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Notification error: {ex.Message}");
+                        }
+                    });
+                }
+                else
+                {
+                    // Hall rejects booking - provide alternatives
+                    booking.Status = "HallRejected";
+                    booking.IsBookingConfirmed = false;
+                    
+                    // Notify customer with alternatives option
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _notificationService.CreateNotificationAsync(
+                                booking.CustomerId,
+                                "Hall Rejected - Alternatives Available",
+                                $"The hall has rejected your booking for {booking.BookingDate:yyyy-MM-dd}. We found alternative halls available for the same date. Please check your booking options.",
+                                "Booking"
+                            );
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Notification error: {ex.Message}");
+                        }
+                    });
+                }
+
+                var updatedBooking = await _bookingService.UpdateBookingAsync(booking);
+                var bookingDto = _mapper.Map<BookingDto>(updatedBooking);
+
+                string message = approved ? "Booking approved by hall" : "Booking rejected by hall";
+                return Success(bookingDto, message);
+            }
+            catch (Exception ex)
+            {
+                return Error<BookingDto>($"Failed to process hall approval: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Approve booking by vendor (VendorManager role only)
+        /// </summary>
+        /// <param name="bookingId">Booking ID</param>
+        /// <param name="vendorId">Vendor ID</param>
+        /// <param name="approved">Approval status</param>
+        /// <returns>Updated booking details</returns>
+        [Authorize(Roles = "VendorManager")]
+        [HttpPost("{bookingId:int}/vendor-approval/{vendorId:int}")]
+        public async Task<ActionResult<ApiResponse<BookingDto>>> ApproveBookingByVendor(int bookingId, int vendorId, [FromBody] bool approved)
+        {
+            try
+            {
+                if (bookingId <= 0 || vendorId <= 0)
+                {
+                    return Error<BookingDto>("Invalid booking or vendor ID", 400);
+                }
+
+                var booking = await _bookingService.GetBookingByIdAsync(bookingId);
+                if (booking == null)
+                {
+                    return Error<BookingDto>("Booking not found", 404);
+                }
+
+                if (booking.Status != "HallApproved")
+                {
+                    return Error<BookingDto>("Booking must be approved by hall first", 400);
+                }
+
+                // Find the vendor booking (now there's only 1 per vendor)
+                var vendorBooking = booking.VendorBookings.FirstOrDefault(vb => vb.VendorId == vendorId);
+                if (vendorBooking == null)
+                {
+                    return Error<BookingDto>("Vendor not associated with this booking", 400);
+                }
+
+                // Update vendor booking status (affects all their services)
+                if (approved)
+                {
+                    vendorBooking.Status = "Approved";
+                    vendorBooking.ApprovedAt = DateTime.UtcNow;
+                    vendorBooking.RejectedAt = null;
+                }
+                else
+                {
+                    vendorBooking.Status = "Rejected";
+                    vendorBooking.RejectedAt = DateTime.UtcNow;
+                    vendorBooking.ApprovedAt = null;
+                }
+
+                // Check overall vendor approval status
+                var allVendorBookings = booking.VendorBookings.ToList();
+                var pendingVendors = allVendorBookings.Where(vb => vb.Status == "Pending").ToList();
+                var approvedVendors = allVendorBookings.Where(vb => vb.Status == "Approved").ToList();
+                var rejectedVendors = allVendorBookings.Where(vb => vb.Status == "Rejected").ToList();
+
+                string notificationTitle;
+                string notificationMessage;
+
+                if (pendingVendors.Any())
+                {
+                    // Still waiting for other vendors
+                    booking.Status = "VendorApprovalInProgress";
+                    booking.IsBookingConfirmed = false;
+                    
+                    var totalVendors = allVendorBookings.Count;
+                    var respondedVendors = allVendorBookings.Count(vb => vb.Status != "Pending");
+                    
+                    notificationTitle = "Vendor Response Received";
+                    notificationMessage = $"A vendor has {(approved ? "approved" : "rejected")} your booking. " +
+                                        $"Progress: {respondedVendors}/{totalVendors} vendors responded.";
+                }
+                else if (rejectedVendors.Any())
+                {
+                    // Some or all vendors rejected
+                    booking.Status = "VendorRejected";
+                    booking.IsBookingConfirmed = false;
+                    
+                    var rejectedVendorNames = rejectedVendors.Select(vb => vb.Vendor.Name).ToList();
+                    
+                    notificationTitle = "Vendor Rejected - Alternatives Available";
+                    notificationMessage = $"Some vendors have rejected your booking for {booking.BookingDate:yyyy-MM-dd}. " +
+                                        $"Rejected: {string.Join(", ", rejectedVendorNames)}. Please select alternatives.";
+                }
+                else
+                {
+                    // All vendors approved
+                    booking.Status = "Confirmed";
+                    booking.IsBookingConfirmed = true;
+                    
+                    notificationTitle = "Booking Fully Confirmed!";
+                    notificationMessage = $"Excellent! All vendors have approved your booking for {booking.BookingDate:yyyy-MM-dd}. " +
+                                        "Your event is fully confirmed and ready for payment.";
+                }
+
+                // Send notification
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _notificationService.CreateNotificationAsync(
+                            booking.CustomerId,
+                            notificationTitle,
+                            notificationMessage,
+                            "Booking"
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Notification error: {ex.Message}");
+                    }
+                });
+
+                var updatedBooking = await _bookingService.UpdateBookingAsync(booking);
+                var bookingDto = _mapper.Map<BookingDto>(updatedBooking);
+                
+                string message = approved ? "Booking approved by vendor" : "Booking rejected by vendor";
+                return Success(bookingDto, message);
+            }
+            catch (Exception ex)
+            {
+                return Error<BookingDto>($"Failed to process vendor approval: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Replace hall in rejected booking (Customer only)
+        /// </summary>
+        /// <param name="bookingId">Original booking ID</param>
+        /// <param name="newHallId">New hall ID to replace rejected hall</param>
+        /// <returns>Updated booking details</returns>
+        [Authorize(Roles = "Customer")]
+        [HttpPost("{bookingId:int}/replace-hall/{newHallId:int}")]
+        public async Task<ActionResult<ApiResponse<BookingDto>>> ReplaceHallInBooking(int bookingId, int newHallId)
+        {
+            try
+            {
+                if (bookingId <= 0 || newHallId <= 0)
+                {
+                    return Error<BookingDto>("Invalid booking or hall ID", 400);
+                }
+
+                var booking = await _bookingService.GetBookingByIdAsync(bookingId);
+                if (booking == null)
+                {
+                    return Error<BookingDto>("Booking not found", 404);
+                }
+
+                // Verify the booking belongs to the customer
+                if (booking.CustomerId != UserId)
+                {
+                    return Error<BookingDto>("You can only modify your own bookings", 403);
+                }
+
+                // Only allow replacement if hall was rejected
+                if (booking.Status != "HallRejected")
+                {
+                    return Error<BookingDto>("Hall can only be replaced if it was rejected", 400);
+                }
+
+                // Update booking with new hall and reset to pending
+                booking.HallId = newHallId;
+                booking.Status = "Pending";
+                booking.IsBookingConfirmed = false;
+
+                // Recalculate cost for new hall
+                var eventStart = booking.BookingDate;
+                var eventEnd = booking.BookingDate.AddHours(4); // Default 4-hour event
+                var newCost = await _bookingService.CalculateBookingCostAsync(newHallId, eventStart, eventEnd);
+                booking.TotalPrice = (double)newCost;
+
+                var updatedBooking = await _bookingService.UpdateBookingAsync(booking);
+                
+                // Notify customer
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _notificationService.CreateNotificationAsync(
+                            booking.CustomerId,
+                            "Hall Replacement Successful",
+                            $"Your booking has been updated with a new hall. Your booking is now pending hall approval again. Booking ID: {booking.Id}",
+                            "Booking"
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Notification error: {ex.Message}");
+                    }
+                });
+
+                var bookingDto = _mapper.Map<BookingDto>(updatedBooking);
+                return Success(bookingDto, "Hall replaced successfully - booking is now pending approval");
+            }
+            catch (Exception ex)
+            {
+                return Error<BookingDto>($"Failed to replace hall: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Replace vendor service in rejected booking (Customer only)
+        /// </summary>
+        /// <param name="bookingId">Original booking ID</param>
+        /// <param name="replacementDto">Vendor replacement data containing rejected and new vendor info</param>
+        /// <returns>Updated booking details</returns>
+        [Authorize(Roles = "Customer")]
+        [HttpPost("{bookingId:int}/replace-vendor")]
+        public async Task<ActionResult<ApiResponse<BookingDto>>> ReplaceVendorInBooking(
+            int bookingId, 
+            [FromBody] VendorReplacementDto replacementDto)
+        {
+            try
+            {
+                if (bookingId <= 0)
+                {
+                    return Error<BookingDto>("Invalid booking ID", 400);
+                }
+
+                var booking = await _bookingService.GetBookingByIdAsync(bookingId);
+                if (booking == null)
+                {
+                    return Error<BookingDto>("Booking not found", 404);
+                }
+
+                // Verify the booking belongs to the customer
+                if (booking.CustomerId != UserId)
+                {
+                    return Error<BookingDto>("You can only modify your own bookings", 403);
+                }
+
+                // Only allow replacement if vendor was rejected
+                if (booking.Status != "VendorRejected")
+                {
+                    return Error<BookingDto>("Vendor can only be replaced if one was rejected", 400);
+                }
+
+                // TODO: Update booking package with new vendor services
+                // This would require extending the booking model to track individual vendor services
+                
+                // Reset booking status to hall approved (since hall already approved)
+                booking.Status = "HallApproved";
+                booking.IsBookingConfirmed = false;
+
+                var updatedBooking = await _bookingService.UpdateBookingAsync(booking);
+                
+                // Notify customer
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _notificationService.CreateNotificationAsync(
+                            booking.CustomerId,
+                            "Vendor Replacement Successful",
+                            $"Your booking has been updated with a new vendor. The vendor approval process will begin again. Booking ID: {booking.Id}",
+                            "Booking"
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Notification error: {ex.Message}");
+                    }
+                });
+
+                var bookingDto = _mapper.Map<BookingDto>(updatedBooking);
+                return Success(bookingDto, "Vendor replaced successfully - awaiting new vendor approval");
+            }
+            catch (Exception ex)
+            {
+                return Error<BookingDto>($"Failed to replace vendor: {ex.Message}", 500);
+            }
         }
 
         /// <summary>
@@ -66,10 +664,11 @@ namespace HallApp.Web.Controllers.Booking
                 {
                     try
                     {
-                        await _notificationService.CreateAndSendNotificationAsync(
+                        await _notificationService.CreateNotificationAsync(
                             booking.CustomerId,
                             "Booking Created",
-                            $"Your booking for Hall ID {booking.HallId} has been successfully created. Booking ID: {booking.Id}"
+                            $"Your booking for Hall ID {booking.HallId} has been successfully created. Booking ID: {booking.Id}",
+                            "Booking"
                         );
                     }
                     catch (Exception ex)
@@ -219,10 +818,11 @@ namespace HallApp.Web.Controllers.Booking
                     {
                         try
                         {
-                            await _notificationService.CreateAndSendNotificationAsync(
+                            await _notificationService.CreateNotificationAsync(
                                 updatedBooking.CustomerId,
                                 "Booking Updated",
-                                $"Your booking for Hall ID {updatedBooking.HallId} has been updated. Status: {updatedBooking.Status}"
+                                $"Your booking for Hall ID {updatedBooking.HallId} has been updated. Status: {updatedBooking.Status}",
+                                "Booking"
                             );
                         }
                         catch (Exception ex)
@@ -277,10 +877,11 @@ namespace HallApp.Web.Controllers.Booking
                         var booking = await _bookingService.GetBookingByIdAsync(id);
                         if (booking != null)
                         {
-                            await _notificationService.CreateAndSendNotificationAsync(
+                            await _notificationService.CreateNotificationAsync(
                                 booking.CustomerId,
                                 "Booking Cancelled",
-                                $"Your booking for Hall ID {booking.HallId} has been cancelled. Booking ID: {id}"
+                                $"Your booking for Hall ID {booking.HallId} has been cancelled. Booking ID: {id}",
+                                "Booking"
                             );
                         }
                     }
@@ -357,5 +958,124 @@ namespace HallApp.Web.Controllers.Booking
                 return Error<HallAvailabilityDto>($"Failed to check hall availability: {ex.Message}", 500);
             }
         }
+
+        /// <summary>
+        /// Calculate comprehensive booking pricing (Customer only)
+        /// </summary>
+        /// <param name="pricingRequest">Pricing calculation request with all parameters</param>
+        /// <returns>Detailed pricing breakdown</returns>
+        [Authorize(Roles = "Customer")]
+        [HttpPost("calculate-pricing")]
+        public async Task<ActionResult<ApiResponse<object>>> CalculateBookingPricing([FromBody] BookingPricingRequestDto pricingRequest)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                    return Error<object>($"Invalid pricing request: {errors}", 400);
+                }
+
+                // Calculate hall cost using existing booking service logic
+                var eventDate = pricingRequest.EventDate;
+                var eventEndDate = eventDate.AddHours(4); // Default 4-hour event
+                var hallCost = await _bookingService.CalculateBookingCostAsync(
+                    pricingRequest.HallId, 
+                    eventDate, 
+                    eventEndDate
+                );
+                
+                var isWeekend = eventDate.DayOfWeek == DayOfWeek.Friday || eventDate.DayOfWeek == DayOfWeek.Saturday;
+                string genderType = pricingRequest.SelectedGender?.ToLower() ?? "mixed";
+
+                // Calculate vendor services cost
+                decimal vendorServicesCost = 0;
+                var vendorBreakdown = new List<object>();
+                
+                if (pricingRequest.SelectedServices?.Any() == true)
+                {
+                    var servicesByVendor = pricingRequest.SelectedServices.GroupBy(s => s.VendorId);
+                    
+                    foreach (var vendorGroup in servicesByVendor)
+                    {
+                        var vendorId = vendorGroup.Key;
+                        var services = vendorGroup.ToList();
+                        decimal vendorTotal = 0;
+                        var serviceDetails = new List<object>();
+                        
+                        foreach (var service in services)
+                        {
+                            var serviceItem = await _serviceItemService.GetServiceItemByIdAsync(service.ServiceItemId);
+                            if (serviceItem != null)
+                            {
+                                decimal servicePrice = serviceItem.Price;
+                                decimal serviceTotalPrice = servicePrice * service.Quantity;
+                                vendorTotal += serviceTotalPrice;
+                                vendorServicesCost += serviceTotalPrice;
+                                
+                                serviceDetails.Add(new
+                                {
+                                    serviceItemId = service.ServiceItemId,
+                                    serviceName = serviceItem.Name,
+                                    unitPrice = servicePrice,
+                                    quantity = service.Quantity,
+                                    totalPrice = serviceTotalPrice
+                                });
+                            }
+                        }
+                        
+                        // Get vendor name from service if available
+                        var vendorName = $"Vendor {vendorId}"; // Fallback name
+                        
+                        vendorBreakdown.Add(new
+                        {
+                            vendorId = vendorId,
+                            vendorName = vendorName,
+                            services = serviceDetails,
+                            vendorTotal = vendorTotal
+                        });
+                    }
+                }
+
+                // Calculate tax (15% VAT)
+                decimal subtotal = hallCost + vendorServicesCost;
+                decimal taxRate = 0.15m;
+                decimal taxAmount = subtotal * taxRate;
+                decimal totalAmount = subtotal + taxAmount;
+
+                var pricingBreakdown = new
+                {
+                    hallCost = new
+                    {
+                        amount = hallCost,
+                        genderType = genderType,
+                        isWeekend = isWeekend,
+                        dayType = isWeekend ? "Weekend" : "Weekday"
+                    },
+                    vendorServices = new
+                    {
+                        totalAmount = vendorServicesCost,
+                        vendors = vendorBreakdown
+                    },
+                    subtotal = subtotal,
+                    tax = new
+                    {
+                        rate = taxRate,
+                        amount = taxAmount
+                    },
+                    totalAmount = totalAmount,
+                    calculatedAt = DateTime.UtcNow
+                };
+
+                Console.WriteLine($"🧮 Pricing Calculation - Hall: {hallCost}, Services: {vendorServicesCost}, Tax: {taxAmount}, Total: {totalAmount}");
+
+                return Success((object)pricingBreakdown, "Pricing calculated successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<object>($"Failed to calculate pricing: {ex.Message}", 500);
+            }
+        }
+
     }
 }

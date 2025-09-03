@@ -22,9 +22,9 @@ public interface IVendorRepository : IGenericRepository<Vendor>
     Task<bool> DeleteVendorAsync(int id);
 
     // Validation
-    Task<bool> IsNameUniqueAsync(string name, int? excludeId = null);
-    Task<bool> IsEmailUniqueAsync(string email, int? excludeId = null);
-    Task<bool> IsPhoneUniqueAsync(string phone, int? excludeId = null);
+    Task<bool> IsNameUniqueAsync(string name, int excludeId = 0);
+    Task<bool> IsEmailUniqueAsync(string email, int excludeId = 0);
+    Task<bool> IsPhoneUniqueAsync(string phone, int excludeId = 0);
 
     // Vendor Type Operations
     Task<List<VendorType>> GetVendorTypesAsync();

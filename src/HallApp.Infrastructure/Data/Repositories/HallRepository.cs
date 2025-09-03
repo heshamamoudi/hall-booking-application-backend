@@ -86,15 +86,15 @@ public class HallRepository : GenericRepository<Hall>, IHallRepository
             .ToListAsync();
     }
 
-    public async Task<bool> IsHallNameUniqueAsync(string name, int? excludeId = null)
+    public async Task<bool> IsHallNameUniqueAsync(string name, int excludeId = 0)
     {
         if (string.IsNullOrEmpty(name))
             return false;
 
         var query = _context.Halls.AsQueryable();
 
-        if (excludeId.HasValue)
-            query = query.Where(h => h.ID != excludeId.Value);
+        if (excludeId != 0)
+            query = query.Where(h => h.ID != excludeId);
 
         return !await query.AnyAsync(h => h.Name.ToLower() == name.ToLower());
     }

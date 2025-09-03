@@ -1,4 +1,3 @@
-#nullable enable
 using HallApp.Core.Entities.NotificationEntities;
 using HallApp.Core.Interfaces.IRepositories;
 using Microsoft.EntityFrameworkCore;
@@ -14,13 +13,12 @@ namespace HallApp.Infrastructure.Data.Repositories
             _context = context;
         }
 
-        public Task CreateNotificationAsync(Notification notification)
+        public async Task AddAsync(Notification notification)
         {
-            _context.Notifications.Add(notification);
-            return Task.CompletedTask;
+            await _context.Notifications.AddAsync(notification);
         }
 
-        public async Task<List<Notification>> GetNotificationsByUserIdAsync(int appUserId)
+        public async Task<List<Notification>> GetByUserIdAsync(int appUserId)
         {
             return await _context.Notifications
                 .Where(n => n.AppUserId == appUserId)
@@ -28,9 +26,10 @@ namespace HallApp.Infrastructure.Data.Repositories
                 .ToListAsync();
         }
 
-        public async Task<Notification?> GetNotificationByIdAsync(int notificationId)
+        public async Task<Notification> GetByIdAsync(int notificationId)
         {
-            return await _context.Notifications.FindAsync(notificationId);
+            var notification = await _context.Notifications.FindAsync(notificationId);
+            return notification ?? throw new InvalidOperationException($"Notification with ID {notificationId} not found");
         }
 
         public async Task MarkAsReadAsync(int notificationId)
@@ -56,13 +55,22 @@ namespace HallApp.Infrastructure.Data.Repositories
             }
         }
 
-        public Task DeleteNotificationAsync(Notification notification)
+        public async Task<int> GetUnreadCountAsync(int appUserId)
         {
-            _context.Notifications.Remove(notification);
-            return Task.CompletedTask;
+            return await _context.Notifications
+                .CountAsync(n => n.AppUserId == appUserId && !n.IsRead);
         }
 
-        public async Task DeleteNotificationsByUserAsync(int appUserId)
+        public async Task DeleteAsync(int notificationId)
+        {
+            var notification = await _context.Notifications.FindAsync(notificationId);
+            if (notification != null)
+            {
+                _context.Notifications.Remove(notification);
+            }
+        }
+
+        public async Task DeleteAllByUserAsync(int appUserId)
         {
             var notifications = await _context.Notifications
                 .Where(n => n.AppUserId == appUserId)

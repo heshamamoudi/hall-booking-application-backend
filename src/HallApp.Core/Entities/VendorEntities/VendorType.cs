@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HallApp.Core.Entities.VendorEntities;
 
-#nullable enable
 public class VendorType
 {
     public int Id { get; set; }
@@ -12,7 +11,7 @@ public class VendorType
     public string Name { get; set; } = string.Empty;
 
     [StringLength(500)]
-    public string? Description { get; set; }
+    public string Description { get; set; } = string.Empty;
 
     public bool RequiresHallBooking { get; set; }
     public bool AllowsMultipleBookings { get; set; }
@@ -25,4 +24,3 @@ public class VendorType
     // Navigation properties
     public List<Vendor> Vendors { get; set; } = new();
 }
-#nullable restore

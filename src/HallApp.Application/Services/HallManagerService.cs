@@ -28,10 +28,10 @@ public class HallManagerService : IHallManagerService
         return hallManager;
     }
 
-    public async Task<HallManager?> UpdateHallManagerAsync(HallManager hallManager)
+    public async Task<HallManager> UpdateHallManagerAsync(HallManager hallManager)
     {
         var existingHallManager = await _unitOfWork.HallManagerRepository.GetByIdAsync(hallManager.Id);
-        if (existingHallManager == null) return null;
+        if (existingHallManager == null) return new HallManager();
 
         // Update business domain properties
         existingHallManager.CompanyName = hallManager.CompanyName;
@@ -57,15 +57,15 @@ public class HallManagerService : IHallManagerService
         return true;
     }
 
-    public async Task<HallManager?> GetHallManagerByIdAsync(int hallManagerId)
+    public async Task<HallManager> GetHallManagerByIdAsync(int hallManagerId)
     {
         return await _unitOfWork.HallManagerRepository.GetByIdAsync(hallManagerId);
     }
 
-    public async Task<HallManager?> GetHallManagerByAppUserIdAsync(int appUserId)
+    public async Task<HallManager> GetHallManagerByAppUserIdAsync(int appUserId)
     {
         var allHallManagers = await _unitOfWork.HallManagerRepository.GetAllAsync();
-        return allHallManagers.FirstOrDefault(hm => hm.AppUserId == appUserId);
+        return allHallManagers.FirstOrDefault(hm => hm.AppUserId == appUserId) ?? new HallManager();
     }
 
     public async Task<List<HallManager>> GetAllHallManagersAsync()
@@ -114,7 +114,7 @@ public class HallManagerService : IHallManagerService
     }
 
     // Validation methods
-    public async Task<bool> IsCommercialRegistrationUniqueAsync(string registrationNumber, int? excludeId = null)
+    public async Task<bool> IsCommercialRegistrationUniqueAsync(string registrationNumber, int excludeId = 0)
     {
         if (string.IsNullOrEmpty(registrationNumber))
             return false;
@@ -122,10 +122,10 @@ public class HallManagerService : IHallManagerService
         var allHallManagers = await _unitOfWork.HallManagerRepository.GetAllAsync();
         return !allHallManagers.Any(hm => 
             hm.CommercialRegistrationNumber == registrationNumber && 
-            (excludeId == null || hm.Id != excludeId));
+            (excludeId == 0 || hm.Id != excludeId));
     }
 
-    public async Task<bool> IsCompanyNameUniqueAsync(string companyName, int? excludeId = null)
+    public async Task<bool> IsCompanyNameUniqueAsync(string companyName, int excludeId = 0)
     {
         if (string.IsNullOrEmpty(companyName))
             return false;
@@ -133,7 +133,7 @@ public class HallManagerService : IHallManagerService
         var allHallManagers = await _unitOfWork.HallManagerRepository.GetAllAsync();
         return !allHallManagers.Any(hm => 
             hm.CompanyName == companyName && 
-            (excludeId == null || hm.Id != excludeId));
+            (excludeId == 0 || hm.Id != excludeId));
     }
 
     // Business relationships

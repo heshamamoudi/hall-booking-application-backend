@@ -16,7 +16,7 @@ public class ServiceItemSeed
     public decimal Price { get; set; }
     public int VendorId { get; set; }
     public int VendorTypeId { get; set; }
-    public string? ImageUrl { get; set; }
+    public string ImageUrl { get; set; } = string.Empty;
     public bool IsAvailable { get; set; }
     public int SortOrder { get; set; }
 }

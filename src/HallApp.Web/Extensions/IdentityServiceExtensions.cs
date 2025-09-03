@@ -101,13 +101,22 @@ namespace HallApp.Web.Extensions
                 {
                     OnMessageReceived = context =>
                     {
-                        var accessToken = context.Request.Query["access_token"];
                         var path = context.HttpContext.Request.Path;
 
                         // Check if the request is for the SignalR hub
-                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/notificationsHub"))
+                        if (path.StartsWithSegments("/notificationsHub"))
                         {
-                            context.Token = accessToken;
+                            // Get token from query parameter (access_token)
+                            var accessToken = context.Request.Query["access_token"].FirstOrDefault();
+                            if (!string.IsNullOrEmpty(accessToken))
+                            {
+                                context.Token = accessToken;
+                                Console.WriteLine($"🔗 SignalR: Token received via query parameter (length: {accessToken.Length})");
+                            }
+                            else
+                            {
+                                Console.WriteLine("⚠️ SignalR: No access_token found in query parameters");
+                            }
                         }
                         return Task.CompletedTask;
                     }

@@ -1,4 +1,5 @@
 using HallApp.Core.Entities.VendorEntities;
+using HallApp.Core.Entities.ChamperEntities;
 
 namespace HallApp.Core.Entities.BookingEntities;
 
@@ -33,6 +34,7 @@ public class Booking
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     
-    // Navigation property for vendor bookings
+    // Navigation properties
+    public Hall Hall { get; set; }
     public List<VendorBooking> VendorBookings { get; set; } = new();
 }

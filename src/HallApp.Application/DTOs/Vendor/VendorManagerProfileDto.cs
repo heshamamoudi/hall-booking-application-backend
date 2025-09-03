@@ -15,15 +15,15 @@ public class VendorManagerProfileDto
     public bool EmailConfirmed { get; set; }
     public bool Active { get; set; }
     public DateTime UserCreated { get; set; }
-    public DateTime? UserUpdated { get; set; }
+    public DateTime UserUpdated { get; set; }
 
     // From VendorManager (business domain data)
     public int VendorManagerId { get; set; }
-    public string? CommercialRegistrationNumber { get; set; }
-    public string? VatNumber { get; set; }
+    public string CommercialRegistrationNumber { get; set; } = string.Empty;
+    public string VatNumber { get; set; } = string.Empty;
     public bool IsApproved { get; set; }
     public DateTime VendorManagerCreated { get; set; }
-    public DateTime? ApprovedAt { get; set; }
+    public DateTime ApprovedAt { get; set; }
 
     // Additional profile data
     public int TotalVendors { get; set; }

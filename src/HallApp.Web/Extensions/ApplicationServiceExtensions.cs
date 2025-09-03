@@ -11,8 +11,7 @@ public static class ApplicationServiceExtensions
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration config)
     {
-        // Add SignalR service registration
-        services.AddSignalR();
+        // SignalR is registered in Program.cs - removed duplicate registration
         
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         
@@ -39,6 +38,9 @@ public static class ApplicationServiceExtensions
             services.AddScoped<IAddressService, AddressService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IVendorManagerService, VendorManagerService>();
+            services.AddScoped<IBookingService, BookingService>();
+            services.AddScoped<IServiceItemService, ServiceItemService>();
+            services.AddScoped<INotificationService, NotificationService>();
         }
         catch (Exception ex)
         {

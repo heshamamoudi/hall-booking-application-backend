@@ -269,7 +269,7 @@ public class AutoMapperProfiles : Profile
                     EmailConfirmed = src.EmailConfirmed,
                     Active = src.Active,
                     Created = src.UserCreated,
-                    Updated = src.UserUpdated ?? DateTime.UtcNow
+                    Updated = src.UserUpdated
                 };
                 
                 var vendorManager = new VendorManager
@@ -410,5 +410,157 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.AverageRating, opt => opt.Ignore())
             .ForMember(dest => dest.Active, opt => opt.Ignore())
             .ForMember(dest => dest.Created, opt => opt.Ignore());
+
+        // Booking mappings - Enhanced with comprehensive customer information
+        CreateMap<HallApp.Core.Entities.BookingEntities.Booking, HallApp.Application.DTOs.Booking.BookingDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.HallId, opt => opt.MapFrom(src => src.HallId))
+            .ForMember(dest => dest.CustomerId, opt => opt.MapFrom(src => src.CustomerId))
+            .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => src.PaymentMethod ?? ""))
+            .ForMember(dest => dest.Coupon, opt => opt.MapFrom(src => src.Coupon ?? ""))
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
+            .ForMember(dest => dest.Tax, opt => opt.MapFrom(src => src.Tax))
+            .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
+            .ForMember(dest => dest.Comments, opt => opt.MapFrom(src => src.Comments ?? ""))
+            .ForMember(dest => dest.Discount, opt => opt.MapFrom(src => src.Discount))
+            .ForMember(dest => dest.VisitDate, opt => opt.MapFrom(src => src.VisitDate))
+            .ForMember(dest => dest.IsVisitCompleted, opt => opt.MapFrom(src => src.IsVisitCompleted))
+            .ForMember(dest => dest.IsBookingConfirmed, opt => opt.MapFrom(src => src.IsBookingConfirmed))
+            .ForMember(dest => dest.BookingDate, opt => opt.MapFrom(src => src.BookingDate))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.Updated))
+            .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => src.PaymentStatus ?? "Pending"))
+            // Enhanced customer information
+            .ForMember(dest => dest.EventDate, opt => opt.MapFrom(src => src.EventDate))
+            .ForMember(dest => dest.StartTime, opt => opt.MapFrom(src => src.StartTime))
+            .ForMember(dest => dest.EndTime, opt => opt.MapFrom(src => src.EndTime))
+            .ForMember(dest => dest.EventType, opt => opt.MapFrom(src => src.EventType ?? ""))
+            .ForMember(dest => dest.GuestCount, opt => opt.MapFrom(src => src.GuestCount))
+            .ForMember(dest => dest.VendorServices, opt => opt.MapFrom(src => src.VendorBookings))
+            .ForMember(dest => dest.FinancialSummary, opt => opt.MapFrom(src => CalculateFinancialSummary(src)))
+            // Map hall information when available
+            .ForMember(dest => dest.Hall, opt => opt.MapFrom(src => src.Hall))
+            .ForMember(dest => dest.HallInfo, opt => opt.MapFrom(src => new HallApp.Application.DTOs.Booking.HallInfo 
+            { 
+                Id = src.Hall != null ? src.Hall.ID : src.HallId,
+                Name = src.Hall != null ? src.Hall.Name : $"Hall #{src.HallId}",
+                Location = src.Hall != null && src.Hall.Location != null ? src.Hall.Location.Address : null
+            }))
+            .ForMember(dest => dest.Customer, opt => opt.Ignore())
+            .ForMember(dest => dest.PackageDetails, opt => opt.Ignore());
+
+        // Hall to HallBookingDto mapping
+        CreateMap<HallApp.Core.Entities.ChamperEntities.Hall, HallApp.Application.DTOs.Champer.Hall.HallBookingDto>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.Managers, opt => opt.Ignore());
+
+        CreateMap<HallApp.Application.DTOs.Booking.BookingDto, HallApp.Core.Entities.BookingEntities.Booking>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.HallId, opt => opt.MapFrom(src => src.HallId))
+            .ForMember(dest => dest.CustomerId, opt => opt.MapFrom(src => src.CustomerId))
+            .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => src.PaymentMethod))
+            .ForMember(dest => dest.Coupon, opt => opt.MapFrom(src => src.Coupon))
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
+            .ForMember(dest => dest.Tax, opt => opt.MapFrom(src => src.Tax))
+            .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
+            .ForMember(dest => dest.Comments, opt => opt.MapFrom(src => src.Comments))
+            .ForMember(dest => dest.Discount, opt => opt.MapFrom(src => src.Discount))
+            .ForMember(dest => dest.IsVisitCompleted, opt => opt.MapFrom(src => src.IsVisitCompleted))
+            .ForMember(dest => dest.IsBookingConfirmed, opt => opt.MapFrom(src => src.IsBookingConfirmed))
+            .ForMember(dest => dest.BookingDate, opt => opt.MapFrom(src => src.BookingDate))
+            .ForMember(dest => dest.VisitDate, opt => opt.MapFrom(src => src.VisitDate))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
+            .ForMember(dest => dest.VendorBookings, opt => opt.Ignore())
+            .ForMember(dest => dest.PackageDetails, opt => opt.Ignore())
+            .ForMember(dest => dest.EventDate, opt => opt.Ignore())
+            .ForMember(dest => dest.StartTime, opt => opt.Ignore())
+            .ForMember(dest => dest.EndTime, opt => opt.Ignore())
+            .ForMember(dest => dest.EventType, opt => opt.Ignore())
+            .ForMember(dest => dest.GuestCount, opt => opt.Ignore())
+            .ForMember(dest => dest.TotalAmount, opt => opt.Ignore())
+            .ForMember(dest => dest.PaymentStatus, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
+
+        // VendorBooking to VendorBookingDto mapping for comprehensive booking details
+        CreateMap<HallApp.Core.Entities.VendorEntities.VendorBooking, HallApp.Application.DTOs.Vendors.VendorBookingDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.VendorId, opt => opt.MapFrom(src => src.VendorId))
+            .ForMember(dest => dest.BookingId, opt => opt.MapFrom(src => src.BookingId))
+            .ForMember(dest => dest.VendorName, opt => opt.MapFrom(src => src.Vendor != null ? src.Vendor.Name : $"Vendor {src.VendorId}"))
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
+            .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount))
+            .ForMember(dest => dest.StartTime, opt => opt.MapFrom(src => src.StartTime))
+            .ForMember(dest => dest.EndTime, opt => opt.MapFrom(src => src.EndTime))
+            .ForMember(dest => dest.ApprovedAt, opt => opt.MapFrom(src => src.ApprovedAt))
+            .ForMember(dest => dest.RejectedAt, opt => opt.MapFrom(src => src.RejectedAt))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+            .ForMember(dest => dest.BookingReference, opt => opt.Ignore())
+            .ForMember(dest => dest.Notes, opt => opt.Ignore())
+            .ForMember(dest => dest.IsPaid, opt => opt.Ignore())
+            .ForMember(dest => dest.PaidAt, opt => opt.Ignore())
+            .ForMember(dest => dest.PaymentMethod, opt => opt.Ignore())
+            .ForMember(dest => dest.PaymentStatus, opt => opt.Ignore())
+            .ForMember(dest => dest.CancellationReason, opt => opt.Ignore())
+            .ForMember(dest => dest.CancelledAt, opt => opt.Ignore());
+
+        // Notification mappings
+        CreateMap<HallApp.Core.Entities.NotificationEntities.Notification, HallApp.Application.DTOs.Notifications.NotificationResponseDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.AppUserId, opt => opt.MapFrom(src => src.AppUserId))
+            .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
+            .ForMember(dest => dest.Message, opt => opt.MapFrom(src => src.Message))
+            .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type ?? "General"))
+            .ForMember(dest => dest.IsRead, opt => opt.MapFrom(src => src.IsRead))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.ReadAt, opt => opt.MapFrom(src => src.ReadAt));
+
+        CreateMap<HallApp.Application.DTOs.Notifications.NotificationDto, HallApp.Core.Entities.NotificationEntities.Notification>()
+            .ForMember(dest => dest.AppUserId, opt => opt.MapFrom(src => src.AppUserId))
+            .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
+            .ForMember(dest => dest.Message, opt => opt.MapFrom(src => src.Message))
+            .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.IsRead, opt => opt.MapFrom(src => false))
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.ReadAt, opt => opt.Ignore());
+    }
+
+    // Helper method to calculate financial summary for BookingDto
+    private static HallApp.Application.DTOs.Booking.BookingFinancialSummary CalculateFinancialSummary(HallApp.Core.Entities.BookingEntities.Booking booking)
+    {
+        // Calculate hall cost from booking total price
+        var hallCost = booking.TotalPrice;
+        
+        // Calculate vendors cost from all vendor bookings
+        var vendorsCost = 0.0;
+        if (booking.VendorBookings?.Any() == true)
+        {
+            vendorsCost = (double)booking.VendorBookings.Sum(vb => vb.TotalAmount);
+        }
+        
+        // Calculate subtotal
+        var subTotal = hallCost + vendorsCost;
+        
+        // Apply discount and calculate tax (15% VAT)
+        var discount = booking.Discount;
+        var tax = subTotal * 0.15; // 15% VAT on subtotal
+        var totalAmount = subTotal - discount + tax;
+
+        return new HallApp.Application.DTOs.Booking.BookingFinancialSummary
+        {
+            HallCost = hallCost,
+            VendorsCost = vendorsCost,
+            SubTotal = subTotal,
+            Discount = discount,
+            Tax = tax,
+            TotalAmount = totalAmount,
+            Currency = "SAR"
+        };
     }
 }

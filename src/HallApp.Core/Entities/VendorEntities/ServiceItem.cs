@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace HallApp.Core.Entities.VendorEntities;
 
-#nullable enable
 public class ServiceItem
 {
     public int Id { get; set; }
@@ -24,7 +23,7 @@ public class ServiceItem
     [Column(TypeName = "decimal(18,2)")]
     public decimal? DiscountedPrice { get; set; }
 
-    public string? ImageUrl { get; set; }
+    public string ImageUrl { get; set; } = string.Empty;
     public bool IsAvailable { get; set; } = true;
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; }
@@ -38,4 +37,3 @@ public class ServiceItem
     public VendorType VendorType { get; set; } = null!;
     public ICollection<ServiceItemImage> Images { get; set; } = new List<ServiceItemImage>();
 }
-#nullable restore

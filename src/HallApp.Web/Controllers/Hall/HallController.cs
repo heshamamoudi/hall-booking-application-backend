@@ -166,5 +166,52 @@ namespace HallApp.Web.Controllers.Hall
                 return Error<IEnumerable<HallDto>>($"Failed to search halls: {ex.Message}", 500);
             }
         }
+
+        /// <summary>
+        /// Get alternative halls available for the same date when one is rejected
+        /// </summary>
+        /// <param name="eventDate">Event date</param>
+        /// <param name="startTime">Start time</param>
+        /// <param name="endTime">End time</param>
+        /// <param name="genderPreference">Gender preference (0=Male, 1=Female, 2=Both)</param>
+        /// <returns>List of available alternative halls</returns>
+        [AllowAnonymous]
+        [HttpGet("alternatives")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetAlternativeHalls(
+            [FromQuery] DateTime eventDate, 
+            [FromQuery] TimeSpan startTime, 
+            [FromQuery] TimeSpan endTime,
+            [FromQuery] int genderPreference = 2)
+        {
+            try
+            {
+                var startDateTime = eventDate.Add(startTime);
+                var endDateTime = eventDate.Add(endTime);
+                
+                var allHalls = await _hallService.GetAllHallsAsync();
+                var availableHalls = new List<HallApp.Core.Entities.ChamperEntities.Hall>();
+                
+                foreach (var hall in allHalls)
+                {
+                    // Check gender compatibility
+                    if (genderPreference != 2 && hall.Gender != genderPreference && hall.Gender != 2)
+                        continue;
+                        
+                    // Check availability
+                    var isAvailable = await _hallService.IsHallAvailableAsync(hall.ID, startDateTime, endDateTime);
+                    if (isAvailable)
+                    {
+                        availableHalls.Add(hall);
+                    }
+                }
+                
+                var hallDtos = _mapper.Map<List<HallDto>>(availableHalls);
+                return Success<IEnumerable<HallDto>>(hallDtos, $"Found {hallDtos.Count} alternative halls for {eventDate:yyyy-MM-dd}");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<HallDto>>($"Failed to get alternative halls: {ex.Message}", 500);
+            }
+        }
     }
 }

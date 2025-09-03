@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HallApp.Core.Entities.VendorEntities;
 
-#nullable enable
 public class VendorBusinessHour
 {
     public int Id { get; set; }
@@ -15,8 +14,7 @@ public class VendorBusinessHour
     public bool IsOpen => !IsClosed;
 
     [StringLength(200)]
-    public string? SpecialNote { get; set; }
+    public string SpecialNote { get; set; } = string.Empty;
     
     public Vendor Vendor { get; set; } = null!;
 }
-#nullable restore

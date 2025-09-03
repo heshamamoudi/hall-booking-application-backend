@@ -1,4 +1,3 @@
-#nullable enable
 using HallApp.Core.Entities.VendorEntities;
 using HallApp.Core.Interfaces.IRepositories;
 using HallApp.Infrastructure.Data;
@@ -29,10 +28,10 @@ public class VendorAvailabilityRepository : IVendorAvailabilityRepository
         return await GetBusinessHoursByVendorAsync(vendorId);
     }
 
-    public async Task<VendorBusinessHour?> GetBusinessHourAsync(int vendorId, int dayOfWeek)
+    public async Task<VendorBusinessHour> GetBusinessHourAsync(int vendorId, int dayOfWeek)
     {
         return await _context.VendorBusinessHours
-            .FirstOrDefaultAsync(h => h.VendorId == vendorId && (int)h.DayOfWeek == dayOfWeek);
+            .FirstOrDefaultAsync(h => h.VendorId == vendorId && (int)h.DayOfWeek == dayOfWeek) ?? new VendorBusinessHour();
     }
 
     public async Task AddBusinessHourAsync(VendorBusinessHour businessHour)
@@ -89,16 +88,16 @@ public class VendorAvailabilityRepository : IVendorAvailabilityRepository
             .ToListAsync();
     }
 
-    public async Task<VendorBlockedDate?> GetBlockedDateAsync(int vendorId, DateTime date)
+    public async Task<VendorBlockedDate> GetBlockedDateAsync(int vendorId, DateTime date)
     {
         return await _context.VendorBlockedDates
-            .FirstOrDefaultAsync(bd => bd.VendorId == vendorId && bd.StartDate <= date && bd.EndDate >= date);
+            .FirstOrDefaultAsync(bd => bd.VendorId == vendorId && bd.StartDate <= date && bd.EndDate >= date) ?? new VendorBlockedDate();
     }
 
-    public async Task<VendorBlockedDate?> GetBlockedDateByIdAsync(int blockedDateId)
+    public async Task<VendorBlockedDate> GetBlockedDateByIdAsync(int blockedDateId)
     {
         return await _context.VendorBlockedDates
-            .FirstOrDefaultAsync(bd => bd.Id == blockedDateId);
+            .FirstOrDefaultAsync(bd => bd.Id == blockedDateId) ?? new VendorBlockedDate();
     }
 
     public async Task AddBlockedDateAsync(VendorBlockedDate blockedDate)

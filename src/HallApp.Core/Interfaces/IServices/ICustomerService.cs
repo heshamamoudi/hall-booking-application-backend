@@ -9,10 +9,10 @@ namespace HallApp.Core.Interfaces.IServices
     public interface ICustomerService
     {
         // Core CRUD operations
-        Task<Customer?> GetCustomerByIdAsync(int customerId);
-        Task<Customer?> GetCustomerByAppUserIdAsync(int appUserId);
-        Task<Customer?> CreateCustomerAsync(Customer customer);
-        Task<Customer?> UpdateCustomerAsync(Customer customer);
+        Task<Customer> GetCustomerByIdAsync(int customerId);
+        Task<Customer> GetCustomerByAppUserIdAsync(int appUserId);
+        Task<Customer> CreateCustomerAsync(Customer customer);
+        Task<Customer> UpdateCustomerAsync(Customer customer);
         Task<bool> DeleteCustomerAsync(int customerId);
         
         // Business operations
@@ -31,7 +31,7 @@ namespace HallApp.Core.Interfaces.IServices
         // Business relationships
         Task<IEnumerable<Customer>> GetCustomersWithBookingsAsync();
         Task<IEnumerable<Customer>> GetCustomersWithReviewsAsync();
-        Task<Customer?> GetCustomerWithRelationshipsAsync(int customerId);
+        Task<Customer> GetCustomerWithRelationshipsAsync(int customerId);
         
         // Business validation
         Task<bool> ValidateCustomerAsync(Customer customer);

@@ -160,10 +160,11 @@ namespace HallApp.Web.Controllers.Review
                 {
                     try
                     {
-                        await _notificationService.CreateAndSendNotificationAsync(
+                        await _notificationService.CreateNotificationAsync(
                             UserId,
                             "Review Created",
-                            $"Your review for Hall ID {reviewDto.HallId} has been submitted successfully. Thank you for your feedback!"
+                            $"Your review for Hall ID {reviewDto.HallId} has been submitted successfully. Thank you for your feedback!",
+                            "Review"
                         );
                     }
                     catch (Exception ex)
@@ -290,10 +291,11 @@ namespace HallApp.Web.Controllers.Review
                 {
                     try
                     {
-                        await _notificationService.CreateAndSendNotificationAsync(
+                        await _notificationService.CreateNotificationAsync(
                             (int)review.CustomerId,
                             "Review Deleted",
-                            $"Your review for Hall ID {review.HallId} has been deleted."
+                            $"Your review for Hall ID {review.HallId} has been deleted.",
+                            "Review"
                         );
                     }
                     catch (Exception ex)

@@ -11,12 +11,12 @@ public class HallManagerRepository : GenericRepository<HallManager>, IHallManage
     {
     }
 
-    public async Task<HallManager?> GetByUserIdAsync(string userId)
+    public async Task<HallManager> GetByUserIdAsync(string userId)
     {
         if (!int.TryParse(userId, out int userIdInt))
-            return null;
+            return new HallManager();
             
-        return await _context.HallManagers.FirstOrDefaultAsync(hm => hm.AppUserId == userIdInt);
+        return await _context.HallManagers.FirstOrDefaultAsync(hm => hm.AppUserId == userIdInt) ?? new HallManager();
     }
 
     public async Task<bool> CommercialRegistrationExistsAsync(string registrationNumber)

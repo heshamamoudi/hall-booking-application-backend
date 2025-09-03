@@ -10,21 +10,21 @@ public interface IVendorManagerService
 {
     // Core CRUD operations
     Task<VendorManager> CreateVendorManagerAsync(VendorManager vendorManager);
-    Task<VendorManager?> UpdateVendorManagerAsync(VendorManager vendorManager);
+    Task<VendorManager> UpdateVendorManagerAsync(VendorManager vendorManager);
     Task<bool> DeleteVendorManagerAsync(int vendorManagerId);
-    Task<VendorManager?> GetVendorManagerByIdAsync(int vendorManagerId);
-    Task<VendorManager?> GetVendorManagerByAppUserIdAsync(int appUserId);
+    Task<VendorManager> GetVendorManagerByIdAsync(int vendorManagerId);
+    Task<VendorManager> GetVendorManagerByAppUserIdAsync(int appUserId);
     Task<List<VendorManager>> GetAllVendorManagersAsync();
     
     // Business domain operations
     Task<bool> ApproveVendorManagerAsync(int vendorManagerId, bool isApproved);
     Task<List<VendorManager>> GetPendingApprovalVendorManagersAsync();
     Task<List<VendorManager>> GetApprovedVendorManagersAsync();
-    Task<bool> UpdateCommercialInfoAsync(int vendorManagerId, string? registrationNumber, string? vatNumber);
+    Task<bool> UpdateCommercialInfoAsync(int vendorManagerId, string registrationNumber, string vatNumber);
     
     // Validation methods
-    Task<bool> IsCommercialRegistrationUniqueAsync(string registrationNumber, int? excludeId = null);
-    Task<bool> IsVatNumberUniqueAsync(string vatNumber, int? excludeId = null);
+    Task<bool> IsCommercialRegistrationUniqueAsync(string registrationNumber, int excludeId = 0);
+    Task<bool> IsVatNumberUniqueAsync(string vatNumber, int excludeId = 0);
     
     // Business relationships
     Task<int> GetVendorManagerVendorCountAsync(int vendorManagerId);

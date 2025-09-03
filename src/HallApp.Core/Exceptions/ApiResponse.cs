@@ -3,14 +3,14 @@ namespace HallApp.Core.Exceptions;
 public class ApiResponse
 {
     public int StatusCode { get; set; }
-    public string Message { get; set; }
-    public object? Data { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public object Data { get; set; } = new();
 
-    public ApiResponse(int statusCode, string message = null, object? data = null)
+    public ApiResponse(int statusCode, string message = "", object data = null)
     {
         StatusCode = statusCode;
-        Message = message ?? GetDefaultMessageForStatusCode(statusCode);
-        Data = data;
+        Message = message.Length > 0 ? message : GetDefaultMessageForStatusCode(statusCode);
+        Data = data ?? new();
     }
 
     private string GetDefaultMessageForStatusCode(int statusCode)
@@ -22,7 +22,7 @@ public class ApiResponse
             403 => "Forbidden",
             404 => "Resource not found",
             500 => "Internal server error",
-            _ => null
+            _ => "Unknown error"
         };
     }
 }

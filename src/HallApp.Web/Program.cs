@@ -29,9 +29,12 @@ builder.Services.AddApiRateLimiting();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerDocumentation();
-builder.Services.AddSignalR();
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true;
+});
 
-// Configure CORS
+// Configure CORS for SignalR
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -39,7 +42,11 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin()
               .AllowAnyHeader()
               .AllowAnyMethod();
+        // Note: Cannot use AllowCredentials() with AllowAnyOrigin()
     });
+    
+    // Add SignalR-specific CORS policy
+   
 });
 // Debug environment variables for Railway deployment
 var env = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
@@ -77,11 +84,7 @@ if (!string.IsNullOrEmpty(port))
 {
     builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 }
-else
-{
-    // Fallback for local development
-    builder.WebHost.UseUrls("http://0.0.0.0:5000");
-}
+// Remove hardcoded fallback - let --urls parameter work
 
 var app = builder.Build();
 
@@ -95,11 +98,11 @@ app.ConfigureEndpoints();
 await app.Services.SetupDatabaseAsync();
 
 // Configure URLs
-//if (!app.Urls.Any())
-//{
-//    app.Urls.Add("http://localhost:5236");
-//    app.Urls.Add("http://0.0.0.0:5236");
-//}
+if (!app.Urls.Any())
+{
+    app.Urls.Add("http://localhost:5236");
+    app.Urls.Add("http://0.0.0.0:5236");
+}
 
 // Log startup information
 

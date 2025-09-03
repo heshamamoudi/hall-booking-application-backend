@@ -14,7 +14,9 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
     {
         return await _context.Bookings
             .Where(b => b.CustomerId == customerId)
+            .Include(b => b.Hall) // Include hall information
             .Include(b => b.VendorBookings)
+                .ThenInclude(vb => vb.Vendor)
             .OrderByDescending(b => b.Created)
             .ToListAsync();
     }
@@ -24,6 +26,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
         return await _context.Bookings
             .Where(b => b.HallId == hallId)
             .Include(b => b.VendorBookings)
+                .ThenInclude(vb => vb.Vendor)
             .OrderByDescending(b => b.Created)
             .ToListAsync();
     }
@@ -33,6 +36,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
         return await _context.Bookings
             .Where(b => b.BookingDate >= startDate && b.BookingDate <= endDate)
             .Include(b => b.VendorBookings)
+                .ThenInclude(vb => vb.Vendor)
             .OrderByDescending(b => b.Created)
             .ToListAsync();
     }
@@ -40,7 +44,11 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
     public async Task<Booking> GetBookingWithDetailsAsync(int bookingId)
     {
         return await _context.Bookings
+            .Include(b => b.Hall) // Include hall information
             .Include(b => b.VendorBookings)
+                .ThenInclude(vb => vb.Vendor)
+            .Include(b => b.VendorBookings)
+                .ThenInclude(vb => vb.Services)
             .FirstOrDefaultAsync(b => b.Id == bookingId);
     }
 
@@ -49,6 +57,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
         return await _context.Bookings
             .Where(b => b.Status == "Pending" || b.Status == "Pending Visitation")
             .Include(b => b.VendorBookings)
+                .ThenInclude(vb => vb.Vendor)
             .OrderBy(b => b.VisitDate)
             .ToListAsync();
     }
@@ -58,6 +67,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
         return await _context.Bookings
             .Where(b => b.Status == "Confirmed" || b.IsBookingConfirmed)
             .Include(b => b.VendorBookings)
+                .ThenInclude(vb => vb.Vendor)
             .OrderBy(b => b.BookingDate)
             .ToListAsync();
     }

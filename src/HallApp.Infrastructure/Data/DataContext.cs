@@ -32,6 +32,7 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
     public DbSet<VendorBlockedDate> VendorBlockedDates { get; set; }
     public DbSet<VendorType> VendorTypes { get; set; }
     public DbSet<VendorBooking> VendorBookings { get; set; }
+    public DbSet<VendorBookingService> VendorBookingServices { get; set; }
 
     // Hall Entities
     public DbSet<Hall> Halls { get; set; }
@@ -232,6 +233,25 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
                 .HasColumnType("decimal(18,2)");
             entity.Property(vb => vb.Amount)
                 .HasColumnType("decimal(18,2)");
+                
+            entity.HasMany(vb => vb.Services)
+                .WithOne(s => s.VendorBooking)
+                .HasForeignKey(s => s.VendorBookingId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // VendorBookingService relationships
+        builder.Entity<VendorBookingService>(entity =>
+        {
+            entity.Property(s => s.UnitPrice)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(s => s.TotalPrice)
+                .HasColumnType("decimal(18,2)");
+                
+            entity.HasOne(s => s.ServiceItem)
+                .WithMany()
+                .HasForeignKey(s => s.ServiceItemId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Hall decimal precision configuration (only for monetary values)

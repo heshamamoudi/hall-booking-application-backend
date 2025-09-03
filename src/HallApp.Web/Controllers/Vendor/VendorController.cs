@@ -26,6 +26,133 @@ namespace HallApp.Web.Controllers.Vendor
         }
 
         /// <summary>
+        /// Get vendor categories for customer selection
+        /// </summary>
+        /// <returns>List of vendor types/categories</returns>
+        [AllowAnonymous]
+        [HttpGet("categories")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<VendorTypeDto>>>> GetVendorCategories()
+        {
+            try
+            {
+                var vendorTypes = await _vendorService.GetVendorTypesAsync();
+                var vendorTypeDtos = _mapper.Map<List<VendorTypeDto>>(vendorTypes);
+                return Success<IEnumerable<VendorTypeDto>>(vendorTypeDtos, "Vendor categories retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<VendorTypeDto>>($"Failed to retrieve vendor categories: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get vendors by category for customer booking workflow
+        /// </summary>
+        /// <param name="categoryId">Vendor category/type ID</param>
+        /// <returns>List of vendors in the category</returns>
+        [AllowAnonymous]
+        [HttpGet("category/{categoryId:int}")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<VendorListDto>>>> GetVendorsByCategory(int categoryId)
+        {
+            try
+            {
+                if (categoryId <= 0)
+                {
+                    return Error<IEnumerable<VendorListDto>>("Invalid category ID", 400);
+                }
+
+                var vendors = await _vendorService.GetVendorsByTypeAsync(categoryId);
+                var vendorDtos = _mapper.Map<List<VendorListDto>>(vendors);
+                return Success<IEnumerable<VendorListDto>>(vendorDtos, $"Vendors in category {categoryId} retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<VendorListDto>>($"Failed to retrieve vendors by category: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get vendor services/items for customer booking workflow
+        /// </summary>
+        /// <param name="vendorId">Vendor ID</param>
+        /// <returns>List of available services for the vendor</returns>
+        [AllowAnonymous]
+        [HttpGet("{vendorId:int}/services")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<ServiceItemDto>>>> GetVendorServices(int vendorId)
+        {
+            try
+            {
+                if (vendorId <= 0)
+                {
+                    return Error<IEnumerable<ServiceItemDto>>("Invalid vendor ID", 400);
+                }
+
+                // Get vendor to verify it exists
+                var vendor = await _vendorService.GetVendorByIdAsync(vendorId);
+                if (vendor == null)
+                {
+                    return Error<IEnumerable<ServiceItemDto>>("Vendor not found", 404);
+                }
+
+                // Return services from vendor entity - map to DTOs
+                var services = vendor.ServiceItems != null ? _mapper.Map<List<ServiceItemDto>>(vendor.ServiceItems) : new List<ServiceItemDto>();
+                return Success<IEnumerable<ServiceItemDto>>(services, $"Services for vendor {vendorId} retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<ServiceItemDto>>($"Failed to retrieve vendor services: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get alternative vendors available for the same date when one is rejected
+        /// </summary>
+        /// <param name="categoryId">Vendor category ID</param>
+        /// <param name="eventDate">Event date</param>
+        /// <param name="excludeVendorId">Vendor ID to exclude (the one that rejected)</param>
+        /// <returns>List of available alternative vendors in the same category</returns>
+        [AllowAnonymous]
+        [HttpGet("alternatives/{categoryId:int}")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<VendorListDto>>>> GetAlternativeVendors(
+            int categoryId,
+            [FromQuery] DateTime eventDate,
+            [FromQuery] int excludeVendorId = 0)
+        {
+            try
+            {
+                if (categoryId <= 0)
+                {
+                    return Error<IEnumerable<VendorListDto>>("Invalid category ID", 400);
+                }
+
+                var vendors = await _vendorService.GetVendorsByTypeAsync(categoryId);
+                var availableVendors = new List<HallApp.Core.Entities.VendorEntities.Vendor>();
+                
+                foreach (var vendor in vendors)
+                {
+                    // Skip the vendor that rejected
+                    if (vendor.Id == excludeVendorId)
+                        continue;
+                        
+                    // Skip inactive vendors
+                    if (!vendor.IsActive)
+                        continue;
+                    
+                    // TODO: Add vendor availability check for the specific date
+                    // For now, assume all active vendors are available
+                    availableVendors.Add(vendor);
+                }
+                
+                var vendorDtos = _mapper.Map<List<VendorListDto>>(availableVendors);
+                return Success<IEnumerable<VendorListDto>>(vendorDtos, $"Found {vendorDtos.Count} alternative vendors for {eventDate:yyyy-MM-dd}");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<VendorListDto>>($"Failed to get alternative vendors: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
         /// Get all vendors with pagination and filtering
         /// </summary>
         /// <param name="vendorParams">Filter and pagination parameters</param>
@@ -331,7 +458,7 @@ namespace HallApp.Web.Controllers.Vendor
                     return Error<bool>("Name is required for validation", 400);
                 }
 
-                var isUnique = await _vendorService.IsNameUniqueAsync(name, excludeId);
+                var isUnique = await _vendorService.IsNameUniqueAsync(name, excludeId ?? 0);
                 return Success(isUnique, $"Name validation completed");
             }
             catch (Exception ex)
@@ -357,7 +484,7 @@ namespace HallApp.Web.Controllers.Vendor
                     return Error<bool>("Email is required for validation", 400);
                 }
 
-                var isUnique = await _vendorService.IsEmailUniqueAsync(email, excludeId);
+                var isUnique = await _vendorService.IsEmailUniqueAsync(email, excludeId ?? 0);
                 return Success(isUnique, "Email validation completed");
             }
             catch (Exception ex)
@@ -383,7 +510,7 @@ namespace HallApp.Web.Controllers.Vendor
                     return Error<bool>("Phone number is required for validation", 400);
                 }
 
-                var isUnique = await _vendorService.IsPhoneUniqueAsync(phone, excludeId);
+                var isUnique = await _vendorService.IsPhoneUniqueAsync(phone, excludeId ?? 0);
                 return Success(isUnique, "Phone validation completed");
             }
             catch (Exception ex)

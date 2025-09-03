@@ -17,16 +17,16 @@ public class BookingService : IBookingService
         _mapper = mapper;
     }
 
-    public async Task<Booking?> CreateBookingAsync(Booking booking)
+    public async Task<Booking> CreateBookingAsync(Booking booking)
     {
         await _unitOfWork.BookingRepository.AddAsync(booking);
         await _unitOfWork.Complete();
         return booking;
     }
 
-    public async Task<Booking?> GetBookingByIdAsync(int bookingId)
+    public async Task<Booking> GetBookingByIdAsync(int bookingId)
     {
-        return await _unitOfWork.BookingRepository.GetByIdAsync(bookingId);
+        return await _unitOfWork.BookingRepository.GetBookingWithDetailsAsync(bookingId) ?? new Booking();
     }
 
     public async Task<IEnumerable<Booking>> GetBookingsByCustomerIdAsync(string customerId)
@@ -43,17 +43,17 @@ public class BookingService : IBookingService
         return await _unitOfWork.BookingRepository.GetAllAsync();
     }
 
-    public async Task<Booking?> UpdateBookingAsync(Booking booking)
+    public async Task<Booking> UpdateBookingAsync(Booking booking)
     {
         _unitOfWork.BookingRepository.Update(booking);
         await _unitOfWork.Complete();
         return booking;
     }
 
-    public async Task<Booking?> UpdateCustomerBookingAsync(string customerId, Booking booking)
+    public async Task<Booking> UpdateCustomerBookingAsync(string customerId, Booking booking)
     {
         var existingBooking = await _unitOfWork.BookingRepository.GetByIdAsync(booking.Id);
-        if (existingBooking?.CustomerId.ToString() != customerId) return null;
+        if (existingBooking?.CustomerId.ToString() != customerId) return new Booking();
         
         _unitOfWork.BookingRepository.Update(booking);
         await _unitOfWork.Complete();
@@ -94,7 +94,16 @@ public class BookingService : IBookingService
 
     public async Task<decimal> CalculateBookingCostAsync(int hallId, DateTime startDate, DateTime endDate)
     {
-        return (decimal)((endDate - startDate).TotalHours * 100); // Placeholder calculation
+        var hall = await _unitOfWork.HallRepository.GetByIdAsync(hallId);
+        if (hall == null) return 0;
+        
+        // Use flat daily rate instead of hourly calculation
+        // Most halls charge per day/event, not per hour
+        var isWeekend = startDate.DayOfWeek == DayOfWeek.Friday || startDate.DayOfWeek == DayOfWeek.Saturday;
+        var baseRate = isWeekend ? (decimal)(hall.BothWeekEnds) : (decimal)(hall.BothWeekDays);
+        
+        Console.WriteLine($"Hall {hallId} pricing: Weekend={isWeekend}, Rate={baseRate}");
+        return baseRate;
     }
 
     public async Task<bool> IsHallAvailableAsync(int hallId, DateTime startDate, DateTime endDate)
@@ -128,10 +137,10 @@ public class BookingService : IBookingService
         ).ToList();
     }
 
-    public async Task<Booking?> RescheduleBookingAsync(int bookingId, DateTime newStartDate, DateTime newEndDate)
+    public async Task<Booking> RescheduleBookingAsync(int bookingId, DateTime newStartDate, DateTime newEndDate)
     {
         var booking = await _unitOfWork.BookingRepository.GetByIdAsync(bookingId);
-        if (booking == null) return null;
+        if (booking == null) return new Booking();
 
         booking.VisitDate = newStartDate;
         _unitOfWork.BookingRepository.Update(booking);
@@ -221,10 +230,10 @@ public class BookingService : IBookingService
         };
     }
 
-    public async Task<HallAvailabilityDto?> GetHallAvailabilityAsync(int hallId, DateTime date)
+    public async Task<HallAvailabilityDto> GetHallAvailabilityAsync(int hallId, DateTime date)
     {
         var hall = await _unitOfWork.HallRepository.GetByIdAsync(hallId);
-        if (hall == null) return null;
+        if (hall == null) return new HallAvailabilityDto();
         
         var dayBookings = await _unitOfWork.BookingRepository.GetBookingsByHallIdAsync(hallId);
         var dateBookings = dayBookings.Where(b => 

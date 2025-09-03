@@ -1,4 +1,3 @@
-#nullable enable
 using HallApp.Core.Entities.VendorEntities;
 using HallApp.Core.Interfaces.IRepositories;
 using HallApp.Infrastructure.Data;
@@ -23,22 +22,22 @@ public class VendorManagerRepository : IVendorManagerRepository
             .ToListAsync();
     }
 
-    public async Task<VendorManager?> GetByIdAsync(int id)
+    public async Task<VendorManager> GetByIdAsync(int id)
     {
         return await _context.VendorManagers
             .Include(vm => vm.AppUser)
-            .FirstOrDefaultAsync(vm => vm.Id == id);
+            .FirstOrDefaultAsync(vm => vm.Id == id) ?? new VendorManager();
     }
 
-    public async Task<VendorManager?> GetByUserIdAsync(string userId)
+    public async Task<VendorManager> GetByUserIdAsync(string userId)
     {
         if (int.TryParse(userId, out int userIdInt))
         {
             return await _context.VendorManagers
                 .Include(vm => vm.AppUser)
-                .FirstOrDefaultAsync(vm => vm.AppUserId == userIdInt);
+                .FirstOrDefaultAsync(vm => vm.AppUserId == userIdInt) ?? new VendorManager();
         }
-        return null;
+        return new VendorManager();
     }
 
     public async Task<bool> VendorManagerExistsAsync(string userId)

@@ -15,7 +15,7 @@ public class Review
     public DateTime Updated { get; set; } = DateTime.UtcNow;
     public bool IsApproved { get; set; } = true;
     public bool IsFlagged { get; set; } = false;
-    public string? RejectionReason { get; set; }
+    public string RejectionReason { get; set; } = string.Empty;
 
     // Relationships
     public int? CustomerId { get; set; }

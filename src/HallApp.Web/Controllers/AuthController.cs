@@ -6,6 +6,7 @@ using HallApp.Core.Entities;
 using HallApp.Core.Exceptions;
 using HallApp.Application.DTOs.Auth;
 using HallApp.Core.Interfaces.IServices;
+using HallApp.Core.Interfaces.IRepositories;
 
 namespace HallApp.Web.Controllers
 {
@@ -17,6 +18,7 @@ namespace HallApp.Web.Controllers
         private readonly SignInManager<AppUser> _signInManager;
         private readonly ITokenService _tokenService;
         private readonly ICustomerService _customerService;
+        private readonly IUserRepository _userRepository;
         private readonly ILogger<AuthController> _logger;
 
         public AuthController(
@@ -24,12 +26,14 @@ namespace HallApp.Web.Controllers
             SignInManager<AppUser> signInManager,
             ITokenService tokenService,
             ICustomerService customerService,
+            IUserRepository userRepository,
             ILogger<AuthController> logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _tokenService = tokenService;
             _customerService = customerService;
+            _userRepository = userRepository;
             _logger = logger;
         }
 
@@ -177,11 +181,8 @@ namespace HallApp.Web.Controllers
                 var accessToken = await _tokenService.CreateToken(user);
                 var refreshToken = await _tokenService.CreateRefreshToken(user);
 
-                // Store refresh token with Georgian timezone
-                user.RefreshToken = refreshToken;
-                var georgianTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Georgia Standard Time");
-                user.RefreshTokenExpiryTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow.AddDays(7), georgianTimeZone);
-                await _userManager.UpdateAsync(user);
+                // Store tokens in database for tracking
+                await _userRepository.RegisterOrUpdateTokenAsync(user, accessToken, refreshToken);
 
                 var response = new AuthResponseDto
                 {
@@ -239,6 +240,9 @@ namespace HallApp.Web.Controllers
                 // Generate tokens
                 var accessToken = await _tokenService.CreateToken(user);
                 var refreshToken = await _tokenService.CreateRefreshToken(user);
+
+                // Store tokens in database for tracking
+                await _userRepository.RegisterOrUpdateTokenAsync(user, accessToken, refreshToken);
 
                 var response = new AuthResponseDto
                 {

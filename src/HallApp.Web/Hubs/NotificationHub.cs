@@ -9,22 +9,39 @@ namespace HallApp.Web.Hubs;
 public class NotificationHub : Hub
 {
     // When a client connects, add them to their customer group
-    [Authorize]
     public override async Task OnConnectedAsync()
     {
-        // Get user ID from claims instead of Context.UserIdentifier
+        // Debug all available claims
+        if (Context.User?.Identity?.IsAuthenticated == true)
+        {
+            Console.WriteLine("🔍 SignalR User Claims:");
+            foreach (var claim in Context.User.Claims)
+            {
+                Console.WriteLine($"   {claim.Type}: {claim.Value}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("⚠️ SignalR: User not authenticated or claims not available");
+        }
+
+        // Get user ID from claims with multiple fallbacks
         var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier) 
                          ?? Context.User?.FindFirst(JwtRegisteredClaimNames.NameId)
-                         ?? Context.User?.FindFirst(JwtRegisteredClaimNames.Sub);
+                         ?? Context.User?.FindFirst(JwtRegisteredClaimNames.Sub)
+                         ?? Context.User?.FindFirst("nameid")
+                         ?? Context.User?.FindFirst("sub");
 
         if (userIdClaim == null || string.IsNullOrEmpty(userIdClaim.Value))
         {
             Console.WriteLine("Warning: User ID not found in claims. SignalR notifications disabled for this connection.");
-            return; // Don't throw error, just skip group assignment
+            // Still continue with base connection for non-authenticated features
+            await base.OnConnectedAsync();
+            return;
         }
 
         var userId = userIdClaim.Value;
-        Console.WriteLine($"User connected with UserID: {userId}");
+        Console.WriteLine($"✅ SignalR User connected with UserID: {userId}");
         
         await Groups.AddToGroupAsync(Context.ConnectionId, userId);
         await base.OnConnectedAsync();

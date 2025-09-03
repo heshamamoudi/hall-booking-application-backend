@@ -19,6 +19,6 @@ public interface IVendorAvailabilityService
     
     // Availability Checks
     Task<bool> IsVendorAvailableAsync(int vendorId, DateTime date);
-    Task<bool> IsVendorAvailableAsync(int vendorId, DateTime date, TimeSpan? startTime, TimeSpan? endTime);
+    Task<bool> IsVendorAvailableAsync(int vendorId, DateTime date, TimeSpan startTime, TimeSpan endTime);
     Task<List<TimeSpan>> GetAvailableTimeSlotsAsync(int vendorId, DateTime date, int durationMinutes);
 }

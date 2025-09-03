@@ -21,18 +21,18 @@ public class CustomerService : ICustomerService
     }
 
     // Core CRUD operations
-    public async Task<Customer?> GetCustomerByIdAsync(int customerId)
+    public async Task<Customer> GetCustomerByIdAsync(int customerId)
     {
-        return await _unitOfWork.CustomerRepository.GetByIdAsync(customerId);
+        return await _unitOfWork.CustomerRepository.GetByIdAsync(customerId) ?? new Customer();
     }
 
-    public async Task<Customer?> GetCustomerByAppUserIdAsync(int appUserId)
+    public async Task<Customer> GetCustomerByAppUserIdAsync(int appUserId)
     {
         var allCustomers = await _unitOfWork.CustomerRepository.GetAllAsync();
-        return allCustomers.FirstOrDefault(c => c.AppUserId == appUserId);
+        return allCustomers.FirstOrDefault(c => c.AppUserId == appUserId) ?? new Customer();
     }
 
-    public async Task<Customer?> CreateCustomerAsync(Customer customer)
+    public async Task<Customer> CreateCustomerAsync(Customer customer)
     {
         customer.Created = DateTime.UtcNow;
         customer.Updated = DateTime.UtcNow;
@@ -46,10 +46,10 @@ public class CustomerService : ICustomerService
         return customer;
     }
 
-    public async Task<Customer?> UpdateCustomerAsync(Customer customer)
+    public async Task<Customer> UpdateCustomerAsync(Customer customer)
     {
         var existingCustomer = await _unitOfWork.CustomerRepository.GetByIdAsync(customer.Id);
-        if (existingCustomer == null) return null;
+        if (existingCustomer == null) return new Customer();
         
         // Update business fields only
         existingCustomer.NumberOfOrders = customer.NumberOfOrders;
@@ -190,10 +190,10 @@ public class CustomerService : ICustomerService
         return customersWithReviews;
     }
 
-    public async Task<Customer?> GetCustomerWithRelationshipsAsync(int customerId)
+    public async Task<Customer> GetCustomerWithRelationshipsAsync(int customerId)
     {
         var customer = await _unitOfWork.CustomerRepository.GetByIdAsync(customerId);
-        if (customer == null) return null;
+        if (customer == null) return new Customer();
         
         // Load all business relationships
         customer.Bookings = (await _unitOfWork.BookingRepository.GetBookingsByCustomerIdAsync(customerId)).ToList();
@@ -204,13 +204,13 @@ public class CustomerService : ICustomerService
     }
 
     // Business validation
-    public async Task<bool> ValidateCustomerAsync(Customer customer)
+    public Task<bool> ValidateCustomerAsync(Customer customer)
     {
-        if (customer == null) return false;
-        if (customer.AppUserId <= 0) return false;
-        if (customer.CreditMoney < 0) return false;
+        if (customer == null) return Task.FromResult(false);
+        if (customer.AppUserId <= 0) return Task.FromResult(false);
+        if (customer.CreditMoney < 0) return Task.FromResult(false);
         
-        return true;
+        return Task.FromResult(true);
     }
 
     public async Task<bool> CanCustomerBookAsync(int customerId)

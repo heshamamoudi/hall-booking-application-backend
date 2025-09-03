@@ -24,6 +24,7 @@ public class VendorBookingDto
     public DateTime? RejectedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public List<VendorBookingServiceDto> ServiceItems { get; set; } = new();
 }
 
 public class CreateVendorBookingDto

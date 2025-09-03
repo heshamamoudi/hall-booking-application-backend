@@ -47,7 +47,12 @@ namespace HallApp.Web.Controllers.Notification
                     return Error($"Invalid data: {errors}", 400);
                 }
 
-                await _notificationService.CreateAndSendNotification(notificationDto);
+                await _notificationService.CreateNotificationAsync(
+                    notificationDto.AppUserId, 
+                    notificationDto.Title, 
+                    notificationDto.Message, 
+                    notificationDto.Type);
+                    
                 return Success("Notification created successfully");
             }
             catch (Exception ex)
@@ -61,22 +66,28 @@ namespace HallApp.Web.Controllers.Notification
         /// </summary>
         /// <returns>List of user's notifications</returns>
         [HttpGet("my-notifications")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<NotificationDto>>>> GetMyNotifications()
+        public async Task<ActionResult<ApiResponse<IEnumerable<NotificationResponseDto>>>> GetMyNotifications()
         {
             try
             {
-                var notificationResponses = await _notificationService.GetUserNotifications(UserId);
-                var notifications = _mapper.Map<IEnumerable<NotificationDto>>(notificationResponses) ?? new List<NotificationDto>();              
-                if (notifications == null || !notifications.Any())
+                var notifications = await _notificationService.GetUserNotificationsAsync(UserId);
+                var notificationDtos = notifications.Select(n => new NotificationResponseDto
                 {
-                    return Success<IEnumerable<NotificationDto>>(new List<NotificationDto>(), "No notifications found");
-                }
-
-                return Success(notifications, "Notifications retrieved successfully");
+                    Id = n.Id,
+                    AppUserId = n.AppUserId,
+                    Title = n.Title,
+                    Message = n.Message,
+                    Type = n.Type ?? "General",
+                    IsRead = n.IsRead,
+                    CreatedAt = n.Created,
+                    ReadAt = n.ReadAt
+                });
+                
+                return Success(notificationDtos, "Notifications retrieved successfully");
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<NotificationDto>>($"Failed to retrieve notifications: {ex.Message}", 500);
+                return Error<IEnumerable<NotificationResponseDto>>($"Failed to retrieve notifications: {ex.Message}", 500);
             }
         }
 
@@ -87,28 +98,33 @@ namespace HallApp.Web.Controllers.Notification
         /// <returns>List of user's notifications</returns>
         [Authorize(Roles = "Admin")]
         [HttpGet("user/{userId:int}")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<NotificationDto>>>> GetUserNotifications(int userId)
+        public async Task<ActionResult<ApiResponse<IEnumerable<NotificationResponseDto>>>> GetUserNotifications(int userId)
         {
             try
             {
                 if (userId <= 0)
                 {
-                    return Error<IEnumerable<NotificationDto>>("Invalid user ID", 400);
+                    return Error<IEnumerable<NotificationResponseDto>>("Invalid user ID", 400);
                 }
 
-                var notificationResponses = await _notificationService.GetUserNotifications(userId);
-                var notifications = _mapper.Map<IEnumerable<NotificationDto>>(notificationResponses) ?? new List<NotificationDto>();
-                
-                if (!notifications.Any())
+                var notifications = await _notificationService.GetUserNotificationsAsync(userId);
+                var notificationDtos = notifications.Select(n => new NotificationResponseDto
                 {
-                    return Success<IEnumerable<NotificationDto>>(new List<NotificationDto>(), $"No notifications found for user {userId}");
-                }
+                    Id = n.Id,
+                    AppUserId = n.AppUserId,
+                    Title = n.Title,
+                    Message = n.Message,
+                    Type = n.Type ?? "General",
+                    IsRead = n.IsRead,
+                    CreatedAt = n.Created,
+                    ReadAt = n.ReadAt
+                });
 
-                return Success(notifications, $"Notifications for user {userId} retrieved successfully");
+                return Success(notificationDtos, $"Notifications for user {userId} retrieved successfully");
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<NotificationDto>>($"Failed to retrieve user notifications: {ex.Message}", 500);
+                return Error<IEnumerable<NotificationResponseDto>>($"Failed to retrieve user notifications: {ex.Message}", 500);
             }
         }
 
@@ -128,11 +144,7 @@ namespace HallApp.Web.Controllers.Notification
                 }
 
                 // Get the notification to check if it belongs to the current user
-                var notification = await _notificationService.GetNotificationById(notificationId);
-                if (notification == null)
-                {
-                    return NotFound($"Notification with ID {notificationId} not found");
-                }
+                var notification = await _notificationService.GetNotificationByIdAsync(notificationId);
 
                 // Check if user owns this notification (unless admin)
                 if (!IsAdmin && notification.AppUserId != UserId)
@@ -140,7 +152,7 @@ namespace HallApp.Web.Controllers.Notification
                     return Forbidden("You can only mark your own notifications as read");
                 }
 
-                await _notificationService.MarkAsRead(notificationId);
+                await _notificationService.MarkAsReadAsync(notificationId);
                 return Success("Notification marked as read");
             }
             catch (Exception ex)
@@ -171,47 +183,34 @@ namespace HallApp.Web.Controllers.Notification
         /// Delete a specific notification
         /// </summary>
         /// <param name="id">Notification ID</param>
-        /// <returns>Updated notifications list</returns>
+        /// <returns>Success response</returns>
         [HttpDelete("{id:int}")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<NotificationDto>>>> DeleteNotification(int id)
+        public async Task<ActionResult<ApiResponse>> DeleteNotification(int id)
         {
             try
             {
                 if (id <= 0)
                 {
-                    return Error<IEnumerable<NotificationDto>>("Invalid notification ID", 400);
+                    return Error("Invalid notification ID", 400);
                 }
 
-                // Get the notification to check permissions and user ID
-                var notification = await _notificationService.GetNotificationById(id);
-                if (notification == null)
-                {
-                    return Error<IEnumerable<NotificationDto>>($"Notification with ID {id} not found", 404);
-                }
+                // Get the notification to check permissions
+                var notification = await _notificationService.GetNotificationByIdAsync(id);
 
                 // Check if user owns this notification (unless admin)
                 if (!IsAdmin && notification.AppUserId != UserId)
                 {
-                    return Error<IEnumerable<NotificationDto>>("You can only access your own notifications", 403);
+                    return Error("You can only delete your own notifications", 403);
                 }
 
-                var appUserId = notification.AppUserId;
-
                 // Delete the notification
-                await _notificationService.DeleteNotificationById(id);
+                await _notificationService.DeleteNotificationAsync(id);
 
-                // Fetch updated notifications
-                var updatedNotifications = await _notificationService.GetUserNotifications(appUserId);
-
-                // Convert to DTOs
-                var notificationDtos = _mapper.Map<IEnumerable<NotificationDto>>(updatedNotifications);
-
-                return Success(notificationDtos ?? new List<NotificationDto>(), 
-                    $"Notification with ID {id} has been deleted");
+                return Success($"Notification with ID {id} has been deleted");
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<NotificationDto>>($"Failed to delete notification: {ex.Message}", 500);
+                return Error($"Failed to delete notification: {ex.Message}", 500);
             }
         }
 
@@ -224,7 +223,7 @@ namespace HallApp.Web.Controllers.Notification
         {
             try
             {
-                await _notificationService.DeleteNotificationsByUser(UserId);
+                await _notificationService.DeleteAllUserNotificationsAsync(UserId);
                 return Success("All your notifications have been deleted");
             }
             catch (Exception ex)
@@ -240,28 +239,23 @@ namespace HallApp.Web.Controllers.Notification
         /// <returns>Updated notifications list</returns>
         [Authorize(Roles = "Admin")]
         [HttpDelete("user/{userId:int}")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<NotificationDto>>>> DeleteUserNotifications(int userId)
+        public async Task<ActionResult<ApiResponse>> DeleteUserNotifications(int userId)
         {
             try
             {
                 if (userId <= 0)
                 {
-                    return Error<IEnumerable<NotificationDto>>("Invalid user ID", 400);
+                    return Error("Invalid user ID", 400);
                 }
 
                 // Delete all notifications for the user
-                await _notificationService.DeleteNotificationsByUser(userId);
+                await _notificationService.DeleteAllUserNotificationsAsync(userId);
 
-                // Fetch updated notifications (should be empty)
-                var updatedNotifications = await _notificationService.GetUserNotifications(userId);
-                var notificationDtos = _mapper.Map<IEnumerable<NotificationDto>>(updatedNotifications);
-
-                return Success(notificationDtos ?? new List<NotificationDto>(), 
-                    $"All notifications for user with ID {userId} have been deleted");
+                return Success($"All notifications for user with ID {userId} have been deleted");
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<NotificationDto>>($"Failed to delete user notifications: {ex.Message}", 500);
+                return Error($"Failed to delete user notifications: {ex.Message}", 500);
             }
         }
 
@@ -274,7 +268,7 @@ namespace HallApp.Web.Controllers.Notification
         {
             try
             {
-                var count = await _notificationService.GetUnreadNotificationsCount(UserId);
+                var count = await _notificationService.GetUnreadCountAsync(UserId);
                 return Success(count, "Unread notifications count retrieved successfully");
             }
             catch (Exception ex)
@@ -294,7 +288,7 @@ namespace HallApp.Web.Controllers.Notification
             try
             {
                 var notifications = await _notificationService.GetUserNotificationsAsync(1); // Admin overview
-                var unreadCount = await _notificationService.GetUnreadNotificationsCount(1);
+                var unreadCount = await _notificationService.GetUnreadCountAsync(1);
                 object stats = new
                 {
                     TotalNotifications = notifications.Count,

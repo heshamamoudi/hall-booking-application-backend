@@ -1,4 +1,3 @@
-#nullable enable
 using HallApp.Core.Entities.VendorEntities;
 using HallApp.Core.Interfaces.IRepositories;
 using HallApp.Infrastructure.Data;
@@ -31,18 +30,18 @@ public class ServiceItemRepository : IServiceItemRepository
             .ToListAsync();
     }
 
-    public async Task<ServiceItem?> GetServiceItemByIdAsync(int id)
+    public async Task<ServiceItem> GetServiceItemByIdAsync(int id)
     {
         return await _context.ServiceItems
             .Include(si => si.Vendor)
-            .FirstOrDefaultAsync(si => si.Id == id);
+            .FirstOrDefaultAsync(si => si.Id == id) ?? new ServiceItem();
     }
 
-    public async Task<ServiceItem?> GetByIdAsync(int id)
+    public async Task<ServiceItem> GetByIdAsync(int id)
     {
         return await _context.ServiceItems
             .Include(si => si.Vendor)
-            .FirstOrDefaultAsync(si => si.Id == id);
+            .FirstOrDefaultAsync(si => si.Id == id) ?? new ServiceItem();
     }
 
     public async Task<IEnumerable<ServiceItem>> GetAllAsync()

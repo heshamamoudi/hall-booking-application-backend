@@ -17,7 +17,7 @@ namespace HallApp.Application.Common.Models
     /// <typeparam name="T">Type of data being returned</typeparam>
     public class ApiResponse<T> : ApiResponse
     {
-        public T? Data { get; set; }
+        public T Data { get; set; }
     }
 
     /// <summary>

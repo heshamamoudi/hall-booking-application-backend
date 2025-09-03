@@ -7,7 +7,7 @@ public interface IVendorAvailabilityRepository
     // Business Hours
     Task<IEnumerable<VendorBusinessHour>> GetBusinessHoursByVendorAsync(int vendorId);
     Task<IEnumerable<VendorBusinessHour>> GetBusinessHoursAsync(int vendorId);
-    Task<VendorBusinessHour?> GetBusinessHourAsync(int vendorId, int dayOfWeek);
+    Task<VendorBusinessHour> GetBusinessHourAsync(int vendorId, int dayOfWeek);
     Task AddBusinessHourAsync(VendorBusinessHour businessHour);
     Task UpdateBusinessHourAsync(VendorBusinessHour businessHour);
     Task DeleteBusinessHourAsync(int vendorId, int businessHourId);
@@ -18,8 +18,8 @@ public interface IVendorAvailabilityRepository
     // Blocked Dates
     Task<IEnumerable<VendorBlockedDate>> GetBlockedDatesByVendorAsync(int vendorId);
     Task<IEnumerable<VendorBlockedDate>> GetBlockedDatesInRangeAsync(int vendorId, DateTime startDate, DateTime endDate);
-    Task<VendorBlockedDate?> GetBlockedDateAsync(int vendorId, DateTime date);
-    Task<VendorBlockedDate?> GetBlockedDateByIdAsync(int blockedDateId);
+    Task<VendorBlockedDate> GetBlockedDateAsync(int vendorId, DateTime date);
+    Task<VendorBlockedDate> GetBlockedDateByIdAsync(int blockedDateId);
     Task AddBlockedDateAsync(VendorBlockedDate blockedDate);
     Task DeleteBlockedDateAsync(int vendorId, int blockedDateId);
     void AddBlockedDate(VendorBlockedDate blockedDate);

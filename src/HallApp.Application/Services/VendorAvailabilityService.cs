@@ -95,11 +95,9 @@ public class VendorAvailabilityService : IVendorAvailabilityService
         return await _unitOfWork.VendorAvailabilityRepository.IsVendorAvailableAsync(vendorId, date, TimeSpan.Zero, TimeSpan.FromHours(24));
     }
 
-    public async Task<bool> IsVendorAvailableAsync(int vendorId, DateTime date, TimeSpan? startTime, TimeSpan? endTime)
+    public async Task<bool> IsVendorAvailableAsync(int vendorId, DateTime date, TimeSpan startTime, TimeSpan endTime)
     {
-        var start = startTime ?? TimeSpan.Zero;
-        var end = endTime ?? TimeSpan.FromHours(24);
-        return await _unitOfWork.VendorAvailabilityRepository.IsVendorAvailableAsync(vendorId, date, start, end);
+        return await _unitOfWork.VendorAvailabilityRepository.IsVendorAvailableAsync(vendorId, date, startTime, endTime);
     }
 
     public async Task<List<TimeSpan>> GetAvailableTimeSlotsAsync(int vendorId, DateTime date, int durationMinutes)

@@ -1,4 +1,3 @@
-#nullable disable
 using HallApp.Core.Entities;
 using HallApp.Core.Interfaces.IRepositories;
 using HallApp.Core.Interfaces.IServices;
@@ -48,10 +47,9 @@ public class UserRepository : IUserRepository
 
     public async Task RegisterOrUpdateTokenAsync(AppUser user, string token, string refreshToken)
     {
-        // Update the user's refresh token properties with Georgian timezone
+        // Update the user's refresh token properties with UTC (cross-platform compatible)
         user.RefreshToken = refreshToken;
-        var georgianTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Georgia Standard Time");
-        user.RefreshTokenExpiryTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow.AddDays(7), georgianTimeZone);
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
         
         // Update the access token in the UserTokens table
         var existingToken = await _context.UserTokens
@@ -147,7 +145,7 @@ public class UserRepository : IUserRepository
         var query = _context.Users.AsQueryable();
         if (excludeId.HasValue)
         {
-            query = query.Where(u => u.Id != excludeId);
+            query = query.Where(u => u.Id != excludeId.Value);
         }
         return !await query.AnyAsync(u => u.UserName.ToLower() == username.ToLower());
     }
@@ -157,7 +155,7 @@ public class UserRepository : IUserRepository
         var query = _context.Users.AsQueryable();
         if (excludeId.HasValue)
         {
-            query = query.Where(u => u.Id != excludeId);
+            query = query.Where(u => u.Id != excludeId.Value);
         }
         return !await query.AnyAsync(u => u.Email.ToLower() == email.ToLower());
     }
@@ -170,7 +168,7 @@ public class UserRepository : IUserRepository
         var query = _context.Users.AsQueryable();
         if (excludeId.HasValue)
         {
-            query = query.Where(u => u.Id != excludeId);
+            query = query.Where(u => u.Id != excludeId.Value);
         }
         return !await query.AnyAsync(u => u.PhoneNumber == phone);
     }

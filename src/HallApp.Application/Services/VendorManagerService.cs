@@ -28,10 +28,10 @@ public class VendorManagerService : IVendorManagerService
         return vendorManager;
     }
 
-    public async Task<VendorManager?> UpdateVendorManagerAsync(VendorManager vendorManager)
+    public async Task<VendorManager> UpdateVendorManagerAsync(VendorManager vendorManager)
     {
         var existingVendorManager = await _unitOfWork.VendorManagerRepository.GetByIdAsync(vendorManager.Id);
-        if (existingVendorManager == null) return null;
+        if (existingVendorManager == null) return new VendorManager();
 
         // Update business domain properties
         existingVendorManager.CommercialRegistrationNumber = vendorManager.CommercialRegistrationNumber;
@@ -57,12 +57,12 @@ public class VendorManagerService : IVendorManagerService
         return true;
     }
 
-    public async Task<VendorManager?> GetVendorManagerByIdAsync(int vendorManagerId)
+    public async Task<VendorManager> GetVendorManagerByIdAsync(int vendorManagerId)
     {
         return await _unitOfWork.VendorManagerRepository.GetByIdAsync(vendorManagerId);
     }
 
-    public async Task<VendorManager?> GetVendorManagerByAppUserIdAsync(int appUserId)
+    public async Task<VendorManager> GetVendorManagerByAppUserIdAsync(int appUserId)
     {
         var allVendorManagers = await _unitOfWork.VendorManagerRepository.GetAllAsync();
         return allVendorManagers.FirstOrDefault(vm => vm.AppUserId == appUserId);
@@ -100,7 +100,7 @@ public class VendorManagerService : IVendorManagerService
         return allVendorManagers.Where(vm => vm.IsApproved).ToList();
     }
 
-    public async Task<bool> UpdateCommercialInfoAsync(int vendorManagerId, string? registrationNumber, string? vatNumber)
+    public async Task<bool> UpdateCommercialInfoAsync(int vendorManagerId, string registrationNumber = "", string vatNumber = "")
     {
         var vendorManager = await _unitOfWork.VendorManagerRepository.GetByIdAsync(vendorManagerId);
         if (vendorManager == null) return false;
@@ -114,7 +114,7 @@ public class VendorManagerService : IVendorManagerService
     }
 
     // Validation methods
-    public async Task<bool> IsCommercialRegistrationUniqueAsync(string registrationNumber, int? excludeId = null)
+    public async Task<bool> IsCommercialRegistrationUniqueAsync(string registrationNumber, int excludeId = 0)
     {
         if (string.IsNullOrEmpty(registrationNumber))
             return false;
@@ -122,10 +122,10 @@ public class VendorManagerService : IVendorManagerService
         var allVendorManagers = await _unitOfWork.VendorManagerRepository.GetAllAsync();
         return !allVendorManagers.Any(vm => 
             vm.CommercialRegistrationNumber == registrationNumber && 
-            (excludeId == null || vm.Id != excludeId));
+            (excludeId == 0 || vm.Id != excludeId));
     }
 
-    public async Task<bool> IsVatNumberUniqueAsync(string vatNumber, int? excludeId = null)
+    public async Task<bool> IsVatNumberUniqueAsync(string vatNumber, int excludeId = 0)
     {
         if (string.IsNullOrEmpty(vatNumber))
             return false;
@@ -133,7 +133,7 @@ public class VendorManagerService : IVendorManagerService
         var allVendorManagers = await _unitOfWork.VendorManagerRepository.GetAllAsync();
         return !allVendorManagers.Any(vm => 
             vm.VatNumber == vatNumber && 
-            (excludeId == null || vm.Id != excludeId));
+            (excludeId == 0 || vm.Id != excludeId));
     }
 
     // Business relationships

@@ -1,4 +1,3 @@
-#nullable enable
 using HallApp.Core.Entities.VendorEntities;
 using HallApp.Core.Interfaces;
 using HallApp.Core.Interfaces.IServices;
@@ -45,7 +44,7 @@ public class VendorService : IVendorService
         return result;
     }
 
-    public async Task<Vendor?> GetVendorByIdAsync(int id)
+    public async Task<Vendor> GetVendorByIdAsync(int id)
     {
         return await _unitOfWork.VendorRepository.GetVendorByIdAsync(id);
     }
@@ -70,7 +69,7 @@ public class VendorService : IVendorService
         return await _unitOfWork.VendorRepository.SearchVendorsAsync(searchTerm);
     }
     
-    public async Task<bool> IsNameUniqueAsync(string name, int? excludeId = null)
+    public async Task<bool> IsNameUniqueAsync(string name, int excludeId = 0)
     {
         if (string.IsNullOrEmpty(name))
             return false;
@@ -78,7 +77,7 @@ public class VendorService : IVendorService
         return await _unitOfWork.VendorRepository.IsNameUniqueAsync(name, excludeId);
     }
     
-    public async Task<bool> IsEmailUniqueAsync(string email, int? excludeId = null)
+    public async Task<bool> IsEmailUniqueAsync(string email, int excludeId = 0)
     {
         if (string.IsNullOrEmpty(email))
             return false;
@@ -86,7 +85,7 @@ public class VendorService : IVendorService
         return await _unitOfWork.VendorRepository.IsEmailUniqueAsync(email, excludeId);
     }
     
-    public async Task<bool> IsPhoneUniqueAsync(string phone, int? excludeId = null)
+    public async Task<bool> IsPhoneUniqueAsync(string phone, int excludeId = 0)
     {
         return await _unitOfWork.VendorRepository.IsPhoneUniqueAsync(phone, excludeId);
     }

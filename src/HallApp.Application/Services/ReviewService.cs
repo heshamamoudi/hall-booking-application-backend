@@ -16,7 +16,7 @@ public class ReviewService : IReviewService
         _mapper = mapper;
     }
 
-    public async Task<Review?> GetReviewByIdAsync(int reviewId)
+    public async Task<Review> GetReviewByIdAsync(int reviewId)
     {
         return await _unitOfWork.ReviewRepository.GetByIdAsync(reviewId);
     }
@@ -40,7 +40,7 @@ public class ReviewService : IReviewService
         return await _unitOfWork.ReviewRepository.GetAllAsync();
     }
 
-    public async Task<Review?> CreateReviewAsync(Review review)
+    public async Task<Review> CreateReviewAsync(Review review)
     {
         review.Created = DateTime.UtcNow;
         review.Updated = DateTime.UtcNow;
@@ -49,10 +49,10 @@ public class ReviewService : IReviewService
         return review;
     }
 
-    public async Task<Review?> UpdateReviewAsync(Review review)
+    public async Task<Review> UpdateReviewAsync(Review review)
     {
         var existingReview = await _unitOfWork.ReviewRepository.GetByIdAsync(review.Id);
-        if (existingReview == null) return null;
+        if (existingReview == null) return new Review();
         
         existingReview.Rating = review.Rating;
         existingReview.Content = review.Content;
@@ -63,7 +63,7 @@ public class ReviewService : IReviewService
         return existingReview;
     }
 
-    public async Task<Review?> GetReviewEntityById(int reviewId)
+    public async Task<Review> GetReviewEntityById(int reviewId)
     {
         return await _unitOfWork.ReviewRepository.GetReviewWithDetailsAsync(reviewId);
     }
@@ -74,11 +74,11 @@ public class ReviewService : IReviewService
         await _unitOfWork.Complete();
     }
 
-    public async Task<Review?> UpdateUserReviewAsync(string userId, Review review)
+    public async Task<Review> UpdateUserReviewAsync(string userId, Review review)
     {
         var existingReview = await _unitOfWork.ReviewRepository.GetByIdAsync(review.Id);
         if (existingReview == null || existingReview.CustomerId.ToString() != userId) 
-            return null;
+            return new Review();
         
         existingReview.Rating = review.Rating;
         existingReview.Content = review.Content;
@@ -149,14 +149,14 @@ public class ReviewService : IReviewService
         return false;
     }
 
-    public async Task<Review?> GetReviewByCustomerAndHall(string customerId, int hallId)
+    public async Task<Review> GetReviewByCustomerAndHall(string customerId, int hallId)
     {
         if (int.TryParse(customerId, out int customerIdInt))
         {
             var reviews = await _unitOfWork.ReviewRepository.GetReviewsByCustomerIdAsync(customerIdInt);
-            return reviews.FirstOrDefault(r => r.HallId == hallId);
+            return reviews.FirstOrDefault(r => r.HallId == hallId) ?? new Review();
         }
-        return null;
+        return new Review();
     }
 
     public async Task<IEnumerable<Review>> GetReviewsByRatingAsync(int rating)
