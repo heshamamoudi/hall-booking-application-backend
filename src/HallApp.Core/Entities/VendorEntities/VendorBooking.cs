@@ -6,9 +6,9 @@ namespace HallApp.Core.Entities.VendorEntities;
 public class VendorBooking : BaseEntity
 {
     public int VendorId { get; set; }
-    public Vendor Vendor { get; set; } = null!;
+    public Vendor? Vendor { get; set; }
     public int BookingId { get; set; }
-    public Booking Booking { get; set; } = null!;
+    public Booking? Booking { get; set; }
     public DateTime StartTime { get; set; } = DateTime.UtcNow;
     public DateTime EndTime { get; set; } = DateTime.UtcNow.AddHours(2);
     public string Status { get; set; } = "Pending";
@@ -24,10 +24,11 @@ public class VendorBooking : BaseEntity
     public DateTime? ApprovedAt { get; set; }
     public DateTime? RejectedAt { get; set; }
     
-    // Additional properties to match original
+    // Event service details
     public DateTime ServiceDate { get; set; } = DateTime.UtcNow;
     public string ServiceType { get; set; } = string.Empty;
-    public decimal Amount { get; set; }
+    
+    // Timestamps
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     

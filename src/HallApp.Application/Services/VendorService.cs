@@ -29,6 +29,7 @@ public class VendorService : IVendorService
         existingVendor.Description = vendor.Description;
         existingVendor.Email = vendor.Email;
         existingVendor.Phone = vendor.Phone;
+        existingVendor.WhatsApp = vendor.WhatsApp;
         existingVendor.LogoUrl = vendor.LogoUrl;
         existingVendor.CoverImageUrl = vendor.CoverImageUrl;
         existingVendor.IsActive = vendor.IsActive;

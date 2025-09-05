@@ -4,6 +4,7 @@ using HallApp.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HallApp.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250905022348_UpdateBookingFinancialFields")]
+    partial class UpdateBookingFinancialFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -203,9 +206,6 @@ namespace HallApp.Infrastructure.Data.Migrations
                     b.Property<string>("EventType")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("GenderPreference")
-                        .HasColumnType("int");
-
                     b.Property<int>("GuestCount")
                         .HasColumnType("int");
 
@@ -374,9 +374,6 @@ namespace HallApp.Infrastructure.Data.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Email")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool>("FemaleActive")
                         .HasColumnType("bit");
 
@@ -416,17 +413,11 @@ namespace HallApp.Infrastructure.Data.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Phone")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("Updated")
                         .HasColumnType("datetime2");
 
                     b.Property<long>("Vat")
                         .HasColumnType("bigint");
-
-                    b.Property<string>("WhatsApp")
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ID");
 
@@ -975,9 +966,6 @@ namespace HallApp.Infrastructure.Data.Migrations
 
                     b.Property<int>("VendorTypeId")
                         .HasColumnType("int");
-
-                    b.Property<string>("WhatsApp")
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 

@@ -35,6 +35,11 @@ public class Hall
     // Gender 1 = Male , 2 = Female , 3 = Both
     public int Gender { get; set; }
 
+    // Direct contact information for independence
+    public string Email { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string WhatsApp { get; set; } = string.Empty;
+
     public string Logo { get; set; }
     public List<HallMedia> MediaFiles { get; set; } = new List<HallMedia>();
     public string Description { get; set; }

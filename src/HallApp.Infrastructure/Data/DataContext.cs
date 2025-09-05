@@ -215,6 +215,22 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
         // Booking relationships
         builder.Entity<Booking>(entity =>
         {
+            // Configure decimal properties with proper precision and scale
+            entity.Property(b => b.HallCost)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(b => b.VendorServicesCost)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(b => b.Subtotal)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(b => b.DiscountAmount)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(b => b.TaxAmount)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(b => b.TaxRate)
+                .HasColumnType("decimal(5,4)"); // For percentage values like 0.15 (15%)
+            entity.Property(b => b.TotalAmount)
+                .HasColumnType("decimal(18,2)");
+
             entity.HasOne(b => b.PackageDetails)
                 .WithOne(p => p.Booking)
                 .HasForeignKey<BookingPackage>(p => p.BookingId)
@@ -230,8 +246,6 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
         builder.Entity<VendorBooking>(entity =>
         {
             entity.Property(vb => vb.TotalAmount)
-                .HasColumnType("decimal(18,2)");
-            entity.Property(vb => vb.Amount)
                 .HasColumnType("decimal(18,2)");
                 
             entity.HasMany(vb => vb.Services)

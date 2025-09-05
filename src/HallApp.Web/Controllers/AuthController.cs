@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 using HallApp.Core.Entities;
 using HallApp.Core.Exceptions;
 using HallApp.Application.DTOs.Auth;
@@ -105,6 +106,7 @@ namespace HallApp.Web.Controllers
                 {
                     AccessToken = accessToken,
                     RefreshToken = refreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddHours(1), // Match TokenService expiry
                     User = new UserDto
                     {
                         Id = user.Id,
@@ -188,6 +190,7 @@ namespace HallApp.Web.Controllers
                 {
                     AccessToken = accessToken,
                     RefreshToken = refreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddHours(1), // Match TokenService expiry
                     User = new UserDto
                     {
                         Id = user.Id,
@@ -248,6 +251,7 @@ namespace HallApp.Web.Controllers
                 {
                     AccessToken = accessToken,
                     RefreshToken = refreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddHours(1), // Match TokenService expiry
                     User = new UserDto
                     {
                         Id = user.Id,
@@ -292,7 +296,7 @@ namespace HallApp.Web.Controllers
                     return Unauthorized(new ApiResponse(401, "Invalid refresh token"));
                 }
 
-                var userId = principal.FindFirstValue("id");
+                var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue(JwtRegisteredClaimNames.NameId);
                 var user = await _userManager.FindByIdAsync(userId);
 
                 if (user == null || user.RefreshToken != refreshTokenDto.RefreshToken)
@@ -308,6 +312,7 @@ namespace HallApp.Web.Controllers
                 {
                     AccessToken = newAccessToken,
                     RefreshToken = newRefreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddHours(1), // Match TokenService expiry
                     User = new UserDto
                     {
                         Id = user.Id,
@@ -414,6 +419,7 @@ namespace HallApp.Web.Controllers
                 {
                     AccessToken = accessToken,
                     RefreshToken = refreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddHours(1), // Match TokenService expiry
                     User = new UserDto
                     {
                         Id = user.Id,

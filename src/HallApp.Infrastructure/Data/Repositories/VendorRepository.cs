@@ -78,6 +78,7 @@ public class VendorRepository : GenericRepository<Vendor>, IVendorRepository
         vendor.Description = updateVendor.Description;
         vendor.Email = updateVendor.Email;
         vendor.Phone = updateVendor.Phone;
+        vendor.WhatsApp = updateVendor.WhatsApp;
         vendor.IsActive = updateVendor.IsActive;
         vendor.VendorTypeId = updateVendor.VendorTypeId;
 
@@ -133,11 +134,14 @@ public class VendorRepository : GenericRepository<Vendor>, IVendorRepository
 
     public async Task<bool> IsEmailUniqueAsync(string email, int excludeId = 0)
     {
-        var query = _context.Vendors.AsQueryable();
+        if (string.IsNullOrEmpty(email))
+            return false;
+
+        var query = _context.Vendors.Where(v => v.IsActive);
+
         if (excludeId != 0)
-        {
             query = query.Where(v => v.Id != excludeId);
-        }
+
         return !await query.AnyAsync(v => v.Email.ToLower() == email.ToLower());
     }
 
@@ -146,7 +150,7 @@ public class VendorRepository : GenericRepository<Vendor>, IVendorRepository
         if (string.IsNullOrEmpty(phone))
             return false;
 
-        var query = _context.Vendors.AsQueryable();
+        var query = _context.Vendors.Where(v => v.IsActive);
 
         if (excludeId != 0)
             query = query.Where(v => v.Id != excludeId);

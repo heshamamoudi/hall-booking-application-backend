@@ -25,6 +25,14 @@ public class VendorBookingDto
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public List<VendorBookingServiceDto> ServiceItems { get; set; } = new();
+    public VendorContactInfo ContactInfo { get; set; }
+}
+
+public class VendorContactInfo
+{
+    public string Phone { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string WhatsApp { get; set; } = string.Empty;
 }
 
 public class CreateVendorBookingDto

@@ -22,6 +22,8 @@ public class Vendor
     [Phone]
     public string Phone { get; set; } = string.Empty;
 
+    public string WhatsApp { get; set; } = string.Empty;
+
     public string LogoUrl { get; set; } = string.Empty;
     public string CoverImageUrl { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;

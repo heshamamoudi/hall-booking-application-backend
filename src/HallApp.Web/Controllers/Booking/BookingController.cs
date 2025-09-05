@@ -4,9 +4,11 @@ using HallApp.Application.DTOs.Booking;
 using HallApp.Application.DTOs.Booking.Registers;
 using HallApp.Application.DTOs.Booking.Updaters;
 using HallApp.Application.DTOs.Vendors;
+using HallApp.Application.DTOs.Champer.Hall;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Core.Entities.BookingEntities;
 using HallApp.Core.Entities.VendorEntities;
+using HallApp.Application.Services;
 using HallApp.Web.Controllers.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,13 +28,20 @@ namespace HallApp.Web.Controllers.Booking
         private readonly IMapper _mapper;
         private readonly IServiceItemService _serviceItemService;
         private readonly INotificationService _notificationService;
+        private readonly IBookingFinancialService _financialService;
 
-        public BookingController(IBookingService bookingService, IMapper mapper, IServiceItemService serviceItemService, INotificationService notificationService)
+        public BookingController(
+            IBookingService bookingService, 
+            IMapper mapper, 
+            IServiceItemService serviceItemService, 
+            INotificationService notificationService,
+            IBookingFinancialService financialService)
         {
             _bookingService = bookingService;
             _mapper = mapper;
             _serviceItemService = serviceItemService;
             _notificationService = notificationService;
+            _financialService = financialService;
         }
 
         /// <summary>
@@ -55,12 +64,28 @@ namespace HallApp.Web.Controllers.Booking
                 // Set the customer ID from the authenticated user
                 bookingDto.CustomerId = UserId;
 
-                // Calculate total cost for hall booking
+                // Calculate comprehensive financial breakdown
                 var eventStart = bookingDto.EventDate.Add(bookingDto.StartTime);
                 var eventEnd = bookingDto.EventDate.Add(bookingDto.EndTime);
-                var totalCost = await _bookingService.CalculateBookingCostAsync(bookingDto.HallId, eventStart, eventEnd);
+                
+                var serviceRequests = bookingDto.SelectedServices?.Select(s => new BookingServiceRequest
+                {
+                    ServiceItemId = s.ServiceItemId,
+                    VendorId = s.VendorId,
+                    Quantity = s.Quantity,
+                    SpecialInstructions = s.SpecialInstructions ?? string.Empty
+                }).ToList() ?? new List<BookingServiceRequest>();
 
-                // Create booking entity from DTO
+                var financialBreakdown = await _financialService.CalculateBookingFinancialsAsync(
+                    bookingDto.HallId,
+                    eventStart,
+                    eventEnd,
+                    serviceRequests,
+                    bookingDto.DiscountCode ?? string.Empty,
+                    "Riyadh" // TODO: Get customer's region
+                );
+
+                // Create booking entity from DTO with financial data
                 var bookingEntity = new BookingEntity
                 {
                     HallId = bookingDto.HallId,
@@ -71,21 +96,27 @@ namespace HallApp.Web.Controllers.Booking
                     EndTime = bookingDto.EndTime,
                     EventType = bookingDto.EventType ?? "Event",
                     GuestCount = bookingDto.ExpectedGuestCount,
+                    GenderPreference = bookingDto.GenderPreference,
                     Status = "Pending", // Awaiting hall approval
                     Comments = bookingDto.SpecialRequests,
-                    TotalPrice = (double)totalCost,
+                    
+                    // Financial breakdown from service
+                    HallCost = financialBreakdown.HallCost,
+                    VendorServicesCost = financialBreakdown.VendorServicesCost,
+                    Subtotal = financialBreakdown.Subtotal,
+                    DiscountAmount = financialBreakdown.DiscountAmount,
+                    TaxAmount = financialBreakdown.TaxAmount,
+                    TaxRate = financialBreakdown.TaxRate,
+                    TotalAmount = financialBreakdown.TotalAmount,
+                    Currency = financialBreakdown.Currency,
+                    Coupon = bookingDto.DiscountCode ?? string.Empty,
+                    
                     IsBookingConfirmed = false,
                     IsVisitCompleted = false,
                     Created = DateTime.UtcNow
                 };
 
-                var booking = await _bookingService.CreateBookingAsync(bookingEntity);
-                if (booking == null)
-                {
-                    return Error<BookingDto>("Failed to create booking", 500);
-                }
-
-                // Create VendorBookings grouped by vendor
+                // Create VendorBookings before saving the booking
                 if (bookingDto.SelectedServices?.Any() == true)
                 {
                     var servicesByVendor = bookingDto.SelectedServices.GroupBy(s => s.VendorId);
@@ -95,19 +126,21 @@ namespace HallApp.Web.Controllers.Booking
                         var vendorId = vendorGroup.Key;
                         var services = vendorGroup.ToList();
                         
-                        // Calculate total amount for this vendor's services
-                        decimal vendorTotalAmount = 0;
+                        // Get vendor financial data from breakdown
+                        var vendorBreakdown = financialBreakdown.VendorBreakdown
+                            .FirstOrDefault(vb => vb.VendorId == vendorId);
+                        
+                        var vendorTotalAmount = vendorBreakdown?.TotalAmount ?? 0;
                         var vendorBookingServices = new List<VendorBookingService>();
                         
                         foreach (var service in services)
                         {
-                            // Get actual service price from ServiceItem
-                            var serviceItem = await _serviceItemService.GetServiceItemByIdAsync(service.ServiceItemId);
-                            decimal servicePrice = serviceItem?.Price ?? 0;
-                            decimal serviceTotalPrice = servicePrice * service.Quantity;
-                            vendorTotalAmount += serviceTotalPrice;
+                            // Get service financial details from breakdown
+                            var serviceDetail = vendorBreakdown?.Services
+                                .FirstOrDefault(s => s.ServiceItemId == service.ServiceItemId);
                             
-                            Console.WriteLine($"Service {service.ServiceItemId}: Price={servicePrice}, Qty={service.Quantity}, Total={serviceTotalPrice}");
+                            var servicePrice = serviceDetail?.UnitPrice ?? 0;
+                            var serviceTotalPrice = serviceDetail?.TotalPrice ?? 0;
                             
                             vendorBookingServices.Add(new VendorBookingService
                             {
@@ -125,7 +158,6 @@ namespace HallApp.Web.Controllers.Booking
                         var vendorBooking = new VendorBooking
                         {
                             VendorId = vendorId,
-                            BookingId = booking.Id,
                             StartTime = bookingDto.EventDate.Add(bookingDto.StartTime),
                             EndTime = bookingDto.EventDate.Add(bookingDto.EndTime),
                             Status = "Pending",
@@ -136,11 +168,14 @@ namespace HallApp.Web.Controllers.Booking
                             UpdatedAt = DateTime.UtcNow
                         };
                         
-                        booking.VendorBookings.Add(vendorBooking);
+                        bookingEntity.VendorBookings.Add(vendorBooking);
                     }
-                    
-                    // Update booking with vendor bookings
-                    await _bookingService.UpdateBookingAsync(booking);
+                }
+
+                var booking = await _bookingService.CreateBookingAsync(bookingEntity);
+                if (booking == null)
+                {
+                    return Error<BookingDto>("Failed to create booking", 500);
                 }
 
                 // Send notification to customer
@@ -527,7 +562,7 @@ namespace HallApp.Web.Controllers.Booking
                 var eventStart = booking.BookingDate;
                 var eventEnd = booking.BookingDate.AddHours(4); // Default 4-hour event
                 var newCost = await _bookingService.CalculateBookingCostAsync(newHallId, eventStart, eventEnd);
-                booking.TotalPrice = (double)newCost;
+                booking.TotalAmount = newCost;
 
                 var updatedBooking = await _bookingService.UpdateBookingAsync(booking);
                 
@@ -696,13 +731,13 @@ namespace HallApp.Web.Controllers.Booking
         [HttpGet("{id:int}")]
         public async Task<ActionResult<ApiResponse<BookingDto>>> GetBookingById(int id)
         {
+            if (id <= 0)
+            {
+                return Error<BookingDto>("Invalid booking ID", 400);
+            }
+
             try
             {
-                if (id <= 0)
-                {
-                    return Error<BookingDto>("Invalid booking ID", 400);
-                }
-
                 var booking = await _bookingService.GetBookingByIdAsync(id);
                 if (booking == null)
                 {
@@ -710,7 +745,7 @@ namespace HallApp.Web.Controllers.Booking
                 }
 
                 var bookingDto = _mapper.Map<BookingDto>(booking);
-                return Success(bookingDto, "Booking retrieved successfully");
+                return Success(bookingDto);
             }
             catch (Exception ex)
             {

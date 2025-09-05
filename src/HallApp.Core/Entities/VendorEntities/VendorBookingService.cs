@@ -32,10 +32,10 @@ public class VendorBookingService
     
     // Navigation properties
     [ForeignKey("VendorBookingId")]
-    public VendorBooking VendorBooking { get; set; } = null!;
+    public VendorBooking? VendorBooking { get; set; }
     
     [ForeignKey("ServiceItemId")]
-    public ServiceItem ServiceItem { get; set; } = null!;
+    public ServiceItem? ServiceItem { get; set; }
     
     // Base entity properties
     public DateTime Created { get; set; } = DateTime.UtcNow;

@@ -65,6 +65,7 @@ public class SeedVendors
                         Description = "Professional event decoration services with premium quality materials and creative designs",
                         Email = "contact@elegantdecor.com",
                         Phone = "966501234567",
+                        WhatsApp = "966501234567",
                         LogoUrl = "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
                         CoverImageUrl = "https://images.unsplash.com/photo-1519225421980-715cb0215aed?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
                         IsActive = true,
@@ -109,69 +110,75 @@ public class SeedVendors
                         return;
                     }
                     
-                    var vendors = new List<Vendor>
+                    var royalCatering = new Vendor
                     {
-                        new Vendor
-                        {
-                            Name = "Royal Catering",
-                            Description = "Luxury catering service for weddings and corporate events with over 20 years of experience",
-                            Email = "info@royalcatering.com",
-                            Phone = "966512345678",
-                            LogoUrl = "https://images.unsplash.com/photo-1555244162-803834f70033?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
-                            CoverImageUrl = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
-                            IsActive = true,
-                            Rating = 4.8f,
-                            ReviewCount = 156,
-                            VendorTypeId = cateringType.Id,
-                            CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow
-                        },
-                        new Vendor
-                        {
-                            Name = "Gourmet Delight Catering",
-                            Description = "Premium gourmet catering with international cuisine options",
-                            Email = "info@gourmetdelight.com",
-                            Phone = "966523456789",
-                            LogoUrl = "https://images.unsplash.com/photo-1528605248644-14dd04022da1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
-                            CoverImageUrl = "https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2370&q=80",
-                            IsActive = true,
-                            Rating = 4.6f,
-                            ReviewCount = 108,
-                            VendorTypeId = cateringType.Id,
-                            CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow
-                        },
-                        new Vendor
-                        {
-                            Name = "Capture Moments Photography",
-                            Description = "Professional photography services for all special occasions",
-                            Email = "info@capturemoments.com",
-                            Phone = "966534567890",
-                            LogoUrl = "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2338&q=80",
-                            CoverImageUrl = "https://images.unsplash.com/photo-1554048612-b6a482bc67e5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
-                            IsActive = true,
-                            Rating = 4.9f,
-                            ReviewCount = 87,
-                            VendorTypeId = photographyType.Id,
-                            CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow
-                        },
-                        new Vendor
-                        {
-                            Name = "Melody Entertainment",
-                            Description = "Professional DJ and live music services for all events",
-                            Email = "bookings@melodyent.com",
-                            Phone = "966545678901",
-                            LogoUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
-                            CoverImageUrl = "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
-                            IsActive = true,
-                            Rating = 4.5f,
-                            ReviewCount = 65,
-                            VendorTypeId = entertainmentType.Id,
-                            CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow
-                        }
+                        Name = "Royal Catering",
+                        Description = "Luxury catering service for weddings and corporate events with over 20 years of experience",
+                        Email = "info@royalcatering.com",
+                        Phone = "966512345678",
+                        WhatsApp = "966512345678",
+                        LogoUrl = "https://images.unsplash.com/photo-1555244162-803834f70033?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
+                        CoverImageUrl = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
+                        IsActive = true,
+                        Rating = 4.8f,
+                        ReviewCount = 156,
+                        VendorTypeId = cateringType.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
                     };
+
+                    var gourmetCatering = new Vendor
+                    {
+                        Name = "Gourmet Delight Catering",
+                        Description = "Premium gourmet catering with international cuisine options",
+                        Email = "info@gourmetdelight.com",
+                        Phone = "966523456789",
+                        WhatsApp = "966523456789",
+                        LogoUrl = "https://images.unsplash.com/photo-1528605248644-14dd04022da1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
+                        CoverImageUrl = "https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2370&q=80",
+                        IsActive = true,
+                        Rating = 4.6f,
+                        ReviewCount = 108,
+                        VendorTypeId = cateringType.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    var photographyVendor = new Vendor
+                    {
+                        Name = "Capture Moments Photography",
+                        Description = "Professional photography services for all special occasions",
+                        Email = "info@capturemoments.com",
+                        Phone = "966534567890",
+                        WhatsApp = "966534567890",
+                        LogoUrl = "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2338&q=80",
+                        CoverImageUrl = "https://images.unsplash.com/photo-1554048612-b6a482bc67e5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
+                        IsActive = true,
+                        Rating = 4.9f,
+                        ReviewCount = 87,
+                        VendorTypeId = photographyType.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    var entertainmentVendor = new Vendor
+                    {
+                        Name = "Melody Entertainment",
+                        Description = "Professional DJ and live music services for all events",
+                        Email = "bookings@melodyent.com",
+                        Phone = "966545678901",
+                        WhatsApp = "966545678901",
+                        LogoUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
+                        CoverImageUrl = "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
+                        IsActive = true,
+                        Rating = 4.5f,
+                        ReviewCount = 65,
+                        VendorTypeId = entertainmentType.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    var vendors = new List<Vendor> { royalCatering, gourmetCatering, photographyVendor, entertainmentVendor };
 
                     context.Vendors.AddRange(vendors);
                     await context.SaveChangesAsync();

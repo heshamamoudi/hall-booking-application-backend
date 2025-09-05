@@ -49,6 +49,8 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
                 .ThenInclude(vb => vb.Vendor)
             .Include(b => b.VendorBookings)
                 .ThenInclude(vb => vb.Services)
+                    .ThenInclude(s => s.ServiceItem)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(b => b.Id == bookingId);
     }
 

@@ -219,8 +219,8 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
             .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
-            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
-            .ForMember(dest => dest.Phone, opt => opt.MapFrom(src => src.Phone))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email ?? ""))
+            .ForMember(dest => dest.Phone, opt => opt.MapFrom(src => src.Phone ?? ""))
             .ForMember(dest => dest.LogoUrl, opt => opt.MapFrom(src => src.LogoUrl))
             .ForMember(dest => dest.CoverImageUrl, opt => opt.MapFrom(src => src.CoverImageUrl))
             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive))
@@ -419,10 +419,17 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => src.PaymentMethod ?? ""))
             .ForMember(dest => dest.Coupon, opt => opt.MapFrom(src => src.Coupon ?? ""))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
-            .ForMember(dest => dest.Tax, opt => opt.MapFrom(src => src.Tax))
-            .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
             .ForMember(dest => dest.Comments, opt => opt.MapFrom(src => src.Comments ?? ""))
-            .ForMember(dest => dest.Discount, opt => opt.MapFrom(src => src.Discount))
+            // Financial fields - new structure
+            .ForMember(dest => dest.HallCost, opt => opt.MapFrom(src => src.HallCost))
+            .ForMember(dest => dest.VendorServicesCost, opt => opt.MapFrom(src => src.VendorServicesCost))
+            .ForMember(dest => dest.Subtotal, opt => opt.MapFrom(src => src.Subtotal))
+            .ForMember(dest => dest.DiscountAmount, opt => opt.MapFrom(src => src.DiscountAmount))
+            .ForMember(dest => dest.TaxAmount, opt => opt.MapFrom(src => src.TaxAmount))
+            .ForMember(dest => dest.TaxRate, opt => opt.MapFrom(src => src.TaxRate))
+            .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount))
+            .ForMember(dest => dest.Currency, opt => opt.MapFrom(src => src.Currency ?? "SAR"))
+            .ForMember(dest => dest.PaidAt, opt => opt.MapFrom(src => src.PaidAt))
             .ForMember(dest => dest.VisitDate, opt => opt.MapFrom(src => src.VisitDate))
             .ForMember(dest => dest.IsVisitCompleted, opt => opt.MapFrom(src => src.IsVisitCompleted))
             .ForMember(dest => dest.IsBookingConfirmed, opt => opt.MapFrom(src => src.IsBookingConfirmed))
@@ -438,24 +445,25 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.EndTime, opt => opt.MapFrom(src => src.EndTime))
             .ForMember(dest => dest.EventType, opt => opt.MapFrom(src => src.EventType ?? ""))
             .ForMember(dest => dest.GuestCount, opt => opt.MapFrom(src => src.GuestCount))
-            .ForMember(dest => dest.VendorServices, opt => opt.MapFrom(src => src.VendorBookings))
-            .ForMember(dest => dest.FinancialSummary, opt => opt.MapFrom(src => CalculateFinancialSummary(src)))
+            .ForMember(dest => dest.GenderPreference, opt => opt.MapFrom(src => src.GenderPreference))
+            .ForMember(dest => dest.VendorServices, opt => opt.MapFrom(src => src.VendorBookings ?? new List<HallApp.Core.Entities.VendorEntities.VendorBooking>()))
+            .ForMember(dest => dest.FinancialSummary, opt => opt.MapFrom(src => new HallApp.Application.DTOs.Booking.BookingFinancialSummary 
+            {
+                HallCost = src.HallCost,
+                VendorsCost = src.VendorServicesCost,
+                SubTotal = src.Subtotal,
+                DiscountAmount = src.DiscountAmount,
+                TaxAmount = src.TaxAmount,
+                TaxRate = src.TaxRate,
+                TotalAmount = src.TotalAmount,
+                Currency = src.Currency ?? "SAR",
+                CalculatedAt = DateTime.UtcNow,
+                VendorBreakdown = new List<HallApp.Application.DTOs.Booking.VendorFinancialBreakdownDto>()
+            }))
             // Map hall information when available
             .ForMember(dest => dest.Hall, opt => opt.MapFrom(src => src.Hall))
-            .ForMember(dest => dest.HallInfo, opt => opt.MapFrom(src => new HallApp.Application.DTOs.Booking.HallInfo 
-            { 
-                Id = src.Hall != null ? src.Hall.ID : src.HallId,
-                Name = src.Hall != null ? src.Hall.Name : $"Hall #{src.HallId}",
-                Location = src.Hall != null && src.Hall.Location != null ? src.Hall.Location.Address : null
-            }))
             .ForMember(dest => dest.Customer, opt => opt.Ignore())
             .ForMember(dest => dest.PackageDetails, opt => opt.Ignore());
-
-        // Hall to HallBookingDto mapping
-        CreateMap<HallApp.Core.Entities.ChamperEntities.Hall, HallApp.Application.DTOs.Champer.Hall.HallBookingDto>()
-            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
-            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-            .ForMember(dest => dest.Managers, opt => opt.Ignore());
 
         CreateMap<HallApp.Application.DTOs.Booking.BookingDto, HallApp.Core.Entities.BookingEntities.Booking>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
@@ -464,10 +472,7 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => src.PaymentMethod))
             .ForMember(dest => dest.Coupon, opt => opt.MapFrom(src => src.Coupon))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
-            .ForMember(dest => dest.Tax, opt => opt.MapFrom(src => src.Tax))
-            .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
             .ForMember(dest => dest.Comments, opt => opt.MapFrom(src => src.Comments))
-            .ForMember(dest => dest.Discount, opt => opt.MapFrom(src => src.Discount))
             .ForMember(dest => dest.IsVisitCompleted, opt => opt.MapFrom(src => src.IsVisitCompleted))
             .ForMember(dest => dest.IsBookingConfirmed, opt => opt.MapFrom(src => src.IsBookingConfirmed))
             .ForMember(dest => dest.BookingDate, opt => opt.MapFrom(src => src.BookingDate))
@@ -476,38 +481,74 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
             .ForMember(dest => dest.VendorBookings, opt => opt.Ignore())
             .ForMember(dest => dest.PackageDetails, opt => opt.Ignore())
-            .ForMember(dest => dest.EventDate, opt => opt.Ignore())
-            .ForMember(dest => dest.StartTime, opt => opt.Ignore())
-            .ForMember(dest => dest.EndTime, opt => opt.Ignore())
-            .ForMember(dest => dest.EventType, opt => opt.Ignore())
-            .ForMember(dest => dest.GuestCount, opt => opt.Ignore())
-            .ForMember(dest => dest.TotalAmount, opt => opt.Ignore())
-            .ForMember(dest => dest.PaymentStatus, opt => opt.Ignore())
+            .ForMember(dest => dest.EventDate, opt => opt.MapFrom(src => src.EventDate))
+            .ForMember(dest => dest.StartTime, opt => opt.MapFrom(src => src.StartTime))
+            .ForMember(dest => dest.EndTime, opt => opt.MapFrom(src => src.EndTime))
+            .ForMember(dest => dest.EventType, opt => opt.MapFrom(src => src.EventType))
+            .ForMember(dest => dest.GuestCount, opt => opt.MapFrom(src => src.GuestCount))
+            .ForMember(dest => dest.GenderPreference, opt => opt.MapFrom(src => src.GenderPreference))
+            .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => src.PaymentStatus))
+            // New financial fields
+            .ForMember(dest => dest.HallCost, opt => opt.MapFrom(src => src.HallCost))
+            .ForMember(dest => dest.VendorServicesCost, opt => opt.MapFrom(src => src.VendorServicesCost))
+            .ForMember(dest => dest.Subtotal, opt => opt.MapFrom(src => src.Subtotal))
+            .ForMember(dest => dest.DiscountAmount, opt => opt.MapFrom(src => src.DiscountAmount))
+            .ForMember(dest => dest.TaxAmount, opt => opt.MapFrom(src => src.TaxAmount))
+            .ForMember(dest => dest.TaxRate, opt => opt.MapFrom(src => src.TaxRate))
+            .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount))
+            .ForMember(dest => dest.Currency, opt => opt.MapFrom(src => src.Currency))
+            .ForMember(dest => dest.PaidAt, opt => opt.MapFrom(src => src.PaidAt))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
 
-        // VendorBooking to VendorBookingDto mapping for comprehensive booking details
+        // Hall to HallBookingDto mapping - enhanced for booking details
+        CreateMap<HallApp.Core.Entities.ChamperEntities.Hall, HallApp.Application.DTOs.Champer.Hall.HallBookingDto>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+            .ForMember(dest => dest.Phone, opt => opt.MapFrom(src => src.Phone))
+            .ForMember(dest => dest.WhatsApp, opt => opt.MapFrom(src => src.WhatsApp))
+            .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
+            .ForMember(dest => dest.Managers, opt => opt.MapFrom(src => src.Managers));
+
+        // VendorBooking to VendorBookingDto mapping
         CreateMap<HallApp.Core.Entities.VendorEntities.VendorBooking, HallApp.Application.DTOs.Vendors.VendorBookingDto>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-            .ForMember(dest => dest.VendorId, opt => opt.MapFrom(src => src.VendorId))
             .ForMember(dest => dest.BookingId, opt => opt.MapFrom(src => src.BookingId))
-            .ForMember(dest => dest.VendorName, opt => opt.MapFrom(src => src.Vendor != null ? src.Vendor.Name : $"Vendor {src.VendorId}"))
+            .ForMember(dest => dest.VendorId, opt => opt.MapFrom(src => src.VendorId))
+            .ForMember(dest => dest.VendorName, opt => opt.MapFrom(src => src.Vendor != null ? src.Vendor.Name : "Unknown Vendor"))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
-            .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount))
+            .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => (double)src.TotalAmount))
             .ForMember(dest => dest.StartTime, opt => opt.MapFrom(src => src.StartTime))
             .ForMember(dest => dest.EndTime, opt => opt.MapFrom(src => src.EndTime))
-            .ForMember(dest => dest.ApprovedAt, opt => opt.MapFrom(src => src.ApprovedAt))
-            .ForMember(dest => dest.RejectedAt, opt => opt.MapFrom(src => src.RejectedAt))
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
             .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
             .ForMember(dest => dest.BookingReference, opt => opt.Ignore())
-            .ForMember(dest => dest.Notes, opt => opt.Ignore())
-            .ForMember(dest => dest.IsPaid, opt => opt.Ignore())
-            .ForMember(dest => dest.PaidAt, opt => opt.Ignore())
-            .ForMember(dest => dest.PaymentMethod, opt => opt.Ignore())
-            .ForMember(dest => dest.PaymentStatus, opt => opt.Ignore())
-            .ForMember(dest => dest.CancellationReason, opt => opt.Ignore())
-            .ForMember(dest => dest.CancelledAt, opt => opt.Ignore());
+            .ForMember(dest => dest.Notes, opt => opt.MapFrom(src => src.Notes))
+            .ForMember(dest => dest.IsPaid, opt => opt.MapFrom(src => src.IsPaid))
+            .ForMember(dest => dest.PaidAt, opt => opt.MapFrom(src => src.PaidAt))
+            .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => src.PaymentMethod))
+            .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => src.PaymentStatus))
+            .ForMember(dest => dest.CancellationReason, opt => opt.MapFrom(src => src.CancellationReason))
+            .ForMember(dest => dest.CancelledAt, opt => opt.MapFrom(src => src.CancelledAt))
+            .ForMember(dest => dest.ServiceItems, opt => opt.MapFrom(src => src.Services))
+            .ForMember(dest => dest.ContactInfo, opt => opt.MapFrom(src => src.Vendor != null ? new VendorContactInfo
+            {
+                Phone = src.Vendor.Phone ?? "",
+                Email = src.Vendor.Email ?? "",
+                WhatsApp = ""
+            } : null));
+
+        // VendorBookingService to VendorBookingServiceDto mapping
+        CreateMap<HallApp.Core.Entities.VendorEntities.VendorBookingService, HallApp.Application.DTOs.Vendors.VendorBookingServiceDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.ServiceItem != null ? src.ServiceItem.Id : src.ServiceItemId))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.ServiceItem != null ? src.ServiceItem.Name : "Unknown Service"))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.ServiceItem != null ? src.ServiceItem.Description : ""))
+            .ForMember(dest => dest.Price, opt => opt.MapFrom(src => (double)src.UnitPrice))
+            .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
+            .ForMember(dest => dest.SpecialInstructions, opt => opt.MapFrom(src => src.SpecialInstructions ?? ""))
+            .ForMember(dest => dest.VendorBookingId, opt => opt.MapFrom(src => src.VendorBookingId));
 
         // Notification mappings
         CreateMap<HallApp.Core.Entities.NotificationEntities.Notification, HallApp.Application.DTOs.Notifications.NotificationResponseDto>()
@@ -534,33 +575,26 @@ public class AutoMapperProfiles : Profile
     // Helper method to calculate financial summary for BookingDto
     private static HallApp.Application.DTOs.Booking.BookingFinancialSummary CalculateFinancialSummary(HallApp.Core.Entities.BookingEntities.Booking booking)
     {
-        // Calculate hall cost from booking total price
-        var hallCost = booking.TotalPrice;
-        
-        // Calculate vendors cost from all vendor bookings
-        var vendorsCost = 0.0;
-        if (booking.VendorBookings?.Any() == true)
-        {
-            vendorsCost = (double)booking.VendorBookings.Sum(vb => vb.TotalAmount);
-        }
-        
-        // Calculate subtotal
-        var subTotal = hallCost + vendorsCost;
-        
-        // Apply discount and calculate tax (15% VAT)
-        var discount = booking.Discount;
-        var tax = subTotal * 0.15; // 15% VAT on subtotal
-        var totalAmount = subTotal - discount + tax;
+        // Use new financial fields from updated Booking entity
+        var hallCost = booking.HallCost;
+        var vendorsCost = booking.VendorServicesCost;
+        var subTotal = booking.Subtotal;
+        var discountAmount = booking.DiscountAmount;
+        var taxAmount = booking.TaxAmount;
+        var totalAmount = booking.TotalAmount;
 
         return new HallApp.Application.DTOs.Booking.BookingFinancialSummary
         {
             HallCost = hallCost,
             VendorsCost = vendorsCost,
             SubTotal = subTotal,
-            Discount = discount,
-            Tax = tax,
+            DiscountAmount = discountAmount,
+            TaxAmount = taxAmount,
+            TaxRate = booking.TaxRate,
             TotalAmount = totalAmount,
-            Currency = "SAR"
+            Currency = booking.Currency ?? "SAR",
+            CalculatedAt = DateTime.UtcNow,
+            VendorBreakdown = new List<HallApp.Application.DTOs.Booking.VendorFinancialBreakdownDto>()
         };
     }
 }

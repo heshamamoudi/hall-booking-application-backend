@@ -41,6 +41,14 @@ public static class ApplicationServiceExtensions
             services.AddScoped<IBookingService, BookingService>();
             services.AddScoped<IServiceItemService, ServiceItemService>();
             services.AddScoped<INotificationService, NotificationService>();
+            // Register BookingFinancialService in the DI container
+            services.AddScoped<IBookingFinancialService>(provider =>
+                new BookingFinancialService(
+                    provider.GetRequiredService<IBookingService>(),
+                    provider.GetRequiredService<IServiceItemService>(),
+                    provider.GetRequiredService<IVendorService>(),
+                    provider.GetRequiredService<ILogger<BookingFinancialService>>()
+                ));
         }
         catch (Exception ex)
         {

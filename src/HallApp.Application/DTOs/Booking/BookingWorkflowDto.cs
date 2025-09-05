@@ -11,6 +11,7 @@ namespace HallApp.Application.DTOs.Booking
         public string EventType { get; set; } = string.Empty;
         public string SpecialRequests { get; set; } = string.Empty;
         public int ExpectedGuestCount { get; set; }
+        public string DiscountCode { get; set; } = string.Empty;
         public List<VendorServiceSelectionDto> SelectedServices { get; set; } = new();
     }
 
