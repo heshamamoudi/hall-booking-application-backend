@@ -12,7 +12,7 @@ namespace HallApp.Web.Controllers.Review
     /// Review management controller
     /// Handles hall reviews and ratings from customers
     /// </summary>
-    [Route("api/v1/reviews")]
+    [Route("api/reviews")]
     public class ReviewController : BaseApiController
     {
         private readonly IReviewService _reviewService;

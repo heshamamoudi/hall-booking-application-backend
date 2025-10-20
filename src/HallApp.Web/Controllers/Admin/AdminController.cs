@@ -21,7 +21,7 @@ namespace HallApp.Web.Controllers.Admin
     /// Handles user management, role assignment, and system administration
     /// </summary>
     [Authorize(Roles = "Admin")]
-    [Route("api/v1/admin")]
+    [Route("api/admin")]
     public class AdminController : BaseApiController
     {
         private readonly UserManager<AppUser> _userManager;

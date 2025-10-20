@@ -14,7 +14,7 @@ namespace HallApp.Web.Controllers.Hall
     /// Handles hall retrieval for customers and guests
     /// </summary>
     [AllowAnonymous]
-    [Route("api/v1/halls")]
+    [Route("api/halls")]
     public class HallController : BaseApiController
     {
         private readonly IHallService _hallService;
@@ -211,6 +211,147 @@ namespace HallApp.Web.Controllers.Hall
             catch (Exception ex)
             {
                 return Error<IEnumerable<HallDto>>($"Failed to get alternative halls: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get special offer halls (venues with very high rating > 4.5)
+        /// </summary>
+        /// <param name="limit">Maximum number of halls to return</param>
+        /// <returns>List of special offer halls</returns>
+        [HttpGet("special-offers")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetSpecialOfferHalls([FromQuery] int limit = 6)
+        {
+            try
+            {
+                var allHalls = await _hallService.GetAllHallsAsync();
+                var specialOfferHalls = allHalls
+                    .Where(h => h.AverageRating > 4.5 && h.Active)
+                    .OrderByDescending(h => h.AverageRating)
+                    .Take(limit)
+                    .ToList();
+
+                var hallDtos = _mapper.Map<List<HallDto>>(specialOfferHalls);
+                return Success<IEnumerable<HallDto>>(hallDtos, $"Found {hallDtos.Count} special offer halls");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<HallDto>>($"Failed to get special offer halls: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get featured halls (high rating and good capacity)
+        /// </summary>
+        /// <param name="limit">Maximum number of halls to return</param>
+        /// <returns>List of featured halls</returns>
+        [HttpGet("featured")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetFeaturedHalls([FromQuery] int limit = 6)
+        {
+            try
+            {
+                var allHalls = await _hallService.GetAllHallsAsync();
+                var featuredHalls = allHalls
+                    .Where(h => h.AverageRating >= 4.0 && 
+                               Math.Max(h.MaleMax, h.FemaleMax) >= 100 && 
+                               h.Active)
+                    .OrderByDescending(h => h.AverageRating)
+                    .ThenByDescending(h => Math.Max(h.MaleMax, h.FemaleMax))
+                    .Take(limit)
+                    .ToList();
+
+                var hallDtos = _mapper.Map<List<HallDto>>(featuredHalls);
+                return Success<IEnumerable<HallDto>>(hallDtos, $"Found {hallDtos.Count} featured halls");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<HallDto>>($"Failed to get featured halls: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get popular halls (high rating and multiple reviews)
+        /// </summary>
+        /// <param name="limit">Maximum number of halls to return</param>
+        /// <returns>List of popular halls</returns>
+        [HttpGet("popular")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetPopularHalls([FromQuery] int limit = 6)
+        {
+            try
+            {
+                var allHalls = await _hallService.GetAllHallsAsync();
+                var popularHalls = allHalls
+                    .Where(h => h.Reviews != null && 
+                               h.Reviews.Count >= 5 && 
+                               h.AverageRating >= 3.8 && 
+                               h.Active)
+                    .OrderByDescending(h => h.Reviews.Count)
+                    .ThenByDescending(h => h.AverageRating)
+                    .Take(limit)
+                    .ToList();
+
+                var hallDtos = _mapper.Map<List<HallDto>>(popularHalls);
+                return Success<IEnumerable<HallDto>>(hallDtos, $"Found {hallDtos.Count} popular halls");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<HallDto>>($"Failed to get popular halls: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get premium halls (high rating, complete media, and description)
+        /// </summary>
+        /// <param name="limit">Maximum number of halls to return</param>
+        /// <returns>List of premium halls</returns>
+        [HttpGet("premium")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetPremiumHalls([FromQuery] int limit = 6)
+        {
+            try
+            {
+                var allHalls = await _hallService.GetAllHallsAsync();
+                var premiumHalls = allHalls
+                    .Where(h => h.AverageRating >= 4.2 && 
+                               h.MediaFiles != null && h.MediaFiles.Count > 0 &&
+                               !string.IsNullOrEmpty(h.Description) && 
+                               h.Active)
+                    .OrderByDescending(h => h.AverageRating)
+                    .ThenByDescending(h => h.MediaFiles.Count)
+                    .Take(limit)
+                    .ToList();
+
+                var hallDtos = _mapper.Map<List<HallDto>>(premiumHalls);
+                return Success<IEnumerable<HallDto>>(hallDtos, $"Found {hallDtos.Count} premium halls");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<HallDto>>($"Failed to get premium halls: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get newly added halls (recently created halls)
+        /// </summary>
+        /// <param name="limit">Maximum number of halls to return</param>
+        /// <returns>List of newly added halls</returns>
+        [HttpGet("newly-added")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetNewlyAddedHalls([FromQuery] int limit = 6)
+        {
+            try
+            {
+                var allHalls = await _hallService.GetAllHallsAsync();
+                var newlyAddedHalls = allHalls
+                    .Where(h => h.Active)
+                    .OrderByDescending(h => h.Created)
+                    .Take(limit)
+                    .ToList();
+
+                var hallDtos = _mapper.Map<List<HallDto>>(newlyAddedHalls);
+                return Success<IEnumerable<HallDto>>(hallDtos, $"Found {hallDtos.Count} newly added halls");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<HallDto>>($"Failed to get newly added halls: {ex.Message}", 500);
             }
         }
     }

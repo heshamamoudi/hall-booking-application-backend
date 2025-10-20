@@ -13,7 +13,7 @@ namespace HallApp.Web.Controllers.Vendor
     /// Handles vendor type retrieval and categorization
     /// </summary>
     [AllowAnonymous]
-    [Route("api/v1/vendor-types")]
+    [Route("api/vendor-types")]
     public class VendorTypeController : BaseApiController
     {
         private readonly IVendorService _vendorService;

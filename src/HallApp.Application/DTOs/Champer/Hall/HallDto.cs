@@ -34,14 +34,15 @@ public class HallDto
     // Gender 1 = Male , 2 = Female , 3 = Both
     public int Gender { get; set; }
 
-
+    public string Description { get; set; }
+    public double AverageRating { get; set; }
     public string Media { get; set; }
-    public List<HallMediaDto> MediaFiles { get; set; }
-    public List<HallManagerDto> Managers { get; set; }
-    public List<ContactDto> Contacts { get; set; }
+    public List<HallMediaDto> MediaFiles { get; set; } = new List<HallMediaDto>();
+    public List<HallManagerDto> Managers { get; set; } = new List<HallManagerDto>();
+    public List<ContactDto> Contacts { get; set; } = new List<ContactDto>();
     public LocationDto Location { get; set; }
-    public List<PackageDto> Packages { get; set; }
-    public List<ServiceDto> Services { get; set; }
+    public List<PackageDto> Packages { get; set; } = new List<PackageDto>();
+    public List<ServiceDto> Services { get; set; } = new List<ServiceDto>();
     public DateTime Created { get; set; }
     public DateTime Updated { get; set; }
 }

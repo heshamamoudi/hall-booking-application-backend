@@ -2,13 +2,17 @@ using AutoMapper;
 using HallApp.Core.Entities;
 using HallApp.Core.Entities.VendorEntities;
 using HallApp.Core.Entities.CustomerEntities;
+using HallApp.Core.Entities.ChamperEntities;
+using HallApp.Core.Entities.ChamperEntities.ContactEntities;
+using HallApp.Core.Entities.ChamperEntities.MediaEntities;
+using HallApp.Core.Entities.ChamperEntities.PackageEntities;
+using HallApp.Core.Entities.ChamperEntities.ServiceEntities;
 using HallApp.Application.DTOs;
 using HallApp.Application.DTOs.Vendors;
 using HallApp.Application.DTOs.Customer;
 using HallApp.Application.DTOs.Auth;
 using HallApp.Application.DTOs.Vendor;
 using HallApp.Application.DTOs.HallManager;
-using HallApp.Core.Entities.ChamperEntities;
 using HallApp.Application.DTOs.Champer.Hall;
 using HallApp.Application.DTOs.Champer.HallManager;
 using HallApp.Application.DTOs.Champer.Contact;
@@ -286,6 +290,9 @@ public class AutoMapperProfiles : Profile
                 return (appUser, vendorManager);
             });
 
+        // Initialize Media mappings
+        CreateMediaMappings();
+
         // Hall mappings
         CreateMap<Hall, HallDto>()
             .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
@@ -305,13 +312,15 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.FemaleMax, opt => opt.MapFrom(src => src.FemaleMax))
             .ForMember(dest => dest.FemaleActive, opt => opt.MapFrom(src => src.FemaleActive))
             .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+            .ForMember(dest => dest.AverageRating, opt => opt.MapFrom(src => src.AverageRating))
             .ForMember(dest => dest.Media, opt => opt.MapFrom(src => src.Logo))
-            .ForMember(dest => dest.MediaFiles, opt => opt.MapFrom(src => src.MediaFiles))
-            .ForMember(dest => dest.Managers, opt => opt.MapFrom(src => src.Managers))
-            .ForMember(dest => dest.Contacts, opt => opt.MapFrom(src => src.Contacts))
+            .ForMember(dest => dest.MediaFiles, opt => opt.MapFrom(src => src.MediaFiles ?? new List<HallMedia>()))
+            .ForMember(dest => dest.Managers, opt => opt.MapFrom(src => src.Managers ?? new List<HallManager>()))
+            .ForMember(dest => dest.Contacts, opt => opt.MapFrom(src => src.Contacts ?? new List<Contact>()))
             .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
-            .ForMember(dest => dest.Packages, opt => opt.MapFrom(src => src.Packages))
-            .ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.Services))
+            .ForMember(dest => dest.Packages, opt => opt.MapFrom(src => src.Packages ?? new List<Package>()))
+            .ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.Services ?? new List<Service>()))
             .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
             .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated));
 
@@ -596,5 +605,149 @@ public class AutoMapperProfiles : Profile
             CalculatedAt = DateTime.UtcNow,
             VendorBreakdown = new List<HallApp.Application.DTOs.Booking.VendorFinancialBreakdownDto>()
         };
+    }
+
+    private void CreateMediaMappings()
+    {
+        // Base Media mappings
+        CreateMap<Media, MediaDto>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.MediaType, opt => opt.MapFrom(src => src.MediaType))
+            .ForMember(dest => dest.URL, opt => opt.MapFrom(src => src.URL))
+            .ForMember(dest => dest.HallID, opt => opt.MapFrom(src => src.HallID))
+            .ForMember(dest => dest.index, opt => opt.MapFrom(src => src.index))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated));
+
+        CreateMap<MediaDto, Media>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.MediaType, opt => opt.MapFrom(src => src.MediaType))
+            .ForMember(dest => dest.URL, opt => opt.MapFrom(src => src.URL))
+            .ForMember(dest => dest.HallID, opt => opt.MapFrom(src => src.HallID))
+            .ForMember(dest => dest.index, opt => opt.MapFrom(src => src.index))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
+            .ForMember(dest => dest.Hall, opt => opt.Ignore());
+
+        // HallMedia mappings
+        CreateMap<HallMedia, HallMediaDto>()
+            .IncludeBase<Media, MediaDto>()
+            .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender));
+
+        CreateMap<HallMediaDto, HallMedia>()
+            .IncludeBase<MediaDto, Media>()
+            .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender));
+
+        // Contact mappings
+        CreateMap<Contact, ContactDto>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+            .ForMember(dest => dest.Phone, opt => opt.MapFrom(src => src.Phone))
+            .ForMember(dest => dest.HallID, opt => opt.MapFrom(src => src.HallID))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated));
+
+        CreateMap<ContactDto, Contact>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+            .ForMember(dest => dest.Phone, opt => opt.MapFrom(src => src.Phone))
+            .ForMember(dest => dest.HallID, opt => opt.MapFrom(src => src.HallID))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
+            .ForMember(dest => dest.Hall, opt => opt.Ignore());
+
+        // Location mappings
+        CreateMap<HallApp.Core.Entities.ChamperEntities.LocationEntities.Location, LocationDto>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.City, opt => opt.MapFrom(src => src.City))
+            .ForMember(dest => dest.State, opt => opt.MapFrom(src => src.State))
+            .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
+            .ForMember(dest => dest.Altitude, opt => opt.MapFrom(src => src.Altitude))
+            .ForMember(dest => dest.Latitude, opt => opt.MapFrom(src => src.Latitude))
+            .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => src.Longitude))
+            .ForMember(dest => dest.HallID, opt => opt.MapFrom(src => src.HallID))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated));
+
+        CreateMap<LocationDto, HallApp.Core.Entities.ChamperEntities.LocationEntities.Location>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.City, opt => opt.MapFrom(src => src.City))
+            .ForMember(dest => dest.State, opt => opt.MapFrom(src => src.State))
+            .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
+            .ForMember(dest => dest.Altitude, opt => opt.MapFrom(src => src.Altitude))
+            .ForMember(dest => dest.Latitude, opt => opt.MapFrom(src => src.Latitude))
+            .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => src.Longitude))
+            .ForMember(dest => dest.HallID, opt => opt.MapFrom(src => src.HallID))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
+            .ForMember(dest => dest.Hall, opt => opt.Ignore());
+
+        // Package mappings
+        CreateMap<Package, PackageDto>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+            .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
+            .ForMember(dest => dest.HallID, opt => opt.MapFrom(src => src.HallID))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated));
+
+        CreateMap<PackageDto, Package>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+            .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
+            .ForMember(dest => dest.HallID, opt => opt.MapFrom(src => src.HallID))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
+            .ForMember(dest => dest.Hall, opt => opt.Ignore());
+
+        // Service mappings
+        CreateMap<Service, ServiceDto>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.ArabicName, opt => opt.MapFrom(src => src.ArabicName))
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive))
+            .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
+            .ForMember(dest => dest.HallID, opt => opt.MapFrom(src => src.HallID))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated));
+
+        CreateMap<ServiceDto, Service>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.ArabicName, opt => opt.MapFrom(src => src.ArabicName))
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive))
+            .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
+            .ForMember(dest => dest.HallID, opt => opt.MapFrom(src => src.HallID))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
+            .ForMember(dest => dest.Hall, opt => opt.Ignore());
+
+        // HallManager mappings
+        CreateMap<HallManager, HallManagerDto>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.CompanyName))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.Email : ""))
+            .ForMember(dest => dest.Phone, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.PhoneNumber : ""))
+            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.UserName : ""))
+            .ForMember(dest => dest.AppUserID, opt => opt.MapFrom(src => src.AppUserId))
+            .ForMember(dest => dest.Active, opt => opt.MapFrom(src => src.IsApproved))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.CreatedAt))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.ApprovedAt ?? src.CreatedAt))
+            .ForMember(dest => dest.Password, opt => opt.Ignore())
+            .ForMember(dest => dest.Halls, opt => opt.Ignore());
+
+        CreateMap<HallManagerDto, HallManager>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.CompanyName, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.AppUserId, opt => opt.MapFrom(src => src.AppUserID))
+            .ForMember(dest => dest.IsApproved, opt => opt.MapFrom(src => src.Active))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.ApprovedAt, opt => opt.MapFrom(src => src.Active ? src.Updated : (DateTime?)null))
+            .ForMember(dest => dest.CommercialRegistrationNumber, opt => opt.Ignore())
+            .ForMember(dest => dest.AppUser, opt => opt.Ignore());
     }
 }

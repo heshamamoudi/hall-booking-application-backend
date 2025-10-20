@@ -21,7 +21,7 @@ namespace HallApp.Web.Controllers.Booking
     /// Booking management controller
     /// Handles hall booking operations, updates, and status management
     /// </summary>
-    [Route("api/v1/bookings")]
+    [Route("api/bookings")]
     public class BookingController : BaseApiController
     {
         private readonly IBookingService _bookingService;

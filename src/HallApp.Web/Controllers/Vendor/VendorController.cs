@@ -13,7 +13,7 @@ namespace HallApp.Web.Controllers.Vendor
     /// Vendor management controller
     /// Handles vendor CRUD operations, search, and validation
     /// </summary>
-    [Route("api/v1/vendors")]
+    [Route("api/vendors")]
     public class VendorController : BaseApiController
     {
         private readonly IVendorService _vendorService;

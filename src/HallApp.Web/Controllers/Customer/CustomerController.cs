@@ -15,17 +15,19 @@ namespace HallApp.Web.Controllers.Customer
     /// Customer management controller
     /// Handles customer profile operations and admin customer management
     /// </summary>
-    [Route("api/v1/customers")]
+    [Route("api/customers")]
     public class CustomerController : BaseApiController
     {
         private readonly ICustomerService _customerService;
         private readonly IAddressService _addressService;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public CustomerController(ICustomerService customerService, IAddressService addressService, IMapper mapper)
+        public CustomerController(ICustomerService customerService, IAddressService addressService, IUnitOfWork unitOfWork, IMapper mapper)
         {
             _customerService = customerService;
             _addressService = addressService;
+            _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
 
@@ -355,6 +357,122 @@ namespace HallApp.Web.Controllers.Customer
             catch (Exception ex)
             {
                 return Error<string>($"Failed to delete address: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get all favorite halls for a customer
+        /// </summary>
+        /// <param name="customerId">Customer ID</param>
+        /// <returns>List of favorite halls</returns>
+        [Authorize(Roles = "Customer")]
+        [HttpGet("{customerId:int}/favorites")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetFavorites(int customerId)
+        {
+            try
+            {
+                // Verify customer ownership
+                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (customer == null || customer.Id != customerId)
+                {
+                    return Error<IEnumerable<object>>("Access denied", 403);
+                }
+
+                var favorites = await _unitOfWork.FavoriteRepository.GetFavoritesByCustomerIdAsync(customerId);
+                
+                // Map to simple DTOs to avoid circular reference issues
+                var favoriteDtos = favorites.Select(f => new
+                {
+                    id = f.Id,
+                    customerId = f.CustomerId,
+                    hallId = f.HallId,
+                    created = f.CreatedAt,
+                    updated = f.CreatedAt
+                }).ToList();
+                
+                return Success<IEnumerable<object>>(favoriteDtos, "Favorites retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<object>>($"Failed to retrieve favorites: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Add a hall to favorites
+        /// </summary>
+        /// <param name="customerId">Customer ID</param>
+        /// <param name="favoriteDto">Favorite data containing hallId</param>
+        /// <returns>Success response</returns>
+        [Authorize(Roles = "Customer")]
+        [HttpPost("{customerId:int}/favorites")]
+        public async Task<ActionResult<ApiResponse<string>>> AddFavorite(int customerId, [FromBody] CreateFavoriteDto favoriteDto)
+        {
+            try
+            {
+                // Verify customer ownership
+                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (customer == null || customer.Id != customerId)
+                {
+                    return Error<string>("Access denied", 403);
+                }
+
+                if (favoriteDto == null || !favoriteDto.HallId.HasValue || favoriteDto.HallId.Value <= 0)
+                {
+                    return Error<string>("Invalid hall ID", 400);
+                }
+
+                var hallId = favoriteDto.HallId.Value;
+
+                // Check if favorite already exists
+                var exists = await _unitOfWork.FavoriteRepository.FavoriteExistsAsync(customerId, hallId);
+                if (exists)
+                {
+                    return Error<string>("Hall is already in favorites", 400);
+                }
+
+                await _unitOfWork.FavoriteRepository.AddFavoriteAsync(customerId, hallId);
+                await _unitOfWork.Complete();
+
+                return Success<string>("Favorite added successfully", "Favorite added successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<string>($"Failed to add favorite: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Remove a hall from favorites
+        /// </summary>
+        /// <param name="customerId">Customer ID</param>
+        /// <param name="hallId">Hall ID to remove</param>
+        /// <returns>Success response</returns>
+        [Authorize(Roles = "Customer")]
+        [HttpDelete("{customerId:int}/favorites/{hallId:int}")]
+        public async Task<ActionResult<ApiResponse<string>>> RemoveFavorite(int customerId, int hallId)
+        {
+            try
+            {
+                // Verify customer ownership
+                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (customer == null || customer.Id != customerId)
+                {
+                    return Error<string>("Access denied", 403);
+                }
+
+                var removed = await _unitOfWork.FavoriteRepository.RemoveFavoriteAsync(customerId, hallId);
+                if (!removed)
+                {
+                    return Error<string>("Favorite not found", 404);
+                }
+
+                await _unitOfWork.Complete();
+                return Success<string>("Favorite removed successfully", "Favorite removed successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<string>($"Failed to remove favorite: {ex.Message}", 500);
             }
         }
     }

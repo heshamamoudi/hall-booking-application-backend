@@ -8,12 +8,12 @@ using HallApp.Core.Exceptions;
 using HallApp.Application.DTOs.Auth;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Core.Interfaces.IRepositories;
+using HallApp.Web.Controllers.Common;
 
 namespace HallApp.Web.Controllers
 {
     [Route("api/auth")]
-    [ApiController]
-    public class AuthController : ControllerBase
+    public class AuthController : BaseApiController
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;

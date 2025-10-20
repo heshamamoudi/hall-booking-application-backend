@@ -13,7 +13,7 @@ namespace HallApp.Web.Controllers.Notification
     /// Handles user notifications, read status, and notification management
     /// </summary>
     [Authorize]
-    [Route("api/v1/notifications")]
+    [Route("api/notifications")]
     public class NotificationController : BaseApiController
     {
         private readonly INotificationService _notificationService;

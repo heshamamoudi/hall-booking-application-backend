@@ -9,7 +9,7 @@ namespace HallApp.Web.Controllers.Common
     /// Implements consistent error handling, user context, and response patterns
     /// </summary>
     [ApiController]
-    [Route("api/v1/[controller]")]
+    [Route("api/[controller]")]
     [Produces("application/json")]
     public abstract class BaseApiController : ControllerBase
     {

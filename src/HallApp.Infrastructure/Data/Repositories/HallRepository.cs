@@ -10,6 +10,36 @@ public class HallRepository : GenericRepository<Hall>, IHallRepository
     {
     }
 
+    // Override GetByIdAsync to include related entities
+    public override async Task<Hall> GetByIdAsync(int id)
+    {
+        return await _context.Halls
+            .Include(h => h.Location)
+            .Include(h => h.MediaFiles)
+            .Include(h => h.Packages)
+            .Include(h => h.Services)
+            .Include(h => h.Reviews)
+            .Include(h => h.Managers)
+                .ThenInclude(m => m.AppUser)
+            .Include(h => h.Contacts)
+            .FirstOrDefaultAsync(h => h.ID == id);
+    }
+
+    // Override GetAllAsync to include related entities
+    public override async Task<IEnumerable<Hall>> GetAllAsync()
+    {
+        return await _context.Halls
+            .Include(h => h.Location)
+            .Include(h => h.MediaFiles)
+            .Include(h => h.Packages)
+            .Include(h => h.Services)
+            .Include(h => h.Reviews)
+            .Include(h => h.Managers)
+                .ThenInclude(m => m.AppUser)
+            .Include(h => h.Contacts)
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<Hall>> GetHallsByManagerIdAsync(int managerId)
     {
         return await _context.Halls
