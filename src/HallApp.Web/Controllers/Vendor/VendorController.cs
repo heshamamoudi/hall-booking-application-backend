@@ -164,7 +164,50 @@ namespace HallApp.Web.Controllers.Vendor
             try
             {
                 var vendors = await _vendorService.GetVendorsAsync(vendorParams);
-                var vendorDtos = _mapper.Map<IEnumerable<VendorDto>>(vendors);
+                
+                // Apply filtering
+                var filteredVendors = vendors.AsQueryable();
+                
+                if (!string.IsNullOrEmpty(vendorParams.SearchTerm))
+                {
+                    var searchLower = vendorParams.SearchTerm.ToLower();
+                    filteredVendors = filteredVendors.Where(v => 
+                        v.Name.ToLower().Contains(searchLower) ||
+                        v.Description.ToLower().Contains(searchLower));
+                }
+                
+                if (vendorParams.VendorTypeId.HasValue)
+                {
+                    filteredVendors = filteredVendors.Where(v => v.VendorTypeId == vendorParams.VendorTypeId);
+                }
+                
+                if (vendorParams.IsActive.HasValue)
+                {
+                    filteredVendors = filteredVendors.Where(v => v.IsActive == vendorParams.IsActive.Value);
+                }
+                
+                // Apply sorting
+                filteredVendors = vendorParams.OrderBy?.ToLower() switch
+                {
+                    "name" => filteredVendors.OrderBy(v => v.Name),
+                    "rating" => filteredVendors.OrderByDescending(v => v.Rating),
+                    "reviews" => filteredVendors.OrderByDescending(v => v.ReviewCount),
+                    _ => filteredVendors.OrderBy(v => v.Id)
+                };
+                
+                var totalCount = filteredVendors.Count();
+                var totalPages = (int)Math.Ceiling((double)totalCount / vendorParams.PageSize);
+                
+                // Apply pagination
+                var pagedVendors = filteredVendors
+                    .Skip((vendorParams.PageNumber - 1) * vendorParams.PageSize)
+                    .Take(vendorParams.PageSize)
+                    .ToList();
+                
+                var vendorDtos = _mapper.Map<IEnumerable<VendorDto>>(pagedVendors);
+                
+                var hasPrevious = vendorParams.PageNumber > 1;
+                var hasNext = vendorParams.PageNumber < totalPages;
                 
                 var response = new PaginatedApiResponse<VendorDto>
                 {
@@ -172,20 +215,22 @@ namespace HallApp.Web.Controllers.Vendor
                     Message = "Vendors retrieved successfully",
                     IsSuccess = true,
                     Data = vendorDtos,
-                    CurrentPage = 1,
-                    PageSize = 10,
-                    TotalCount = vendorDtos.Count(),
-                    TotalPages = 1
+                    CurrentPage = vendorParams.PageNumber,
+                    PageSize = vendorParams.PageSize,
+                    TotalCount = totalCount,
+                    TotalPages = totalPages,
+                    HasPrevious = hasPrevious,
+                    HasNext = hasNext
                 };
 
                 Response.Headers["X-Pagination"] = JsonSerializer.Serialize(new
                 {
-                    totalCount = vendorDtos.Count(),
-                    pageSize = 10,
-                    currentPage = 1,
-                    totalPages = 1,
-                    hasNext = false,
-                    hasPrevious = false
+                    totalCount,
+                    pageSize = vendorParams.PageSize,
+                    currentPage = vendorParams.PageNumber,
+                    totalPages,
+                    hasNext,
+                    hasPrevious
                 });
 
                 return response;
