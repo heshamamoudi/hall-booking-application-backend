@@ -519,7 +519,8 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.Phone, opt => opt.MapFrom(src => src.Phone))
             .ForMember(dest => dest.WhatsApp, opt => opt.MapFrom(src => src.WhatsApp))
             .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
-            .ForMember(dest => dest.Managers, opt => opt.MapFrom(src => src.Managers));
+            .ForMember(dest => dest.Managers, opt => opt.MapFrom(src => src.Managers))
+            .ForMember(dest => dest.MediaFiles, opt => opt.MapFrom(src => src.MediaFiles));
 
         // VendorBooking to VendorBookingDto mapping
         CreateMap<HallApp.Core.Entities.VendorEntities.VendorBooking, HallApp.Application.DTOs.Vendors.VendorBookingDto>()

@@ -218,9 +218,7 @@ namespace HallApp.Web.Controllers.Vendor
                     CurrentPage = vendorParams.PageNumber,
                     PageSize = vendorParams.PageSize,
                     TotalCount = totalCount,
-                    TotalPages = totalPages,
-                    HasPrevious = hasPrevious,
-                    HasNext = hasNext
+                    TotalPages = totalPages
                 };
 
                 Response.Headers["X-Pagination"] = JsonSerializer.Serialize(new
@@ -561,6 +559,148 @@ namespace HallApp.Web.Controllers.Vendor
             catch (Exception ex)
             {
                 return Error<bool>($"Validation failed: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get special offer vendors (vendors with services that have discounts/offers)
+        /// </summary>
+        /// <param name="limit">Maximum number of vendors to return</param>
+        /// <returns>List of special offer vendors</returns>
+        [AllowAnonymous]
+        [HttpGet("special-offers")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<VendorDto>>>> GetSpecialOfferVendors([FromQuery] int limit = 6)
+        {
+            try
+            {
+                var allVendors = await _vendorService.GetVendorsAsync(null);
+                // Filter by HasSpecialOffer flag (set when vendor has active discounts/offers)
+                var specialOfferVendors = allVendors
+                    .Where(v => v.HasSpecialOffer && v.IsActive)
+                    .OrderByDescending(v => v.Rating)
+                    .Take(limit)
+                    .ToList();
+
+                var vendorDtos = _mapper.Map<List<VendorDto>>(specialOfferVendors);
+                return Success<IEnumerable<VendorDto>>(vendorDtos, $"Found {vendorDtos.Count} special offer vendors");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<VendorDto>>($"Failed to get special offer vendors: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get featured vendors (high rating and multiple services)
+        /// </summary>
+        /// <param name="limit">Maximum number of vendors to return</param>
+        /// <returns>List of featured vendors</returns>
+        [AllowAnonymous]
+        [HttpGet("featured")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<VendorDto>>>> GetFeaturedVendors([FromQuery] int limit = 6)
+        {
+            try
+            {
+                var allVendors = await _vendorService.GetVendorsAsync(null);
+                // Filter by IsFeatured flag (set when vendor pays for featured placement)
+                var featuredVendors = allVendors
+                    .Where(v => v.IsFeatured && v.IsActive)
+                    .OrderByDescending(v => v.Rating)
+                    .ThenByDescending(v => v.ServiceItems?.Count ?? 0)
+                    .Take(limit)
+                    .ToList();
+
+                var vendorDtos = _mapper.Map<List<VendorDto>>(featuredVendors);
+                return Success<IEnumerable<VendorDto>>(vendorDtos, $"Found {vendorDtos.Count} featured vendors");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<VendorDto>>($"Failed to get featured vendors: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get popular vendors (high review count)
+        /// </summary>
+        /// <param name="limit">Maximum number of vendors to return</param>
+        /// <returns>List of popular vendors</returns>
+        [AllowAnonymous]
+        [HttpGet("popular")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<VendorDto>>>> GetPopularVendors([FromQuery] int limit = 6)
+        {
+            try
+            {
+                var allVendors = await _vendorService.GetVendorsAsync(null);
+                // Popular based on metrics (review count and rating)
+                var popularVendors = allVendors
+                    .Where(v => v.ReviewCount >= 10 && v.IsActive)
+                    .OrderByDescending(v => v.ReviewCount)
+                    .ThenByDescending(v => v.Rating)
+                    .Take(limit)
+                    .ToList();
+
+                var vendorDtos = _mapper.Map<List<VendorDto>>(popularVendors);
+                return Success<IEnumerable<VendorDto>>(vendorDtos, $"Found {vendorDtos.Count} popular vendors");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<VendorDto>>($"Failed to get popular vendors: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get premium vendors (high rating and complete profile)
+        /// </summary>
+        /// <param name="limit">Maximum number of vendors to return</param>
+        /// <returns>List of premium vendors</returns>
+        [AllowAnonymous]
+        [HttpGet("premium")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<VendorDto>>>> GetPremiumVendors([FromQuery] int limit = 6)
+        {
+            try
+            {
+                var allVendors = await _vendorService.GetVendorsAsync(null);
+                // Filter by IsPremium flag (set when vendor has premium subscription)
+                var premiumVendors = allVendors
+                    .Where(v => v.IsPremium && v.IsActive)
+                    .OrderByDescending(v => v.Rating)
+                    .Take(limit)
+                    .ToList();
+
+                var vendorDtos = _mapper.Map<List<VendorDto>>(premiumVendors);
+                return Success<IEnumerable<VendorDto>>(vendorDtos, $"Found {vendorDtos.Count} premium vendors");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<VendorDto>>($"Failed to get premium vendors: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get newly added vendors (recently created vendors)
+        /// </summary>
+        /// <param name="limit">Maximum number of vendors to return</param>
+        /// <returns>List of newly added vendors</returns>
+        [AllowAnonymous]
+        [HttpGet("newly-added")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<VendorDto>>>> GetNewlyAddedVendors([FromQuery] int limit = 6)
+        {
+            try
+            {
+                var allVendors = await _vendorService.GetVendorsAsync(null);
+                // Newly added based on creation date
+                var newlyAddedVendors = allVendors
+                    .Where(v => v.IsActive)
+                    .OrderByDescending(v => v.CreatedAt)
+                    .Take(limit)
+                    .ToList();
+
+                var vendorDtos = _mapper.Map<List<VendorDto>>(newlyAddedVendors);
+                return Success<IEnumerable<VendorDto>>(vendorDtos, $"Found {vendorDtos.Count} newly added vendors");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<VendorDto>>($"Failed to get newly added vendors: {ex.Message}", 500);
             }
         }
     }

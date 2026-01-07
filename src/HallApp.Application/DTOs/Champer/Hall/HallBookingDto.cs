@@ -14,4 +14,5 @@ public class HallBookingDto
     public string WhatsApp { get; set; } = string.Empty;
     public LocationDto Location { get; set; }
     public List<HallManagerDto> Managers { get; set; } = new();
+    public List<HallMediaDto> MediaFiles { get; set; } = new();
 }

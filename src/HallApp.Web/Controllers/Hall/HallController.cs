@@ -215,7 +215,7 @@ namespace HallApp.Web.Controllers.Hall
         }
 
         /// <summary>
-        /// Get special offer halls (venues with very high rating > 4.5)
+        /// Get special offer halls (halls with active discounts/offers)
         /// </summary>
         /// <param name="limit">Maximum number of halls to return</param>
         /// <returns>List of special offer halls</returns>
@@ -225,8 +225,9 @@ namespace HallApp.Web.Controllers.Hall
             try
             {
                 var allHalls = await _hallService.GetAllHallsAsync();
+                // Filter by HasSpecialOffer flag (set when hall has active discounts/offers)
                 var specialOfferHalls = allHalls
-                    .Where(h => h.AverageRating > 4.5 && h.Active)
+                    .Where(h => h.HasSpecialOffer && h.Active)
                     .OrderByDescending(h => h.AverageRating)
                     .Take(limit)
                     .ToList();
@@ -241,7 +242,7 @@ namespace HallApp.Web.Controllers.Hall
         }
 
         /// <summary>
-        /// Get featured halls (high rating and good capacity)
+        /// Get featured halls (halls that paid for featured placement)
         /// </summary>
         /// <param name="limit">Maximum number of halls to return</param>
         /// <returns>List of featured halls</returns>
@@ -251,10 +252,9 @@ namespace HallApp.Web.Controllers.Hall
             try
             {
                 var allHalls = await _hallService.GetAllHallsAsync();
+                // Filter by IsFeatured flag (set when hall owner pays for featured placement)
                 var featuredHalls = allHalls
-                    .Where(h => h.AverageRating >= 4.0 && 
-                               Math.Max(h.MaleMax, h.FemaleMax) >= 100 && 
-                               h.Active)
+                    .Where(h => h.IsFeatured && h.Active)
                     .OrderByDescending(h => h.AverageRating)
                     .ThenByDescending(h => Math.Max(h.MaleMax, h.FemaleMax))
                     .Take(limit)
@@ -300,7 +300,7 @@ namespace HallApp.Web.Controllers.Hall
         }
 
         /// <summary>
-        /// Get premium halls (high rating, complete media, and description)
+        /// Get premium halls (halls with premium subscription)
         /// </summary>
         /// <param name="limit">Maximum number of halls to return</param>
         /// <returns>List of premium halls</returns>
@@ -310,13 +310,11 @@ namespace HallApp.Web.Controllers.Hall
             try
             {
                 var allHalls = await _hallService.GetAllHallsAsync();
+                // Filter by IsPremium flag (set when hall has premium subscription)
                 var premiumHalls = allHalls
-                    .Where(h => h.AverageRating >= 4.2 && 
-                               h.MediaFiles != null && h.MediaFiles.Count > 0 &&
-                               !string.IsNullOrEmpty(h.Description) && 
-                               h.Active)
+                    .Where(h => h.IsPremium && h.Active)
                     .OrderByDescending(h => h.AverageRating)
-                    .ThenByDescending(h => h.MediaFiles.Count)
+                    .ThenByDescending(h => h.MediaFiles?.Count ?? 0)
                     .Take(limit)
                     .ToList();
 

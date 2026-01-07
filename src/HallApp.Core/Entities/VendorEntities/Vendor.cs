@@ -44,4 +44,9 @@ public class Vendor
     // References
     public int VendorTypeId { get; set; }
     public VendorType VendorType { get; set; } = null!;
+    
+    // Section flags for categorization
+    public bool HasSpecialOffer { get; set; } = false;
+    public bool IsFeatured { get; set; } = false;
+    public bool IsPremium { get; set; } = false;
 }

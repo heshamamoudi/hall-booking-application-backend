@@ -53,4 +53,9 @@ public class Hall
     public DateTime Created { get; set; } = DateTime.UtcNow;
     public DateTime Updated { get; set; } = DateTime.UtcNow;
     public bool Active { get; set; } = true;
+    
+    // Section flags for categorization
+    public bool HasSpecialOffer { get; set; } = false;
+    public bool IsFeatured { get; set; } = false;
+    public bool IsPremium { get; set; } = false;
 }
