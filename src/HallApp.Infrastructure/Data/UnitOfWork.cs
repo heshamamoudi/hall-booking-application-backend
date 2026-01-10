@@ -24,6 +24,7 @@ public class UnitOfWork : IUnitOfWork
         ReviewRepository = new ReviewRepository(_context);
         FavoriteRepository = new FavoriteRepository(_context);
         NotificationRepository = new NotificationRepository(_context);
+        ChatRepository = new ChatRepository(_context);
         // UserRepository requires additional dependencies - should be injected via DI
     }
 
@@ -41,6 +42,7 @@ public class UnitOfWork : IUnitOfWork
     public IFavoriteRepository FavoriteRepository { get; private set; }
     public IUserRepository UserRepository { get; private set; }
     public INotificationRepository NotificationRepository { get; private set; }
+    public IChatRepository ChatRepository { get; private set; }
 
     public async Task<int> Complete()
     {

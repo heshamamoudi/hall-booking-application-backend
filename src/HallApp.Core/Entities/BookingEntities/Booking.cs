@@ -1,5 +1,6 @@
 using HallApp.Core.Entities.VendorEntities;
 using HallApp.Core.Entities.ChamperEntities;
+using HallApp.Core.Entities.CustomerEntities;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace HallApp.Core.Entities.BookingEntities;
@@ -62,5 +63,7 @@ public class Booking
     
     // Navigation properties
     public Hall? Hall { get; set; }
+    public Customer? Customer { get; set; }
     public List<VendorBooking> VendorBookings { get; set; } = new();
+    public Invoice? Invoice { get; set; }
 }

@@ -23,6 +23,5 @@ namespace HallApp.Core.Interfaces.IServices
         // Business profile operations
         Task<(AppUser AppUser, HallManager HallManager)?> GetHallManagerDashboardAsync(string userId);
         Task<bool> UpdateBusinessPreferencesAsync(string userId, HallManager businessData);
-        Task<bool> ApproveHallManagerAsync(string userId, bool isApproved);
     }
 }

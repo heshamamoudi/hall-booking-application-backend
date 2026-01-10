@@ -2,6 +2,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HallApp.Core.Entities.ChamperEntities;
 
+/// <summary>
+/// Represents a user who manages one or more halls.
+/// Business properties (commercial registration, VAT) belong to the Hall entity.
+/// </summary>
 public class HallManager
 {
     public int Id { get; set; }
@@ -10,13 +14,8 @@ public class HallManager
     public int AppUserId { get; set; }
     public AppUser AppUser { get; set; } = null!;
     
-    [StringLength(100)]
-    public string CompanyName { get; set; } = string.Empty;
-    
-    [StringLength(50)]
-    public string CommercialRegistrationNumber { get; set; } = string.Empty;
-    
-    public bool IsApproved { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? ApprovedAt { get; set; }
+    
+    // Navigation properties - Many-to-Many with Halls
+    public List<Hall> Halls { get; set; } = new();
 }

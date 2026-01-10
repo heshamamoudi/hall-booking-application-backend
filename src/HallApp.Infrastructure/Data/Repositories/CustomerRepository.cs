@@ -10,9 +10,32 @@ public class CustomerRepository : GenericRepository<Customer>, ICustomerReposito
     {
     }
 
+    // Override to include AppUser navigation property
+    public override async Task<IEnumerable<Customer>> GetAllAsync()
+    {
+        return await _context.Customers
+            .Include(c => c.AppUser)
+            .Include(c => c.Addresses)
+            .Include(c => c.Favorites)
+            .Include(c => c.Bookings)
+            .ToListAsync();
+    }
+
+    // Override to include AppUser navigation property
+    public override async Task<Customer> GetByIdAsync(int id)
+    {
+        return await _context.Customers
+            .Include(c => c.AppUser)
+            .Include(c => c.Addresses)
+            .Include(c => c.Favorites)
+            .Include(c => c.Bookings)
+            .FirstOrDefaultAsync(c => c.Id == id);
+    }
+
     public async Task<Customer> GetCustomerByAppUserIdAsync(int appUserId)
     {
         return await _context.Customers
+            .Include(c => c.AppUser)
             .Include(c => c.Addresses)
             .Include(c => c.Favorites)
             .Include(c => c.Bookings)
@@ -22,6 +45,7 @@ public class CustomerRepository : GenericRepository<Customer>, ICustomerReposito
     public async Task<Customer> GetCustomerWithAddressesAsync(int customerId)
     {
         return await _context.Customers
+            .Include(c => c.AppUser)
             .Include(c => c.Addresses)
             .FirstOrDefaultAsync(c => c.Id == customerId);
     }
@@ -29,6 +53,7 @@ public class CustomerRepository : GenericRepository<Customer>, ICustomerReposito
     public async Task<Customer> GetCustomerWithBookingsAsync(int customerId)
     {
         return await _context.Customers
+            .Include(c => c.AppUser)
             .Include(c => c.Bookings)
                 .ThenInclude(b => b.VendorBookings)
             .FirstOrDefaultAsync(c => c.Id == customerId);
@@ -37,6 +62,7 @@ public class CustomerRepository : GenericRepository<Customer>, ICustomerReposito
     public async Task<IEnumerable<Customer>> GetCustomersWithOrdersAsync()
     {
         return await _context.Customers
+            .Include(c => c.AppUser)
             .Include(c => c.Bookings)
             .Where(c => c.Bookings.Any())
             .OrderByDescending(c => c.NumberOfOrders)

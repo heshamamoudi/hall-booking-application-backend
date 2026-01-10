@@ -15,7 +15,15 @@ namespace HallApp.Application.DTOs.Booking
         public DateTime EventDate { get; set; }
 
         [Required]
+        public TimeSpan StartTime { get; set; }
+
+        [Required]
+        public TimeSpan EndTime { get; set; }
+
+        [Required]
         public string SelectedGender { get; set; } = null!;
+
+        public string? DiscountCode { get; set; }
 
         public List<SelectedServiceDto> SelectedServices { get; set; } = new();
     }

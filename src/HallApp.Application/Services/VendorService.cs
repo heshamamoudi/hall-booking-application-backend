@@ -25,14 +25,84 @@ public class VendorService : IVendorService
         var existingVendor = await _unitOfWork.VendorRepository.GetVendorByIdAsync(id);
         if (existingVendor == null) throw new ArgumentException($"Vendor with id {id} not found");
         
+        // Update scalar properties
         existingVendor.Name = vendor.Name;
         existingVendor.Description = vendor.Description;
         existingVendor.Email = vendor.Email;
         existingVendor.Phone = vendor.Phone;
-        existingVendor.WhatsApp = vendor.WhatsApp;
-        existingVendor.LogoUrl = vendor.LogoUrl;
-        existingVendor.CoverImageUrl = vendor.CoverImageUrl;
+        existingVendor.WhatsApp = vendor.WhatsApp ?? existingVendor.WhatsApp;
+        existingVendor.Website = vendor.Website ?? existingVendor.Website;
+        existingVendor.LogoUrl = vendor.LogoUrl ?? existingVendor.LogoUrl;
+        existingVendor.CoverImageUrl = vendor.CoverImageUrl ?? existingVendor.CoverImageUrl;
+        existingVendor.VendorTypeId = vendor.VendorTypeId;
         existingVendor.IsActive = vendor.IsActive;
+        
+        // Update flags
+        existingVendor.HasSpecialOffer = vendor.HasSpecialOffer;
+        existingVendor.IsFeatured = vendor.IsFeatured;
+        existingVendor.IsPremium = vendor.IsPremium;
+        
+        // Update timestamp
+        existingVendor.UpdatedAt = DateTime.UtcNow;
+        
+        // Update Location if provided
+        if (vendor.Location != null)
+        {
+            if (existingVendor.Location == null)
+            {
+                existingVendor.Location = vendor.Location;
+            }
+            else
+            {
+                existingVendor.Location.Latitude = vendor.Location.Latitude;
+                existingVendor.Location.Longitude = vendor.Location.Longitude;
+                existingVendor.Location.City = vendor.Location.City;
+                existingVendor.Location.Address = vendor.Location.Address;
+                existingVendor.Location.State = vendor.Location.State;
+                existingVendor.Location.Country = vendor.Location.Country;
+                existingVendor.Location.PostalCode = vendor.Location.PostalCode;
+            }
+        }
+        
+        // Update Managers collection if provided
+        if (vendor.Managers != null)
+        {
+            existingVendor.Managers?.Clear();
+            existingVendor.Managers = vendor.Managers;
+        }
+        
+        // Update ServiceItems collection if provided
+        if (vendor.ServiceItems != null)
+        {
+            existingVendor.ServiceItems?.Clear();
+            existingVendor.ServiceItems = vendor.ServiceItems;
+        }
+        
+        // Update BusinessHours collection if provided
+        if (vendor.BusinessHours != null)
+        {
+            existingVendor.BusinessHours?.Clear();
+            existingVendor.BusinessHours = vendor.BusinessHours;
+        }
+        
+        // Update BlockedDates collection if provided
+        if (vendor.BlockedDates != null)
+        {
+            existingVendor.BlockedDates?.Clear();
+            existingVendor.BlockedDates = vendor.BlockedDates;
+        }
+        
+        await _unitOfWork.Complete();
+        return existingVendor;
+    }
+
+    public async Task<Vendor> ToggleVendorActiveAsync(int id, bool isActive)
+    {
+        var existingVendor = await _unitOfWork.VendorRepository.GetVendorByIdAsync(id);
+        if (existingVendor == null) return null;
+        
+        // Only update IsActive field to prevent data loss
+        existingVendor.IsActive = isActive;
         
         await _unitOfWork.Complete();
         return existingVendor;

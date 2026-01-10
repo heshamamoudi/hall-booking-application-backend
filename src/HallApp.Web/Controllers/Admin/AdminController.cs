@@ -1,4 +1,6 @@
 using HallApp.Web.Controllers.Common;
+using HallApp.Web.Services;
+using HallApp.Web.DTOs;
 using HallApp.Application.Common.Models;
 using HallApp.Application.DTOs.Admin;
 using HallApp.Application.DTOs.Champer.Hall;
@@ -19,10 +21,11 @@ namespace HallApp.Web.Controllers.Admin
     /// <summary>
     /// Admin management controller
     /// Handles user management, role assignment, and system administration
+    /// Extended with vendor and booking management
     /// </summary>
     [Authorize(Roles = "Admin")]
     [Route("api/admin")]
-    public class AdminController : BaseApiController
+    public partial class AdminController : BaseApiController
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly IUserService _userService;
@@ -32,7 +35,9 @@ namespace HallApp.Web.Controllers.Admin
         private readonly IHallManagerProfileService _hallManagerProfileService;
         private readonly IVendorManagerService _vendorManagerService;
         private readonly IVendorProfileService _vendorProfileService;
+        private readonly IBookingService _bookingService;
         private readonly IMapper _mapper;
+        private readonly IFileUploadService _fileUploadService;
 
         public AdminController(
             IUserService userService,
@@ -42,8 +47,10 @@ namespace HallApp.Web.Controllers.Admin
             IHallManagerProfileService hallManagerProfileService,
             IVendorManagerService vendorManagerService,
             IVendorProfileService vendorProfileService,
+            IBookingService bookingService,
             IMapper mapper,
-            UserManager<HallApp.Core.Entities.AppUser> userManager)
+            UserManager<HallApp.Core.Entities.AppUser> userManager,
+            IFileUploadService fileUploadService)
         {
             _userService = userService;
             _hallService = hallService;
@@ -52,8 +59,10 @@ namespace HallApp.Web.Controllers.Admin
             _hallManagerProfileService = hallManagerProfileService;
             _vendorManagerService = vendorManagerService;
             _vendorProfileService = vendorProfileService;
+            _bookingService = bookingService;
             _mapper = mapper;
             _userManager = userManager;
+            _fileUploadService = fileUploadService;
         }
 
         /// <summary>
@@ -71,6 +80,8 @@ namespace HallApp.Web.Controllers.Admin
                     {
                         Id = u.Id,
                         UserName = u.UserName,
+                        FirstName = u.FirstName,
+                        LastName = u.LastName,
                         Email = u.Email,
                         EmailConfirmed = u.EmailConfirmed,
                         PhoneNumber = u.PhoneNumber,
@@ -139,6 +150,130 @@ namespace HallApp.Web.Controllers.Admin
         }
 
         /// <summary>
+        /// Update user profile (Admin/HallManager users only)
+        /// </summary>
+        /// <param name="id">User ID</param>
+        /// <param name="userUpdateDto">Updated user data</param>
+        /// <returns>Updated user with roles</returns>
+        [HttpPut("users/{id}")]
+        public async Task<ActionResult<ApiResponse<UsersDto>>> UpdateUser(string id, [FromBody] UserUpdateDto userUpdateDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                    return Error<UsersDto>($"Invalid data: {errors}", 400);
+                }
+
+                var user = await _userManager.FindByIdAsync(id);
+                
+                if (user == null)
+                {
+                    return Error<UsersDto>($"User with ID {id} not found", 404);
+                }
+
+                // Update user properties
+                if (!string.IsNullOrEmpty(userUpdateDto.UserName))
+                    user.UserName = userUpdateDto.UserName;
+                    
+                if (!string.IsNullOrEmpty(userUpdateDto.FirstName))
+                    user.FirstName = userUpdateDto.FirstName;
+                    
+                if (!string.IsNullOrEmpty(userUpdateDto.LastName))
+                    user.LastName = userUpdateDto.LastName;
+                    
+                if (!string.IsNullOrEmpty(userUpdateDto.Email))
+                    user.Email = userUpdateDto.Email;
+                    
+                if (!string.IsNullOrEmpty(userUpdateDto.PhoneNumber))
+                    user.PhoneNumber = userUpdateDto.PhoneNumber;
+                    
+                if (userUpdateDto.DOB != default(DateTime))
+                    user.DOB = userUpdateDto.DOB;
+                    
+                user.Active = userUpdateDto.Active;
+                    
+                user.Updated = DateTime.UtcNow;
+
+                var result = await _userManager.UpdateAsync(user);
+                
+                if (!result.Succeeded)
+                {
+                    return Error<UsersDto>($"Failed to update user: {string.Join(", ", result.Errors.Select(e => e.Description))}", 400);
+                }
+
+                // Return updated user with roles
+                var updatedUser = new UsersDto
+                {
+                    Id = user.Id,
+                    UserName = user.UserName,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    EmailConfirmed = user.EmailConfirmed,
+                    PhoneNumber = user.PhoneNumber,
+                    DOB = user.DOB,
+                    Created = user.Created,
+                    Updated = user.Updated,
+                    Roles = (await _userManager.GetRolesAsync(user)).ToList(),
+                    Active = user.Active
+                };
+
+                return Success(updatedUser, "User updated successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<UsersDto>($"Failed to update user: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Delete user (Admin/HallManager users only, not customers)
+        /// </summary>
+        /// <param name="id">User ID</param>
+        /// <returns>Success response</returns>
+        [HttpDelete("users/{id}")]
+        public async Task<ActionResult<ApiResponse>> DeleteUser(string id)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(id);
+                
+                if (user == null)
+                {
+                    return Error($"User with ID {id} not found", 404);
+                }
+
+                // Prevent self-deletion
+                if (user.Id == UserId)
+                {
+                    return Error("You cannot delete your own account", 400);
+                }
+
+                // Check if user is a customer - redirect to CustomerController
+                var roles = await _userManager.GetRolesAsync(user);
+                if (roles.Contains("Customer"))
+                {
+                    return Error("Cannot delete customer users through this endpoint. Use /api/customers/{id} instead.", 400);
+                }
+
+                var result = await _userManager.DeleteAsync(user);
+                
+                if (!result.Succeeded)
+                {
+                    return Error($"Failed to delete user: {string.Join(", ", result.Errors.Select(e => e.Description))}", 400);
+                }
+
+                return Success("User deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error($"Failed to delete user: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
         /// Get orders for moderation
         /// </summary>
         /// <returns>Orders requiring moderation</returns>
@@ -170,13 +305,10 @@ namespace HallApp.Web.Controllers.Admin
 
                 if (user != null)
                 {
-                    // Create HallManager business entity with default values
+                    // Create HallManager entity - just links AppUser to managed Halls
                     var hallManager = new HallManager
                     {
-                        AppUserId = user.Id,
-                        CompanyName = "Default Company",
-                        CommercialRegistrationNumber = $"REG-{user.Id}-{DateTime.Now.Ticks}",
-                        IsApproved = false
+                        AppUserId = user.Id
                     };
 
                     var createdHallManager = await _hallManagerService.CreateHallManagerAsync(hallManager);
@@ -209,33 +341,16 @@ namespace HallApp.Web.Controllers.Admin
         {
             try
             {
-                if (!ModelState.IsValid)
+                // Get the profile and update it
+                var profile = await _hallManagerProfileService.GetHallManagerProfileAsync(userId);
+                if (profile.HasValue)
                 {
-                    var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
-                    return Error<HallManagerProfileDto>($"Invalid data: {errors}", 400);
+                    // TODO: Implement update logic
+                    var profileDto = _mapper.Map<HallManagerProfileDto>(profile.Value);
+                    return Success(profileDto, "Hall manager retrieved successfully");
                 }
 
-                // Map user and hall manager data
-                var userData = _mapper.Map<HallApp.Core.Entities.AppUser>(userUpdateDto);
-                var hallManagerData = new HallManager
-                {
-                    CompanyName = "Updated Company",
-                    CommercialRegistrationNumber = $"REG-UPD-{DateTime.Now.Ticks}"
-                };
-
-                var result = await _hallManagerProfileService.UpdateHallManagerProfileAsync(userId, userData, hallManagerData);
-                
-                if (result)
-                {
-                    var profile = await _hallManagerProfileService.GetHallManagerProfileAsync(userId);
-                    if (profile.HasValue)
-                    {
-                        var profileDto = _mapper.Map<HallManagerProfileDto>(profile.Value);
-                        return Success(profileDto, "Hall manager updated successfully");
-                    }
-                }
-
-                return Error<HallManagerProfileDto>("Couldn't update hall manager", 500);
+                return Error<HallManagerProfileDto>("Hall manager not found", 404);
             }
             catch (Exception ex)
             {
@@ -383,11 +498,49 @@ namespace HallApp.Web.Controllers.Admin
                 if (IsAdmin)
                 {
                     var hallEntity = _mapper.Map<HallApp.Core.Entities.ChamperEntities.Hall>(hallUpdateDto);
+                    
+                    // Process mediaBeforeUploade - replace MediaFiles with new media (base64 or URLs)
+                    if (hallUpdateDto.mediaBeforeUploade != null && hallUpdateDto.mediaBeforeUploade.Any())
+                    {
+                        hallEntity.MediaFiles = new List<HallApp.Core.Entities.ChamperEntities.MediaEntities.HallMedia>();
+                        int index = 0;
+                        foreach (var mediaData in hallUpdateDto.mediaBeforeUploade)
+                        {
+                            hallEntity.MediaFiles.Add(new HallApp.Core.Entities.ChamperEntities.MediaEntities.HallMedia
+                            {
+                                URL = mediaData, // Can be base64 or URL
+                                HallID = hallEntity.ID,
+                                MediaType = mediaData.StartsWith("data:") ? "image" : "image",
+                                Gender = 3, // Default to both
+                                index = index++
+                            });
+                        }
+                    }
+                    
                     updatedHallEntity = await _hallService.UpdateHallAsync(hallEntity);
                 }
                 else if (IsHallManager)
                 {
+                    
                     var hallEntity = _mapper.Map<HallApp.Core.Entities.ChamperEntities.Hall>(hallUpdateDto);
+                    // Process mediaBeforeUploade - add new media (base64 or URLs)
+                    if (hallUpdateDto.mediaBeforeUploade != null && hallUpdateDto.mediaBeforeUploade.Any())
+                    {
+                        hallEntity.MediaFiles = new List<HallApp.Core.Entities.ChamperEntities.MediaEntities.HallMedia>();
+                        int index = 0;
+                        foreach (var mediaData in hallUpdateDto.mediaBeforeUploade)
+                        {
+                            hallEntity.MediaFiles.Add(new HallApp.Core.Entities.ChamperEntities.MediaEntities.HallMedia
+                            {
+                                URL = mediaData,
+                                HallID = hallEntity.ID,
+                                MediaType = mediaData.StartsWith("data:") ? "image" : "image",
+                                Gender = 3,
+                                index = index++
+                            });
+                        }
+                    }
+                    
                     updatedHallEntity = await _hallService.UpdateHallAsync(hallEntity);
                 }
                 else
@@ -406,6 +559,144 @@ namespace HallApp.Web.Controllers.Admin
                     return Error<HallDto>("Couldn't update hall", 500);
                 }
                 return Success(updatedHall, "Hall updated successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<HallDto>($"Failed to update hall: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Update hall with file uploads (recommended - replaces base64)
+        /// </summary>
+        [HttpPut("halls/{id}/files")]
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<ApiResponse<HallDto>>> UpdateHallWithFiles(
+            int id,
+            [FromForm] HallUpdateWithFilesDto hallUpdateDto)
+        {
+            try
+            {
+                if (id != hallUpdateDto.ID)
+                {
+                    return Error<HallDto>("ID mismatch", 400);
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                    return Error<HallDto>($"Invalid data: {errors}", 400);
+                }
+
+                var hallEntity = _mapper.Map<HallApp.Core.Entities.ChamperEntities.Hall>(hallUpdateDto);
+                
+                // Build list of all image URLs (existing + new uploads)
+                var allImageUrls = new List<string>();
+                
+                // Add existing images that user wants to keep
+                if (hallUpdateDto.ExistingImageUrls != null && hallUpdateDto.ExistingImageUrls.Any())
+                {
+                    allImageUrls.AddRange(hallUpdateDto.ExistingImageUrls);
+                }
+                
+                // Upload new images and get their URLs
+                if (hallUpdateDto.NewImages != null && hallUpdateDto.NewImages.Any())
+                {
+                    var uploadedUrls = await _fileUploadService.SaveImagesAsync(
+                        hallUpdateDto.NewImages.ToList(), 
+                        "halls");
+                    allImageUrls.AddRange(uploadedUrls);
+                }
+                
+                // Create MediaFiles from all URLs
+                hallEntity.MediaFiles = new List<HallApp.Core.Entities.ChamperEntities.MediaEntities.HallMedia>();
+                int index = 0;
+                foreach (var url in allImageUrls)
+                {
+                    hallEntity.MediaFiles.Add(new HallApp.Core.Entities.ChamperEntities.MediaEntities.HallMedia
+                    {
+                        URL = url,
+                        HallID = hallEntity.ID,
+                        MediaType = "image",
+                        Gender = 3,
+                        index = index++
+                    });
+                }
+                
+                var updatedHallEntity = await _hallService.UpdateHallAsync(hallEntity);
+                
+                if (updatedHallEntity == null)
+                {
+                    return Error<HallDto>("Couldn't update hall", 500);
+                }
+                
+                var updatedHall = _mapper.Map<HallDto>(updatedHallEntity);
+                return Success(updatedHall, "Hall updated successfully with file uploads");
+            }
+            catch (Exception ex)
+            {
+                return Error<HallDto>($"Failed to update hall: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Delete hall (Admin only)
+        /// </summary>
+        /// <param name="id">Hall ID</param>
+        /// <returns>Success response</returns>
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("halls/{id:int}")]
+        public async Task<ActionResult<ApiResponse<string>>> DeleteHall(int id)
+        {
+            try
+            {
+                var hall = await _hallService.GetHallByIdAsync(id);
+                if (hall == null)
+                {
+                    return Error<string>($"Hall with ID {id} not found", 404);
+                }
+
+                var result = await _hallService.DeleteHallAsync(id);
+                if (!result)
+                {
+                    return Error<string>("Failed to delete hall", 500);
+                }
+
+                return Success<string>("Hall deleted successfully", "Hall deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<string>($"Failed to delete hall: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Toggle hall active status (Admin/HallManager)
+        /// </summary>
+        /// <param name="id">Hall ID</param>
+        /// <param name="active">Active status</param>
+        /// <returns>Updated hall</returns>
+        [Authorize(Roles = "Admin,HallManager")]
+        [HttpPatch("halls/{id:int}/toggle-active")]
+        public async Task<ActionResult<ApiResponse<HallDto>>> ToggleHallActive(int id, [FromQuery] bool active)
+        {
+            try
+            {
+                var hall = await _hallService.GetHallByIdAsync(id);
+                if (hall == null)
+                {
+                    return Error<HallDto>($"Hall with ID {id} not found", 404);
+                }
+
+                hall.Active = active;
+                var updatedHall = await _hallService.UpdateHallAsync(hall);
+                if (updatedHall == null)
+                {
+                    return Error<HallDto>("Failed to update hall status", 500);
+                }
+
+                var hallDto = _mapper.Map<HallDto>(updatedHall);
+                return Success(hallDto, $"Hall {(active ? "activated" : "deactivated")} successfully");
             }
             catch (Exception ex)
             {

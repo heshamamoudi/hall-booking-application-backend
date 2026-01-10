@@ -26,6 +26,8 @@ namespace HallApp.Core.Interfaces.IServices
         Task<Booking> CreateBookingAsync(Booking booking);
         Task<Booking> GetBookingByIdAsync(int bookingId);
         Task<IEnumerable<Booking>> GetBookingsByCustomerIdAsync(string customerId);
+        Task<IEnumerable<Booking>> GetCustomerBookingsAsync(string customerId);
+        Task<IEnumerable<Booking>> GetBookingsByVendorIdAsync(int vendorId);
         Task<IEnumerable<Booking>> GetAllBookingsAsync();
         Task<Booking> UpdateBookingAsync(Booking booking);
         Task<Booking> UpdateCustomerBookingAsync(string customerId, Booking booking);

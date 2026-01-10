@@ -47,6 +47,102 @@ public class HallService : IHallService
 
     public async Task<Hall> UpdateHallAsync(Hall hall)
     {
+        // First, fetch existing hall to update all properties
+        var existingHall = await _unitOfWork.HallRepository.GetByIdAsync(hall.ID);
+        if (existingHall != null)
+        {
+            // Update all scalar properties
+            existingHall.Name = hall.Name;
+            existingHall.CommercialRegisteration = hall.CommercialRegisteration;
+            existingHall.Vat = hall.Vat;
+            existingHall.BothWeekDays = hall.BothWeekDays;
+            existingHall.BothWeekEnds = hall.BothWeekEnds;
+            existingHall.MaleWeekDays = hall.MaleWeekDays;
+            existingHall.MaleWeekEnds = hall.MaleWeekEnds;
+            existingHall.MaleMin = hall.MaleMin;
+            existingHall.MaleMax = hall.MaleMax;
+            existingHall.MaleActive = hall.MaleActive;
+            existingHall.FemaleWeekDays = hall.FemaleWeekDays;
+            existingHall.FemaleWeekEnds = hall.FemaleWeekEnds;
+            existingHall.FemaleMin = hall.FemaleMin;
+            existingHall.FemaleMax = hall.FemaleMax;
+            existingHall.FemaleActive = hall.FemaleActive;
+            existingHall.Gender = hall.Gender;
+            existingHall.Description = hall.Description;
+            
+            // Update direct contact information
+            existingHall.Email = hall.Email ?? existingHall.Email;
+            existingHall.Phone = hall.Phone ?? existingHall.Phone;
+            existingHall.WhatsApp = hall.WhatsApp ?? existingHall.WhatsApp;
+            existingHall.Logo = hall.Logo ?? existingHall.Logo;
+            
+            // Update flags
+            existingHall.Active = hall.Active;
+            existingHall.HasSpecialOffer = hall.HasSpecialOffer;
+            existingHall.IsFeatured = hall.IsFeatured;
+            existingHall.IsPremium = hall.IsPremium;
+            
+            existingHall.Updated = DateTime.UtcNow;
+            
+            // Update MediaFiles collection
+            if (hall.MediaFiles != null)
+            {
+                existingHall.MediaFiles.Clear();
+                foreach (var mediaFile in hall.MediaFiles)
+                {
+                    existingHall.MediaFiles.Add(mediaFile);
+                }
+            }
+            
+            // Update Location
+            if (hall.Location != null)
+            {
+                if (existingHall.Location == null)
+                {
+                    existingHall.Location = hall.Location;
+                }
+                else
+                {
+                    existingHall.Location.Latitude = hall.Location.Latitude;
+                    existingHall.Location.Longitude = hall.Location.Longitude;
+                    existingHall.Location.City = hall.Location.City;
+                    existingHall.Location.Address = hall.Location.Address;
+                }
+            }
+            
+            // Update Managers collection
+            if (hall.Managers != null)
+            {
+                existingHall.Managers?.Clear();
+                existingHall.Managers = hall.Managers;
+            }
+            
+            // Update Contacts collection
+            if (hall.Contacts != null)
+            {
+                existingHall.Contacts?.Clear();
+                existingHall.Contacts = hall.Contacts;
+            }
+            
+            // Update Packages collection
+            if (hall.Packages != null)
+            {
+                existingHall.Packages?.Clear();
+                existingHall.Packages = hall.Packages;
+            }
+            
+            // Update Services collection
+            if (hall.Services != null)
+            {
+                existingHall.Services?.Clear();
+                existingHall.Services = hall.Services;
+            }
+            
+            await _unitOfWork.Complete();
+            return existingHall;
+        }
+        
+        // If hall not found, try normal update
         _unitOfWork.HallRepository.Update(hall);
         await _unitOfWork.Complete();
         return hall;

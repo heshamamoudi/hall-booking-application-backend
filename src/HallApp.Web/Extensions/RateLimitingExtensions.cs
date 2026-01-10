@@ -24,8 +24,16 @@ namespace HallApp.Web.Extensions
                     // Burst protection: Only 10 requests per second from same IP (prevents 100 reqs in 1 sec)
                     PartitionedRateLimiter.Create<HttpContext, string>(context =>
                     {
+                        var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
+
+                        // Skip rate limiting for localhost
+                        if (clientIp == "::1" || clientIp == "127.0.0.1" || clientIp == "::ffff:127.0.0.1")
+                        {
+                            return RateLimitPartition.GetNoLimiter("localhost");
+                        }
+
                         return RateLimitPartition.GetFixedWindowLimiter(
-                            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+                            partitionKey: clientIp,
                             factory: _ => new FixedWindowRateLimiterOptions
                             {
                                 Window = TimeSpan.FromSeconds(1),
@@ -38,8 +46,16 @@ namespace HallApp.Web.Extensions
                     // Layer 2: Short-term limit - protection against sustained medium-rate attacks
                     PartitionedRateLimiter.Create<HttpContext, string>(context =>
                     {
+                        var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
+
+                        // Skip rate limiting for localhost
+                        if (clientIp == "::1" || clientIp == "127.0.0.1" || clientIp == "::ffff:127.0.0.1")
+                        {
+                            return RateLimitPartition.GetNoLimiter("localhost");
+                        }
+
                         return RateLimitPartition.GetFixedWindowLimiter(
-                            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+                            partitionKey: clientIp,
                             factory: _ => new FixedWindowRateLimiterOptions
                             {
                                 Window = TimeSpan.FromSeconds(10),
@@ -52,8 +68,16 @@ namespace HallApp.Web.Extensions
                     // Layer 3: Overall limit - general rate limiting
                     PartitionedRateLimiter.Create<HttpContext, string>(context =>
                     {
+                        var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
+
+                        // Skip rate limiting for localhost
+                        if (clientIp == "::1" || clientIp == "127.0.0.1" || clientIp == "::ffff:127.0.0.1")
+                        {
+                            return RateLimitPartition.GetNoLimiter("localhost");
+                        }
+
                         return RateLimitPartition.GetFixedWindowLimiter(
-                            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+                            partitionKey: clientIp,
                             factory: _ => new FixedWindowRateLimiterOptions
                             {
                                 Window = TimeSpan.FromMinutes(1),

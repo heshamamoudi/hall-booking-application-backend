@@ -66,10 +66,6 @@ public class VendorProfileService : IVendorProfileService
         var vendorManager = await _vendorManagerService.GetVendorManagerByAppUserIdAsync(userIdInt);
         if (vendorManager == null) return false;
 
-        vendorManager.CommercialRegistrationNumber = vendorManagerData.CommercialRegistrationNumber;
-        vendorManager.VatNumber = vendorManagerData.VatNumber;
-        vendorManager.IsApproved = vendorManagerData.IsApproved;
-
         await _vendorManagerService.UpdateVendorManagerAsync(vendorManager);
         return true;
     }
@@ -128,11 +124,8 @@ public class VendorProfileService : IVendorProfileService
         var vendorManager = await _vendorManagerService.GetVendorManagerByAppUserIdAsync(userIdInt);
         if (vendorManager == null) return false;
 
-        // Update business-specific preferences
-        vendorManager.CommercialRegistrationNumber = businessData.CommercialRegistrationNumber;
-        vendorManager.VatNumber = businessData.VatNumber;
-        vendorManager.IsApproved = businessData.IsApproved;
-
+        // Business properties are now on Vendor entity
+        // This method is deprecated - use Vendor update endpoints instead
         var updatedVendorManager = await _vendorManagerService.UpdateVendorManagerAsync(vendorManager);
         return updatedVendorManager != null;
     }
@@ -145,6 +138,7 @@ public class VendorProfileService : IVendorProfileService
         var vendorManager = await _vendorManagerService.GetVendorManagerByAppUserIdAsync(userIdInt);
         if (vendorManager == null) return false;
 
-        return await _vendorManagerService.ApproveVendorManagerAsync(vendorManager.Id, isApproved);
+        // Approval is now done at Vendor level, not VendorManager level
+        return false;
     }
 }

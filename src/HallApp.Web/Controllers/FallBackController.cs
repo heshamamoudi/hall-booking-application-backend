@@ -119,7 +119,7 @@ namespace HallApp.Web.Controllers
         {
             // Debug logging - helpful for troubleshooting which routes get here
             _logger.LogDebug("CatchAll invoked for: {Url}", url ?? "(null)");
-            
+
             // If this is a Swagger request that somehow got here, don't handle it
             // This should not happen with proper middleware ordering, but it's a safeguard
             if (url != null && url.StartsWith("swagger", StringComparison.OrdinalIgnoreCase))
@@ -127,7 +127,7 @@ namespace HallApp.Web.Controllers
                 _logger.LogWarning("Fallback controller received Swagger request: {Path}", url);
                 return new EmptyResult(); // Let other middleware handle it
             }
-            
+
             // API routes that aren't found should return a proper API error response
             if (url != null && url.StartsWith("api/", StringComparison.OrdinalIgnoreCase))
             {
@@ -135,32 +135,10 @@ namespace HallApp.Web.Controllers
                 return NotFound(new ApiResponse(404, $"API endpoint '{url}' not found"));
             }
 
-            try
-            {
-                // For all non-API routes that reach here, serve the SPA index.html
-                // This enables client-side routing in the SPA
-                if (_env?.WebRootPath == null)
-                {
-                    _logger.LogError("WebRootPath is null, cannot serve SPA index.html");
-                    return NotFound(new ApiResponse(404, "Server configuration error"));
-                }
-
-                var indexPath = Path.Combine(_env.WebRootPath, "index.html");
-                if (System.IO.File.Exists(indexPath))
-                {
-                    return PhysicalFile(indexPath, "text/html");
-                }
-                else
-                {
-                    _logger.LogError("SPA index.html not found at expected path: {Path}", indexPath);
-                    return NotFound(new ApiResponse(404, "SPA index file not found"));
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error serving SPA index.html for path: {Path}", url);
-                return StatusCode(500, new ApiResponse(500, "Internal server error"));
-            }
+            // SPA SERVING DISABLED - Frontend is deployed separately
+            // Return 404 for all non-API routes since we don't host the SPA
+            _logger.LogDebug("Non-API route requested: {Path}. Frontend is deployed separately.", url);
+            return NotFound(new ApiResponse(404, "Frontend is deployed separately. API-only backend."));
         }
     }
 }

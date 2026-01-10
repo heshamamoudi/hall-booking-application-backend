@@ -1,3 +1,4 @@
+using HallApp.Application.DTOs.Auth;
 using HallApp.Application.DTOs.Booking;
 using HallApp.Application.DTOs.Customer;
 
@@ -15,4 +16,5 @@ public class CustomerDto
     public DateTime Created { get; set; } 
     public DateTime Updated { get; set; }
     public int AppUserId { get; set; }
+    public UserDto AppUser { get; set; }
 }

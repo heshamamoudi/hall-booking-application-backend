@@ -37,6 +37,13 @@ public class GlobalRateLimitingMiddleware
         // Get client identifier (IP address)
         string clientId = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
+        // Skip rate limiting for localhost
+        if (clientId == "::1" || clientId == "127.0.0.1" || clientId == "::ffff:127.0.0.1")
+        {
+            await _next(context);
+            return;
+        }
+
         // Get or create token bucket for this client
         var bucket = _buckets.GetOrAdd(clientId, _ => new TokenBucket(
             MaxBucketSize,

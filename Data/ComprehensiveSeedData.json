@@ -1,0 +1,224 @@
+[
+  {
+    "Name": "System Administrator",
+    "UserName": "admin",
+    "Email": "admin@hallbooking.sa",
+    "PhoneNumber": "+966500000001",
+    "Password": "Admin@123",
+    "Role": "Admin"
+  },
+  {
+    "Name": "Ahmed Al-Mansour",
+    "UserName": "ahmed.mansour",
+    "Email": "ahmed.mansour@grandhall.com",
+    "PhoneNumber": "+966501111111",
+    "Password": "HallManager@123",
+    "Role": "HallManager",
+    "HallManager": {
+      "CompanyName": "Grand Hall Events Company",
+      "CommercialRegistrationNumber": "1010123456",
+      "VatNumber": "300012345600003",
+      "IsApproved": true
+    }
+  },
+  {
+    "Name": "Sara Al-Zahrani",
+    "UserName": "sara.zahrani",
+    "Email": "sara.zahrani@royalpalace.sa",
+    "PhoneNumber": "+966501111112",
+    "Password": "HallManager@123",
+    "Role": "HallManager",
+    "HallManager": {
+      "CompanyName": "Royal Palace Events",
+      "CommercialRegistrationNumber": "1010234567",
+      "VatNumber": "300023456700003",
+      "IsApproved": true
+    }
+  },
+  {
+    "Name": "Khalid Al-Otaibi",
+    "UserName": "khalid.otaibi",
+    "Email": "khalid.otaibi@elitecatering.sa",
+    "PhoneNumber": "+966502222221",
+    "Password": "VendorManager@123",
+    "Role": "VendorManager",
+    "VendorManager": {
+      "CommercialRegistrationNumber": "2020456789",
+      "VatNumber": "300045678900003",
+      "IsApproved": true
+    }
+  },
+  {
+    "Name": "Noura Al-Dosari",
+    "UserName": "noura.dosari",
+    "Email": "noura.dosari@luxurydecor.sa",
+    "PhoneNumber": "+966502222222",
+    "Password": "VendorManager@123",
+    "Role": "VendorManager",
+    "VendorManager": {
+      "CommercialRegistrationNumber": "2020567890",
+      "VatNumber": "300056789000003",
+      "IsApproved": true
+    }
+  },
+  {
+    "Name": "Mohammed Al-Rashid",
+    "UserName": "mohammed.rashid",
+    "Email": "mohammed.rashid@example.com",
+    "PhoneNumber": "+966503333331",
+    "Password": "Customer@123",
+    "Role": "Customer",
+    "Customer": {
+      "PhoneNumber": "+966503333331",
+      "CreditMoney": 0,
+      "NumberOfOrders": 3,
+      "SelectedAddressId": 0,
+      "Addresses": [
+        {
+          "AddressName": "Home Address",
+          "Street": "King Fahd Road",
+          "BuildingNumber": "1234",
+          "District": "Al Olaya",
+          "City": "Riyadh",
+          "PostalCode": "12211",
+          "AdditionalInfo": "Near Al Faisaliah Tower"
+        }
+      ],
+      "Cards": [
+        {
+          "CardNumber": "4111111111111111",
+          "CardHolder": "Mohammed Al-Rashid",
+          "Expiration": "2027-12-31T23:59:59"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Fatima Ahmed",
+    "UserName": "fatima.ahmed",
+    "Email": "fatima.ahmed@example.com",
+    "PhoneNumber": "+966503333332",
+    "Password": "Customer@123",
+    "Role": "Customer",
+    "Customer": {
+      "PhoneNumber": "+966503333332",
+      "CreditMoney": 500,
+      "NumberOfOrders": 2,
+      "SelectedAddressId": 0,
+      "Addresses": [
+        {
+          "AddressName": "Home - Jeddah",
+          "Street": "Prince Sultan Road",
+          "BuildingNumber": "5678",
+          "District": "Al Rawdah",
+          "City": "Jeddah",
+          "PostalCode": "23321",
+          "AdditionalInfo": "Near Red Sea Mall"
+        }
+      ],
+      "Cards": [
+        {
+          "CardNumber": "5500000000000004",
+          "CardHolder": "Fatima Ahmed",
+          "Expiration": "2027-12-31T23:59:59"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Ali Hassan",
+    "UserName": "ali.hassan",
+    "Email": "ali.hassan@example.com",
+    "PhoneNumber": "+966503333333",
+    "Password": "Customer@123",
+    "Role": "Customer",
+    "Customer": {
+      "PhoneNumber": "+966503333333",
+      "CreditMoney": 0,
+      "NumberOfOrders": 1,
+      "SelectedAddressId": 0,
+      "Addresses": [
+        {
+          "AddressName": "Office - Riyadh",
+          "Street": "Olaya Street",
+          "BuildingNumber": "9012",
+          "District": "Al Olaya",
+          "City": "Riyadh",
+          "PostalCode": "12213",
+          "AdditionalInfo": "Tower 3, Office 501"
+        }
+      ],
+      "Cards": [
+        {
+          "CardNumber": "340000000000009",
+          "CardHolder": "Ali Hassan",
+          "Expiration": "2027-12-31T23:59:59"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Maha Al-Ghamdi",
+    "UserName": "maha.ghamdi",
+    "Email": "maha.ghamdi@example.com",
+    "PhoneNumber": "+966503333334",
+    "Password": "Customer@123",
+    "Role": "Customer",
+    "Customer": {
+      "PhoneNumber": "+966503333334",
+      "CreditMoney": 1000,
+      "NumberOfOrders": 5,
+      "SelectedAddressId": 0,
+      "Addresses": [
+        {
+          "AddressName": "Home - Dammam",
+          "Street": "King Faisal Road",
+          "BuildingNumber": "3456",
+          "District": "Al Faisaliyah",
+          "City": "Dammam",
+          "PostalCode": "32231",
+          "AdditionalInfo": "Villa 15"
+        }
+      ],
+      "Cards": [
+        {
+          "CardNumber": "4111111111111112",
+          "CardHolder": "Maha Al-Ghamdi",
+          "Expiration": "2027-12-31T23:59:59"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Omar Al-Mutairi",
+    "UserName": "omar.mutairi",
+    "Email": "omar.mutairi@example.com",
+    "PhoneNumber": "+966503333335",
+    "Password": "Customer@123",
+    "Role": "Customer",
+    "Customer": {
+      "PhoneNumber": "+966503333335",
+      "CreditMoney": 0,
+      "NumberOfOrders": 1,
+      "SelectedAddressId": 0,
+      "Addresses": [
+        {
+          "AddressName": "Home - Riyadh",
+          "Street": "Northern Ring Road",
+          "BuildingNumber": "7890",
+          "District": "Al Nakheel",
+          "City": "Riyadh",
+          "PostalCode": "12314",
+          "AdditionalInfo": "Compound A, Building 2"
+        }
+      ],
+      "Cards": [
+        {
+          "CardNumber": "5500000000000005",
+          "CardHolder": "Omar Al-Mutairi",
+          "Expiration": "2027-12-31T23:59:59"
+        }
+      ]
+    }
+  }
+]

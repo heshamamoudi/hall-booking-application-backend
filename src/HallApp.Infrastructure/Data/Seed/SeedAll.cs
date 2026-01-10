@@ -27,11 +27,11 @@ public class SeedAll
     {
         // First seed users and roles
         await Seed.SeedInformation(userManager, roleManager, context);
-        
+
         // Then add our own seeding logic in the correct order
         // Use the SeedVendors class to handle both vendor types and vendors
         Console.WriteLine("Starting vendor data seeding...");
-        await SeedVendors.SeedVendorData(context);
+        await SeedVendors.SeedVendorData(context, userManager);
         
         // Ensure all vendor data is saved before proceeding
         await context.SaveChangesAsync();

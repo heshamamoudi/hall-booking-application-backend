@@ -38,11 +38,15 @@ public class HallDto
     public double AverageRating { get; set; }
     public string Media { get; set; }
     public List<HallMediaDto> MediaFiles { get; set; } = new List<HallMediaDto>();
-    public List<HallManagerDto> Managers { get; set; } = new List<HallManagerDto>();
+    public List<HallManagerSimpleDto> Managers { get; set; } = new List<HallManagerSimpleDto>();
     public List<ContactDto> Contacts { get; set; } = new List<ContactDto>();
     public LocationDto Location { get; set; }
     public List<PackageDto> Packages { get; set; } = new List<PackageDto>();
     public List<ServiceDto> Services { get; set; } = new List<ServiceDto>();
     public DateTime Created { get; set; }
     public DateTime Updated { get; set; }
+    
+    // Approval workflow
+    public bool IsApproved { get; set; }
+    public DateTime? ApprovedAt { get; set; }
 }

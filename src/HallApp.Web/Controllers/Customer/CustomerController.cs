@@ -61,22 +61,28 @@ namespace HallApp.Web.Controllers.Customer
         /// </summary>
         /// <param name="id">Customer ID</param>
         /// <returns>Customer details</returns>
-        [Authorize]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("{id:int}")]
         public async Task<ActionResult<ApiResponse<CustomerDto>>> GetCustomerById(int id)
         {
             try
             {
-                if (!IsCustomer || UserId != id)
-                {
-                    return Error<CustomerDto>("Access denied", 403);
-                }
+                // Admins can access any customer, customers can only access their own
+                var customer = await _customerService.GetCustomerByIdAsync(id);
 
-                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
-                
                 if (customer == null)
                 {
                     return Error<CustomerDto>("Customer not found", 404);
+                }
+
+                // If not admin, verify the customer is requesting their own data
+                if (!IsAdmin)
+                {
+                    var requestingCustomer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                    if (requestingCustomer == null || requestingCustomer.Id != id)
+                    {
+                        return Error<CustomerDto>("Access denied", 403);
+                    }
                 }
 
                 var customerDto = _mapper.Map<CustomerDto>(customer);
@@ -92,7 +98,7 @@ namespace HallApp.Web.Controllers.Customer
         /// Get current customer profile
         /// </summary>
         /// <returns>Current customer's profile</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("profile")]
         public async Task<ActionResult<ApiResponse<CustomerDto>>> GetMyProfile()
         {
@@ -119,7 +125,7 @@ namespace HallApp.Web.Controllers.Customer
         /// </summary>
         /// <param name="updateDto">Updated customer information</param>
         /// <returns>Updated customer profile</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPut("profile")]
         public async Task<ActionResult<ApiResponse<CustomerDto>>> UpdateMyProfile([FromBody] CustomerDto updateDto)
         {
@@ -196,6 +202,42 @@ namespace HallApp.Web.Controllers.Customer
         }
 
         /// <summary>
+        /// Toggle customer active status (Admin only)
+        /// </summary>
+        /// <param name="id">Customer ID</param>
+        /// <param name="active">Active status</param>
+        /// <returns>Updated customer</returns>
+        [Authorize(Roles = "Admin")]
+        [HttpPut("{id:int}/toggle-active")]
+        public async Task<ActionResult<ApiResponse<CustomerDto>>> ToggleCustomerActive(int id, [FromQuery] bool active)
+        {
+            try
+            {
+                var customer = await _customerService.GetCustomerByIdAsync(id);
+                
+                if (customer == null)
+                {
+                    return Error<CustomerDto>($"Customer with ID {id} not found", 404);
+                }
+
+                customer.Active = active;
+                var updatedCustomer = await _customerService.UpdateCustomerAsync(customer);
+                
+                if (updatedCustomer == null)
+                {
+                    return Error<CustomerDto>("Failed to update customer status", 500);
+                }
+
+                var customerDto = _mapper.Map<CustomerDto>(updatedCustomer);
+                return Success(customerDto, $"Customer {(active ? "activated" : "deactivated")} successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<CustomerDto>($"Failed to update customer: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
         /// Test API connection
         /// </summary>
         /// <returns>API status</returns>
@@ -217,17 +259,21 @@ namespace HallApp.Web.Controllers.Customer
         /// </summary>
         /// <param name="customerId">Customer ID</param>
         /// <returns>List of customer addresses</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("{customerId:int}/addresses")]
         public async Task<ActionResult<ApiResponse<IEnumerable<AddressDto>>>> GetCustomerAddresses(int customerId)
         {
             try
             {
-                // Verify customer ownership
-                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
-                if (customer == null || customer.Id != customerId)
+                // Admins can access any customer's addresses
+                if (!IsAdmin)
                 {
-                    return Error<IEnumerable<AddressDto>>("Access denied", 403);
+                    // Verify customer ownership for non-admin users
+                    var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                    if (customer == null || customer.Id != customerId)
+                    {
+                        return Error<IEnumerable<AddressDto>>("Access denied", 403);
+                    }
                 }
 
                 var addresses = await _addressService.GetAddressesByCustomerIdAsync(customerId);
@@ -246,17 +292,21 @@ namespace HallApp.Web.Controllers.Customer
         /// <param name="customerId">Customer ID</param>
         /// <param name="addressDto">Address data</param>
         /// <returns>Created address</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPost("{customerId:int}/addresses")]
         public async Task<ActionResult<ApiResponse<AddressDto>>> CreateAddress(int customerId, [FromBody] AddressDto addressDto)
         {
             try
             {
-                // Verify customer ownership
-                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
-                if (customer == null || customer.Id != customerId)
+                // Admins can create addresses for any customer
+                if (!IsAdmin)
                 {
-                    return Error<AddressDto>("Access denied", 403);
+                    // Verify customer ownership for non-admin users
+                    var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                    if (customer == null || customer.Id != customerId)
+                    {
+                        return Error<AddressDto>("Access denied", 403);
+                    }
                 }
 
                 if (!ModelState.IsValid)
@@ -285,22 +335,26 @@ namespace HallApp.Web.Controllers.Customer
         /// <param name="addressId">Address ID</param>
         /// <param name="addressDto">Updated address data</param>
         /// <returns>Updated address</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPut("{customerId:int}/addresses/{addressId:int}")]
         public async Task<ActionResult<ApiResponse<AddressDto>>> UpdateAddress(int customerId, int addressId, [FromBody] AddressDto addressDto)
         {
             try
             {
-                // Verify customer ownership
-                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
-                if (customer == null || customer.Id != customerId)
+                // Admins can update addresses for any customer
+                if (!IsAdmin)
                 {
-                    return Error<AddressDto>("Access denied", 403);
+                    // Verify customer ownership for non-admin users
+                    var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                    if (customer == null || customer.Id != customerId)
+                    {
+                        return Error<AddressDto>("Access denied", 403);
+                    }
                 }
 
                 var addresses = await _addressService.GetAddressesByCustomerIdAsync(customerId);
                 var existingAddress = addresses.FirstOrDefault(a => a.Id == addressId);
-                
+
                 if (existingAddress == null)
                 {
                     return Error<AddressDto>("Address not found", 404);
@@ -334,17 +388,21 @@ namespace HallApp.Web.Controllers.Customer
         /// <param name="customerId">Customer ID</param>
         /// <param name="addressId">Address ID</param>
         /// <returns>Success response</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpDelete("{customerId:int}/addresses/{addressId:int}")]
         public async Task<ActionResult<ApiResponse<string>>> DeleteAddress(int customerId, int addressId)
         {
             try
             {
-                // Verify customer ownership
-                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
-                if (customer == null || customer.Id != customerId)
+                // Admins can delete addresses for any customer
+                if (!IsAdmin)
                 {
-                    return Error<string>("Access denied", 403);
+                    // Verify customer ownership for non-admin users
+                    var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                    if (customer == null || customer.Id != customerId)
+                    {
+                        return Error<string>("Access denied", 403);
+                    }
                 }
 
                 var result = await _addressService.DeleteAddressAsync(customerId, addressId);
@@ -365,21 +423,25 @@ namespace HallApp.Web.Controllers.Customer
         /// </summary>
         /// <param name="customerId">Customer ID</param>
         /// <returns>List of favorite halls</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("{customerId:int}/favorites")]
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetFavorites(int customerId)
         {
             try
             {
-                // Verify customer ownership
-                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
-                if (customer == null || customer.Id != customerId)
+                // Admins can access any customer's favorites
+                if (!IsAdmin)
                 {
-                    return Error<IEnumerable<object>>("Access denied", 403);
+                    // Verify customer ownership for non-admin users
+                    var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                    if (customer == null || customer.Id != customerId)
+                    {
+                        return Error<IEnumerable<object>>("Access denied", 403);
+                    }
                 }
 
                 var favorites = await _unitOfWork.FavoriteRepository.GetFavoritesByCustomerIdAsync(customerId);
-                
+
                 // Map to simple DTOs to avoid circular reference issues
                 var favoriteDtos = favorites.Select(f => new
                 {
@@ -389,7 +451,7 @@ namespace HallApp.Web.Controllers.Customer
                     created = f.CreatedAt,
                     updated = f.CreatedAt
                 }).ToList();
-                
+
                 return Success<IEnumerable<object>>(favoriteDtos, "Favorites retrieved successfully");
             }
             catch (Exception ex)
@@ -404,17 +466,21 @@ namespace HallApp.Web.Controllers.Customer
         /// <param name="customerId">Customer ID</param>
         /// <param name="favoriteDto">Favorite data containing hallId</param>
         /// <returns>Success response</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPost("{customerId:int}/favorites")]
         public async Task<ActionResult<ApiResponse<string>>> AddFavorite(int customerId, [FromBody] CreateFavoriteDto favoriteDto)
         {
             try
             {
-                // Verify customer ownership
-                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
-                if (customer == null || customer.Id != customerId)
+                // Admins can add favorites for any customer
+                if (!IsAdmin)
                 {
-                    return Error<string>("Access denied", 403);
+                    // Verify customer ownership for non-admin users
+                    var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                    if (customer == null || customer.Id != customerId)
+                    {
+                        return Error<string>("Access denied", 403);
+                    }
                 }
 
                 if (favoriteDto == null || !favoriteDto.HallId.HasValue || favoriteDto.HallId.Value <= 0)
@@ -448,17 +514,21 @@ namespace HallApp.Web.Controllers.Customer
         /// <param name="customerId">Customer ID</param>
         /// <param name="hallId">Hall ID to remove</param>
         /// <returns>Success response</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpDelete("{customerId:int}/favorites/{hallId:int}")]
         public async Task<ActionResult<ApiResponse<string>>> RemoveFavorite(int customerId, int hallId)
         {
             try
             {
-                // Verify customer ownership
-                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
-                if (customer == null || customer.Id != customerId)
+                // Admins can remove favorites for any customer
+                if (!IsAdmin)
                 {
-                    return Error<string>("Access denied", 403);
+                    // Verify customer ownership for non-admin users
+                    var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                    if (customer == null || customer.Id != customerId)
+                    {
+                        return Error<string>("Access denied", 403);
+                    }
                 }
 
                 var removed = await _unitOfWork.FavoriteRepository.RemoveFavoriteAsync(customerId, hallId);

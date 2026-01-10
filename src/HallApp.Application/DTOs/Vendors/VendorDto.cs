@@ -12,7 +12,14 @@ public class VendorDto
     public string Email { get; set; }
     public string Phone { get; set; }
     public string Website { get; set; }
+    
+    // Business registration details
+    public string CommercialRegistrationNumber { get; set; }
+    public string VatNumber { get; set; }
+    
     public bool IsActive { get; set; }
+    public bool IsApproved { get; set; }
+    public DateTime? ApprovedAt { get; set; }
     public double Rating { get; set; }
     public int ReviewCount { get; set; }
     public int VendorManagerId { get; set; }
@@ -42,14 +49,37 @@ public class CreateVendorDto
     [Phone]
     public string Phone { get; set; }
     
+    public string PhoneNumber { get; set; } = string.Empty; // Alternative phone field
+    
     [Url]
     public string Website { get; set; }
+    
+    public string WhatsApp { get; set; } = string.Empty;
+    
+    public string LogoUrl { get; set; } = string.Empty;
+    
+    public string CoverImageUrl { get; set; } = string.Empty;
+    
+    // Business registration details
+    [StringLength(50)]
+    public string CommercialRegistrationNumber { get; set; } = string.Empty;
+    
+    [StringLength(50)]
+    public string VatNumber { get; set; } = string.Empty;
     
     [Required]
     public int VendorTypeId { get; set; }
     
+    public bool IsActive { get; set; } = true;
+    public bool IsApproved { get; set; } = false;
+    
     public double Rating { get; set; }
     
     public int ReviewCount { get; set; }
+    
+    // Flags for categorization
+    public bool HasSpecialOffer { get; set; } = false;
+    public bool IsFeatured { get; set; } = false;
+    public bool IsPremium { get; set; } = false;
 }
 

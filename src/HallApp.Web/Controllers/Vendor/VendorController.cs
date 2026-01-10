@@ -404,12 +404,12 @@ namespace HallApp.Web.Controllers.Vendor
         }
 
         /// <summary>
-        /// Update existing vendor (Admin/HallManager only)
+        /// Update existing vendor (Admin/VendorManager only)
         /// </summary>
         /// <param name="id">Vendor ID</param>
         /// <param name="updateDto">Updated vendor data</param>
         /// <returns>Updated vendor</returns>
-        [Authorize(Roles = "VendorManager")]
+        [Authorize(Roles = "Admin,VendorManager")]
         [HttpPut("{id:int}")]
         public async Task<ActionResult<ApiResponse<VendorDto>>> UpdateVendor(int id, [FromBody] UpdateVendorDto updateDto)
         {

@@ -54,6 +54,10 @@ public class Hall
     public DateTime Updated { get; set; } = DateTime.UtcNow;
     public bool Active { get; set; } = true;
     
+    // Approval workflow
+    public bool IsApproved { get; set; } = false;
+    public DateTime? ApprovedAt { get; set; }
+    
     // Section flags for categorization
     public bool HasSpecialOffer { get; set; } = false;
     public bool IsFeatured { get; set; } = false;

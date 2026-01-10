@@ -40,8 +40,9 @@ namespace HallApp.Web.Extensions
                 return Results.NotFound(new { statusCode = 404, message = $"API endpoint 'api/{catchAll}' not found" });
             }).WithDisplayName("API 404 Handler (Non-GET methods)");
 
-            // Fallback for SPA routes
-            app.MapFallbackToController("CatchAll", "FallBack");
+            // Fallback for SPA routes - DISABLED in development (Angular runs on port 4200)
+            // Enable this only when serving built Angular app from wwwroot in production
+            // app.MapFallbackToController("CatchAll", "FallBack");
         }
 
         public static void ConfigureUrls(this WebApplication app, ILogger logger)

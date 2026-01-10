@@ -34,19 +34,24 @@ builder.Services.AddSignalR(options =>
     options.EnableDetailedErrors = true;
 });
 
-// Configure CORS for SignalR
+// Configure CORS for SignalR and API calls
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins(
+                "http://localhost:4200",
+                "https://localhost:4200",
+                "http://localhost:5235",
+                "http://127.0.0.1:4200",
+                 "https://127.0.0.1:4200",
+                "http://127.0.0.1:5235"
+              )
               .AllowAnyHeader()
-              .AllowAnyMethod();
-        // Note: Cannot use AllowCredentials() with AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowCredentials()
+              .SetIsOriginAllowedToAllowWildcardSubdomains();
     });
-    
-    // Add SignalR-specific CORS policy
-   
 });
 // Debug environment variables for Railway deployment
 var env = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
@@ -100,8 +105,8 @@ await app.Services.SetupDatabaseAsync();
 // Configure URLs
 if (!app.Urls.Any())
 {
-    app.Urls.Add("http://localhost:5236");
-    app.Urls.Add("http://0.0.0.0:5236");
+    app.Urls.Add("http://localhost:5235");
+    app.Urls.Add("http://0.0.0.0:5235");
 }
 
 // Log startup information

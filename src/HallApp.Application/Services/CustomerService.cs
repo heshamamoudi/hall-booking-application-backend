@@ -51,13 +51,42 @@ public class CustomerService : ICustomerService
         var existingCustomer = await _unitOfWork.CustomerRepository.GetByIdAsync(customer.Id);
         if (existingCustomer == null) return new Customer();
         
-        // Update business fields only
+        // Update all scalar properties
         existingCustomer.NumberOfOrders = customer.NumberOfOrders;
         existingCustomer.SelectedAddressId = customer.SelectedAddressId;
         existingCustomer.CreditMoney = Math.Max(0, customer.CreditMoney);
         existingCustomer.Confirmed = customer.Confirmed;
         existingCustomer.Active = customer.Active;
+        existingCustomer.AppUserId = customer.AppUserId;
         existingCustomer.Updated = DateTime.UtcNow;
+        
+        // Update Addresses collection if provided
+        if (customer.Addresses != null)
+        {
+            existingCustomer.Addresses?.Clear();
+            existingCustomer.Addresses = customer.Addresses;
+        }
+        
+        // Update Reviews collection if provided
+        if (customer.Reviews != null)
+        {
+            existingCustomer.Reviews?.Clear();
+            existingCustomer.Reviews = customer.Reviews;
+        }
+        
+        // Update Bookings collection if provided
+        if (customer.Bookings != null)
+        {
+            existingCustomer.Bookings?.Clear();
+            existingCustomer.Bookings = customer.Bookings;
+        }
+        
+        // Update Favorites collection if provided
+        if (customer.Favorites != null)
+        {
+            existingCustomer.Favorites?.Clear();
+            existingCustomer.Favorites = customer.Favorites;
+        }
         
         _unitOfWork.CustomerRepository.Update(existingCustomer);
         await _unitOfWork.Complete();

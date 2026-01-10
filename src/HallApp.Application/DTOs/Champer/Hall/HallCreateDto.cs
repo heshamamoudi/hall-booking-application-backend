@@ -36,6 +36,14 @@ public class HallCreateDto
     public int Gender { get; set; }
 
     public string Description { get; set; }
+    
+    // Direct contact information
+    public string Email { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string WhatsApp { get; set; } = string.Empty;
+    public string Logo { get; set; } = string.Empty;
+    
+    // Related entities
     public List<HallMediaDto> MediaFiles { get; set; }
     public List<UserCreateDto> Managers { get; set; }
     public List<ContactDto> Contacts { get; set; }
@@ -43,4 +51,11 @@ public class HallCreateDto
     public List<PackageDto> Packages { get; set; }
     public List<ServiceDto> Services { get; set; }
     public List<string> mediaBeforeUploade { get; set; }
+    
+    // Flags for categorization
+    public bool Active { get; set; } = true;
+    public bool IsApproved { get; set; } = false;
+    public bool HasSpecialOffer { get; set; } = false;
+    public bool IsFeatured { get; set; } = false;
+    public bool IsPremium { get; set; } = false;
 }

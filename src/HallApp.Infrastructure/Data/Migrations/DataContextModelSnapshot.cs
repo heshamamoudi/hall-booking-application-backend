@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace HallApp.Infrastructure.Data.Migrations
+namespace HallApp.Infrastructure.Migrations
 {
     [DbContext(typeof(DataContext))]
     partial class DataContextModelSnapshot : ModelSnapshot
@@ -312,6 +312,281 @@ namespace HallApp.Infrastructure.Data.Migrations
                     b.ToTable("BookingPackages");
                 });
 
+            modelBuilder.Entity("HallApp.Core.Entities.BookingEntities.Invoice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BookingId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("BuyerAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("BuyerCity")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("BuyerCountryCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<string>("BuyerName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("BuyerPostalCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("BuyerVatNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("HallId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("InvoiceDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InvoiceHash")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("InvoiceType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("IsCancelled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPdfGenerated")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("PaymentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("PaymentReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PaymentStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("PdfPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("QRCode")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("SellerAddress")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("SellerBuildingNumber")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("SellerCity")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SellerCommercialRegistrationNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SellerCountryCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<string>("SellerDistrict")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SellerName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("SellerPostalCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("SellerStreetName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SellerVatNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("SubtotalBeforeTax")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("SupplyDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal>("TaxableAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Terms")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal>("TotalAmountWithTax")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ZATCA_Response")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ZATCA_Status")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("ZATCA_SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ZATCA_UUID")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId")
+                        .IsUnique();
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("HallId");
+
+                    b.HasIndex("InvoiceNumber")
+                        .IsUnique();
+
+                    b.HasIndex("ZATCA_UUID");
+
+                    b.ToTable("Invoices");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.BookingEntities.InvoiceLineItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("InvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ItemCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("LineNumber")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SubtotalBeforeTax")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TaxCategory")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.ToTable("InvoiceLineItems");
+                });
+
             modelBuilder.Entity("HallApp.Core.Entities.ChamperEntities.ContactEntities.Contact", b =>
                 {
                     b.Property<int>("ID")
@@ -356,6 +631,9 @@ namespace HallApp.Infrastructure.Data.Migrations
                     b.Property<bool>("Active")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<double>("AverageRating")
                         .HasColumnType("float");
 
@@ -396,6 +674,9 @@ namespace HallApp.Infrastructure.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<bool>("HasSpecialOffer")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsFeatured")
@@ -453,32 +734,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                     b.Property<int>("AppUserId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CommercialRegistrationNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("CompanyName")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<int?>("HallID")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 
                     b.HasIndex("AppUserId")
                         .IsUnique();
-
-                    b.HasIndex("HallID");
 
                     b.ToTable("HallManagers");
                 });
@@ -640,6 +902,235 @@ namespace HallApp.Infrastructure.Data.Migrations
                     b.ToTable("Service");
                 });
 
+            modelBuilder.Entity("HallApp.Core.Entities.ChatEntities.ChatConversation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BookingId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ClaimedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ConversationType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedById")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CustomerFeedback")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int?>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CustomerRating")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("HallId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsAutoCloseEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastMessageAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<TimeSpan?>("ResolutionTime")
+                        .HasColumnType("time");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<TimeSpan?>("ResponseTime")
+                        .HasColumnType("time");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int?>("SupportAgentId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalMessages")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("VendorId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("HallId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("SupportAgentId");
+
+                    b.HasIndex("VendorId");
+
+                    b.ToTable("ChatConversations");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.ChatEntities.ChatMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AttachmentName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<long?>("AttachmentSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("AttachmentUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("ConversationId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystemMessage")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SenderId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SenderType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.HasIndex("IsRead");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("SentAt");
+
+                    b.ToTable("ChatMessages");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.ChatEntities.ChatStatistics", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<double>("AverageResolutionTime")
+                        .HasColumnType("float");
+
+                    b.Property<double>("AverageResponseTime")
+                        .HasColumnType("float");
+
+                    b.Property<int>("ClosedConversations")
+                        .HasColumnType("int");
+
+                    b.Property<double>("CustomerSatisfactionScore")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MessagesFromAgents")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MessagesFromCustomers")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OpenConversations")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ResolvedConversations")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalConversations")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalMessages")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Date")
+                        .IsUnique();
+
+                    b.ToTable("ChatStatistics");
+                });
+
             modelBuilder.Entity("HallApp.Core.Entities.CustomerEntities.Address", b =>
                 {
                     b.Property<int>("Id")
@@ -797,6 +1288,187 @@ namespace HallApp.Infrastructure.Data.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("HallApp.Core.Entities.PaymentEntities.Payment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("BookingId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CardBrand")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("CardExpiryDate")
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<string>("CardHolder")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CheckoutId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<string>("CustomerEmail")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CustomerPhone")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("FailedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsRefunded")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Last4Digits")
+                        .HasMaxLength(4)
+                        .HasColumnType("nvarchar(4)");
+
+                    b.Property<string>("PaymentBrand")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("PaymentGateway")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("RefundAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("RefundReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RefundedBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ResultCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("RiskScore")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("StatusDescription")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("TransactionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("WebhookPayload")
+                        .HasColumnType("nvarchar(MAX)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("CheckoutId")
+                        .IsUnique();
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("TransactionId");
+
+                    b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.PaymentEntities.PaymentRefund", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PaymentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("RefundAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("RefundTransactionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("RequestedBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ResponsePayload")
+                        .HasColumnType("nvarchar(MAX)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentId");
+
+                    b.HasIndex("RequestedBy");
+
+                    b.ToTable("PaymentRefunds");
+                });
+
             modelBuilder.Entity("HallApp.Core.Entities.ReviewEntities.Review", b =>
                 {
                     b.Property<int>("Id")
@@ -944,6 +1616,13 @@ namespace HallApp.Infrastructure.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CommercialRegistrationNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("CoverImageUrl")
                         .HasColumnType("nvarchar(max)");
 
@@ -962,6 +1641,9 @@ namespace HallApp.Infrastructure.Data.Migrations
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsFeatured")
@@ -991,8 +1673,15 @@ namespace HallApp.Infrastructure.Data.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("VatNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<int>("VendorTypeId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Website")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("WhatsApp")
                         .HasColumnType("nvarchar(max)");
@@ -1273,35 +1962,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                     b.Property<int>("AppUserId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CommercialRegistrationNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("VatNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("AppUserId")
                         .IsUnique();
-
-                    b.HasIndex("CommercialRegistrationNumber")
-                        .IsUnique()
-                        .HasFilter("[CommercialRegistrationNumber] IS NOT NULL");
-
-                    b.HasIndex("VatNumber")
-                        .IsUnique()
-                        .HasFilter("[VatNumber] IS NOT NULL");
 
                     b.ToTable("VendorManagers");
                 });
@@ -1347,6 +2014,21 @@ namespace HallApp.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("VendorTypes");
+                });
+
+            modelBuilder.Entity("HallHallManager", b =>
+                {
+                    b.Property<int>("HallsID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ManagersId")
+                        .HasColumnType("int");
+
+                    b.HasKey("HallsID", "ManagersId");
+
+                    b.HasIndex("ManagersId");
+
+                    b.ToTable("HallHallManager", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
@@ -1473,7 +2155,7 @@ namespace HallApp.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("HallApp.Core.Entities.BookingEntities.Booking", b =>
                 {
-                    b.HasOne("HallApp.Core.Entities.CustomerEntities.Customer", null)
+                    b.HasOne("HallApp.Core.Entities.CustomerEntities.Customer", "Customer")
                         .WithMany("Bookings")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -1484,6 +2166,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                         .HasForeignKey("HallId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Customer");
 
                     b.Navigation("Hall");
                 });
@@ -1497,6 +2181,43 @@ namespace HallApp.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Booking");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.BookingEntities.Invoice", b =>
+                {
+                    b.HasOne("HallApp.Core.Entities.BookingEntities.Booking", "Booking")
+                        .WithOne("Invoice")
+                        .HasForeignKey("HallApp.Core.Entities.BookingEntities.Invoice", "BookingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HallApp.Core.Entities.CustomerEntities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HallApp.Core.Entities.ChamperEntities.Hall", "Hall")
+                        .WithMany()
+                        .HasForeignKey("HallId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Hall");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.BookingEntities.InvoiceLineItem", b =>
+                {
+                    b.HasOne("HallApp.Core.Entities.BookingEntities.Invoice", "Invoice")
+                        .WithMany("LineItems")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Invoice");
                 });
 
             modelBuilder.Entity("HallApp.Core.Entities.ChamperEntities.ContactEntities.Contact", b =>
@@ -1513,14 +2234,10 @@ namespace HallApp.Infrastructure.Data.Migrations
             modelBuilder.Entity("HallApp.Core.Entities.ChamperEntities.HallManager", b =>
                 {
                     b.HasOne("HallApp.Core.Entities.AppUser", "AppUser")
-                        .WithOne("HallManager")
+                        .WithOne()
                         .HasForeignKey("HallApp.Core.Entities.ChamperEntities.HallManager", "AppUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("HallApp.Core.Entities.ChamperEntities.Hall", null)
-                        .WithMany("Managers")
-                        .HasForeignKey("HallID");
 
                     b.Navigation("AppUser");
                 });
@@ -1567,6 +2284,67 @@ namespace HallApp.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Hall");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.ChatEntities.ChatConversation", b =>
+                {
+                    b.HasOne("HallApp.Core.Entities.BookingEntities.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("HallApp.Core.Entities.AppUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById");
+
+                    b.HasOne("HallApp.Core.Entities.CustomerEntities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HallApp.Core.Entities.ChamperEntities.Hall", "Hall")
+                        .WithMany()
+                        .HasForeignKey("HallId");
+
+                    b.HasOne("HallApp.Core.Entities.AppUser", "SupportAgent")
+                        .WithMany()
+                        .HasForeignKey("SupportAgentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("HallApp.Core.Entities.VendorEntities.Vendor", "Vendor")
+                        .WithMany()
+                        .HasForeignKey("VendorId");
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Hall");
+
+                    b.Navigation("SupportAgent");
+
+                    b.Navigation("Vendor");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.ChatEntities.ChatMessage", b =>
+                {
+                    b.HasOne("HallApp.Core.Entities.ChatEntities.ChatConversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HallApp.Core.Entities.AppUser", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+
+                    b.Navigation("Sender");
                 });
 
             modelBuilder.Entity("HallApp.Core.Entities.CustomerEntities.Address", b =>
@@ -1619,6 +2397,44 @@ namespace HallApp.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("AppUser");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.PaymentEntities.Payment", b =>
+                {
+                    b.HasOne("HallApp.Core.Entities.BookingEntities.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HallApp.Core.Entities.CustomerEntities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.PaymentEntities.PaymentRefund", b =>
+                {
+                    b.HasOne("HallApp.Core.Entities.PaymentEntities.Payment", "Payment")
+                        .WithMany("Refunds")
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HallApp.Core.Entities.AppUser", "RequestedByUser")
+                        .WithMany()
+                        .HasForeignKey("RequestedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Payment");
+
+                    b.Navigation("RequestedByUser");
                 });
 
             modelBuilder.Entity("HallApp.Core.Entities.ReviewEntities.Review", b =>
@@ -1769,6 +2585,21 @@ namespace HallApp.Infrastructure.Data.Migrations
                     b.Navigation("AppUser");
                 });
 
+            modelBuilder.Entity("HallHallManager", b =>
+                {
+                    b.HasOne("HallApp.Core.Entities.ChamperEntities.Hall", null)
+                        .WithMany()
+                        .HasForeignKey("HallsID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HallApp.Core.Entities.ChamperEntities.HallManager", null)
+                        .WithMany()
+                        .HasForeignKey("ManagersId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
                 {
                     b.HasOne("HallApp.Core.Entities.AppRole", null)
@@ -1827,8 +2658,6 @@ namespace HallApp.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("HallApp.Core.Entities.AppUser", b =>
                 {
-                    b.Navigation("HallManager");
-
                     b.Navigation("Notifications");
 
                     b.Navigation("UserRoles");
@@ -1836,9 +2665,16 @@ namespace HallApp.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("HallApp.Core.Entities.BookingEntities.Booking", b =>
                 {
+                    b.Navigation("Invoice");
+
                     b.Navigation("PackageDetails");
 
                     b.Navigation("VendorBookings");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.BookingEntities.Invoice", b =>
+                {
+                    b.Navigation("LineItems");
                 });
 
             modelBuilder.Entity("HallApp.Core.Entities.ChamperEntities.Hall", b =>
@@ -1847,8 +2683,6 @@ namespace HallApp.Infrastructure.Data.Migrations
 
                     b.Navigation("Location");
 
-                    b.Navigation("Managers");
-
                     b.Navigation("MediaFiles");
 
                     b.Navigation("Packages");
@@ -1856,6 +2690,11 @@ namespace HallApp.Infrastructure.Data.Migrations
                     b.Navigation("Reviews");
 
                     b.Navigation("Services");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.ChatEntities.ChatConversation", b =>
+                {
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("HallApp.Core.Entities.CustomerEntities.Customer", b =>
@@ -1867,6 +2706,11 @@ namespace HallApp.Infrastructure.Data.Migrations
                     b.Navigation("Favorites");
 
                     b.Navigation("Reviews");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.PaymentEntities.Payment", b =>
+                {
+                    b.Navigation("Refunds");
                 });
 
             modelBuilder.Entity("HallApp.Core.Entities.VendorEntities.ServiceItem", b =>

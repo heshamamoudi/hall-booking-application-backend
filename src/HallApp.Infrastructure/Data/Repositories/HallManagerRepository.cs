@@ -13,35 +13,28 @@ public class HallManagerRepository : GenericRepository<HallManager>, IHallManage
 
     public async Task<HallManager> GetByUserIdAsync(string userId)
     {
-        if (!int.TryParse(userId, out int userIdInt))
-            return new HallManager();
-            
-        return await _context.HallManagers.FirstOrDefaultAsync(hm => hm.AppUserId == userIdInt) ?? new HallManager();
+        if (int.TryParse(userId, out int userIdInt))
+        {
+            return await _context.HallManagers
+                .Include(hm => hm.AppUser)
+                .FirstOrDefaultAsync(hm => hm.AppUserId == userIdInt);
+        }
+        return null;
     }
 
-    public async Task<bool> CommercialRegistrationExistsAsync(string registrationNumber)
+    // Override base methods to include AppUser relationship
+    public new async Task<IEnumerable<HallManager>> GetAllAsync()
     {
-        if (string.IsNullOrEmpty(registrationNumber))
-            return false;
-            
-        return await _context.HallManagers.AnyAsync(hm => hm.CommercialRegistrationNumber == registrationNumber);
+        return await _context.HallManagers
+            .Include(hm => hm.AppUser)
+            .OrderBy(hm => hm.CreatedAt)
+            .ToListAsync();
     }
 
-    public async Task<bool> CompanyNameExistsAsync(string companyName)
+    public new async Task<HallManager> GetByIdAsync(int id)
     {
-        if (string.IsNullOrEmpty(companyName))
-            return false;
-            
-        return await _context.HallManagers.AnyAsync(hm => hm.CompanyName == companyName);
-    }
-
-    public async Task<IEnumerable<HallManager>> GetPendingApprovalAsync()
-    {
-        return await _context.HallManagers.Where(hm => !hm.IsApproved).ToListAsync();
-    }
-
-    public async Task<IEnumerable<HallManager>> GetApprovedAsync()
-    {
-        return await _context.HallManagers.Where(hm => hm.IsApproved).ToListAsync();
+        return await _context.HallManagers
+            .Include(hm => hm.AppUser)
+            .FirstOrDefaultAsync(hm => hm.Id == id);
     }
 }

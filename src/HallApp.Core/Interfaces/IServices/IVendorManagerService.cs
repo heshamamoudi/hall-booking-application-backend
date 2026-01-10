@@ -3,8 +3,9 @@ using HallApp.Core.Entities.VendorEntities;
 namespace HallApp.Core.Interfaces.IServices;
 
 /// <summary>
-/// Service interface for VendorManager business domain operations only
-/// Focuses purely on VendorManager entity business logic
+/// Service interface for VendorManager operations
+/// VendorManager is just a link between AppUser and managed Vendors
+/// Business properties (approval, commercial reg, VAT) are on Vendor entity
 /// </summary>
 public interface IVendorManagerService
 {
@@ -16,17 +17,6 @@ public interface IVendorManagerService
     Task<VendorManager> GetVendorManagerByAppUserIdAsync(int appUserId);
     Task<List<VendorManager>> GetAllVendorManagersAsync();
     
-    // Business domain operations
-    Task<bool> ApproveVendorManagerAsync(int vendorManagerId, bool isApproved);
-    Task<List<VendorManager>> GetPendingApprovalVendorManagersAsync();
-    Task<List<VendorManager>> GetApprovedVendorManagersAsync();
-    Task<bool> UpdateCommercialInfoAsync(int vendorManagerId, string registrationNumber, string vatNumber);
-    
-    // Validation methods
-    Task<bool> IsCommercialRegistrationUniqueAsync(string registrationNumber, int excludeId = 0);
-    Task<bool> IsVatNumberUniqueAsync(string vatNumber, int excludeId = 0);
-    
     // Business relationships
     Task<int> GetVendorManagerVendorCountAsync(int vendorManagerId);
-    Task<List<VendorManager>> GetVendorManagersByStatusAsync(bool isApproved);
 }

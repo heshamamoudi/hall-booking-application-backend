@@ -30,8 +30,16 @@ namespace HallApp.Web.Extensions
             app.UseMiddleware<ImageUploadMiddleware>();
             app.UseMiddleware<RateLimitingMiddleware>();
 
-            // Static files
+            // Static files - serve from wwwroot
             app.UseStaticFiles();
+            
+            // Serve uploaded files from wwwroot/uploads
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+                    Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads")),
+                RequestPath = "/uploads"
+            });
 
             // Swagger in development
             if (app.Environment.IsDevelopment())

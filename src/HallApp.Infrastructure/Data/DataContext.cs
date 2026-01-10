@@ -5,6 +5,8 @@ using HallApp.Core.Entities.NotificationEntities;
 using HallApp.Core.Entities.ReviewEntities;
 using HallApp.Core.Entities.VendorEntities;
 using HallApp.Core.Entities.ChamperEntities;
+using HallApp.Core.Entities.PaymentEntities;
+using HallApp.Core.Entities.ChatEntities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -50,6 +52,19 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<Booking> Bookings { get; set; }
     public DbSet<BookingPackage> BookingPackages { get; set; }
+
+    // Invoice Entities
+    public DbSet<Invoice> Invoices { get; set; }
+    public DbSet<InvoiceLineItem> InvoiceLineItems { get; set; }
+
+    // Payment Entities
+    public DbSet<Payment> Payments { get; set; }
+    public DbSet<PaymentRefund> PaymentRefunds { get; set; }
+
+    // Chat Entities
+    public DbSet<ChatConversation> ChatConversations { get; set; }
+    public DbSet<ChatMessage> ChatMessages { get; set; }
+    public DbSet<ChatStatistics> ChatStatistics { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -121,14 +136,6 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
                 .WithOne()
                 .HasForeignKey<VendorManager>(m => m.AppUserId)
                 .OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasIndex(m => m.CommercialRegistrationNumber)
-                .IsUnique()
-                .HasFilter("[CommercialRegistrationNumber] IS NOT NULL");
-
-            entity.HasIndex(m => m.VatNumber)
-                .IsUnique()
-                .HasFilter("[VatNumber] IS NOT NULL");
         });
 
         // ServiceItem relationships
@@ -186,7 +193,7 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasMany(c => c.Bookings)
-                .WithOne()
+                .WithOne(b => b.Customer)
                 .HasForeignKey(b => b.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -196,14 +203,21 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // HallManager relationships
+        // HallManager relationships - matching VendorManager pattern
         builder.Entity<HallManager>(entity =>
         {
-            entity.HasOne(h => h.AppUser)
-                .WithOne(a => a.HallManager)
-                .HasForeignKey<HallManager>(h => h.AppUserId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasKey(hm => hm.Id);
+            entity.HasOne(hm => hm.AppUser)
+                .WithOne()
+                .HasForeignKey<HallManager>(hm => hm.AppUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
+        
+        // Configure many-to-many between Hall and HallManager explicitly
+        builder.Entity<Hall>()
+            .HasMany(h => h.Managers)
+            .WithMany(hm => hm.Halls)
+            .UsingEntity(j => j.ToTable("HallHallManager"));
 
         // Notification relationships
         builder.Entity<Notification>()
@@ -296,5 +310,165 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
         });
 
         // VendorLocation - Latitude/Longitude are now double - no configuration needed
+
+        // Invoice relationships and configurations
+        builder.Entity<Invoice>(entity =>
+        {
+            entity.HasOne(i => i.Booking)
+                .WithOne(b => b.Invoice)
+                .HasForeignKey<Invoice>(i => i.BookingId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(i => i.Customer)
+                .WithMany()
+                .HasForeignKey(i => i.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(i => i.Hall)
+                .WithMany()
+                .HasForeignKey(i => i.HallId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasMany(i => i.LineItems)
+                .WithOne(li => li.Invoice)
+                .HasForeignKey(li => li.InvoiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Unique invoice number
+            entity.HasIndex(i => i.InvoiceNumber)
+                .IsUnique();
+
+            // ZATCA UUID index for quick lookup
+            entity.HasIndex(i => i.ZATCA_UUID);
+
+            // Decimal precision for monetary values
+            entity.Property(i => i.SubtotalBeforeTax)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(i => i.TaxableAmount)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(i => i.TaxRate)
+                .HasColumnType("decimal(5,2)");
+            entity.Property(i => i.TaxAmount)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(i => i.DiscountAmount)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(i => i.TotalAmountWithTax)
+                .HasColumnType("decimal(18,2)");
+        });
+
+        // InvoiceLineItem configuration
+        builder.Entity<InvoiceLineItem>(entity =>
+        {
+            // Decimal precision for monetary values
+            entity.Property(li => li.Quantity)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(li => li.UnitPrice)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(li => li.DiscountAmount)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(li => li.SubtotalBeforeTax)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(li => li.TaxRate)
+                .HasColumnType("decimal(5,2)");
+            entity.Property(li => li.TaxAmount)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(li => li.TotalAmount)
+                .HasColumnType("decimal(18,2)");
+        });
+
+        // Payment relationships and configurations
+        builder.Entity<Payment>(entity =>
+        {
+            entity.HasOne(p => p.Booking)
+                .WithMany()
+                .HasForeignKey(p => p.BookingId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(p => p.Customer)
+                .WithMany()
+                .HasForeignKey(p => p.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasMany(p => p.Refunds)
+                .WithOne(r => r.Payment)
+                .HasForeignKey(r => r.PaymentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Unique checkout ID
+            entity.HasIndex(p => p.CheckoutId)
+                .IsUnique();
+
+            // Transaction ID index
+            entity.HasIndex(p => p.TransactionId);
+
+            // Decimal precision for monetary values
+            entity.Property(p => p.Amount)
+                .HasColumnType("decimal(18,2)");
+            entity.Property(p => p.RefundAmount)
+                .HasColumnType("decimal(18,2)");
+        });
+
+        // PaymentRefund configuration
+        builder.Entity<PaymentRefund>(entity =>
+        {
+            entity.HasOne(r => r.RequestedByUser)
+                .WithMany()
+                .HasForeignKey(r => r.RequestedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.Property(r => r.RefundAmount)
+                .HasColumnType("decimal(18,2)");
+        });
+
+        // Chat relationships and configurations
+        builder.Entity<ChatConversation>(entity =>
+        {
+            entity.HasOne(c => c.Booking)
+                .WithMany()
+                .HasForeignKey(c => c.BookingId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(c => c.Customer)
+                .WithMany()
+                .HasForeignKey(c => c.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(c => c.SupportAgent)
+                .WithMany()
+                .HasForeignKey(c => c.SupportAgentId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasMany(c => c.Messages)
+                .WithOne(m => m.Conversation)
+                .HasForeignKey(m => m.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Indexes for performance
+            entity.HasIndex(c => c.Status);
+            entity.HasIndex(c => c.CustomerId);
+            entity.HasIndex(c => c.SupportAgentId);
+            entity.HasIndex(c => c.CreatedAt);
+        });
+
+        // ChatMessage configuration
+        builder.Entity<ChatMessage>(entity =>
+        {
+            entity.HasOne(m => m.Sender)
+                .WithMany()
+                .HasForeignKey(m => m.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Indexes for performance
+            entity.HasIndex(m => m.ConversationId);
+            entity.HasIndex(m => m.SentAt);
+            entity.HasIndex(m => m.IsRead);
+        });
+
+        // ChatStatistics configuration
+        builder.Entity<ChatStatistics>(entity =>
+        {
+            entity.HasIndex(s => s.Date)
+                .IsUnique();
+        });
     }
 }

@@ -1,11 +1,15 @@
+using HallApp.Core.Entities;
 using HallApp.Core.Entities.VendorEntities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+
+#nullable enable
 
 namespace HallApp.Infrastructure.Data.Seed;
 
 public class SeedVendors
 {
-    public static async Task SeedVendorData(DataContext context)
+    public static async Task SeedVendorData(DataContext context, UserManager<AppUser>? userManager = null)
     {
         try
         {
@@ -195,6 +199,75 @@ public class SeedVendors
                 Console.WriteLine("Sufficient vendors already exist, skipping creation");
             }
             
+            // Create VendorManager entities and link them to vendors
+            if (userManager != null && !await context.VendorManagers.AnyAsync())
+            {
+                try
+                {
+                    Console.WriteLine("Creating vendor managers...");
+
+                    // Get the vendor manager users
+                    var khalidUser = await userManager.FindByNameAsync("khalid.otaibi");
+                    var nouraUser = await userManager.FindByNameAsync("noura.dosari");
+
+                    if (khalidUser != null && nouraUser != null)
+                    {
+                        // Get vendors to assign
+                        var vendors = await context.Vendors.OrderBy(v => v.Id).ToListAsync();
+
+                        if (vendors.Count >= 2)
+                        {
+                            // Create VendorManager for Khalid and assign first 2-3 vendors
+                            var khalidVendors = vendors.Take(3).ToList();
+                            var khalidManager = new VendorManager
+                            {
+                                AppUserId = khalidUser.Id,
+                                CreatedAt = DateTime.UtcNow,
+                                Vendors = khalidVendors
+                            };
+                            context.VendorManagers.Add(khalidManager);
+
+                            // Create VendorManager for Noura and assign remaining vendors
+                            var nouraVendors = vendors.Skip(3).ToList();
+                            if (nouraVendors.Any())
+                            {
+                                var nouraManager = new VendorManager
+                                {
+                                    AppUserId = nouraUser.Id,
+                                    CreatedAt = DateTime.UtcNow,
+                                    Vendors = nouraVendors
+                                };
+                                context.VendorManagers.Add(nouraManager);
+                            }
+
+                            await context.SaveChangesAsync();
+                            Console.WriteLine($"✅ Created vendor managers - Khalid: {khalidVendors.Count} vendors, Noura: {nouraVendors.Count} vendors");
+                        }
+                        else
+                        {
+                            Console.WriteLine("⚠️ Not enough vendors to assign to vendor managers");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"⚠️ Vendor manager users not found - Khalid: {khalidUser != null}, Noura: {nouraUser != null}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Error creating vendor managers: {ex.Message}");
+                    Console.WriteLine(ex.StackTrace);
+                }
+            }
+            else if (userManager == null)
+            {
+                Console.WriteLine("⚠️ UserManager not provided, skipping vendor manager creation");
+            }
+            else
+            {
+                Console.WriteLine("ℹ️ Vendor managers already exist, skipping creation");
+            }
+
             Console.WriteLine("Vendor seeding completed successfully");
         }
         catch (Exception ex)

@@ -18,7 +18,6 @@ public class AppUser : IdentityUser<int>
     public bool IsRestaurantManager => UserRoles.Any(ur => ur.Role.Name == "RestaurantManager");
 
     // Navigation properties
-    public HallManager HallManager { get; set; } = new();
     public List<Notification> Notifications { get; set; } = new List<Notification>();
 
     [DataType(DataType.Date)]

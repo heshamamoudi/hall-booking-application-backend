@@ -304,5 +304,77 @@ namespace HallApp.Web.Controllers.Notification
                 return Error<object>($"Failed to retrieve notification statistics: {ex.Message}", 500);
             }
         }
+
+        /// <summary>
+        /// Send a test notification to current user
+        /// </summary>
+        /// <returns>Success response</returns>
+        [HttpPost("test")]
+        public async Task<ActionResult<ApiResponse>> SendTestNotification()
+        {
+            try
+            {
+                var notificationTypes = new[] { "Booking", "Payment", "Review", "Hall", "System" };
+                var randomType = notificationTypes[new Random().Next(notificationTypes.Length)];
+                
+                var title = $"Test {randomType} Notification";
+                var message = $"This is a test {randomType.ToLower()} notification sent at {DateTime.Now:yyyy-MM-dd HH:mm:ss}. Testing real-time updates via SignalR!";
+                
+                await _notificationService.CreateNotificationAsync(
+                    UserId,
+                    title,
+                    message,
+                    randomType);
+                
+                return Success($"Test notification sent successfully! Type: {randomType}");
+            }
+            catch (Exception ex)
+            {
+                return Error($"Failed to send test notification: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Send a custom test notification to current user
+        /// </summary>
+        /// <param name="request">Test notification request</param>
+        /// <returns>Success response</returns>
+        [HttpPost("test/custom")]
+        public async Task<ActionResult<ApiResponse>> SendCustomTestNotification([FromBody] TestNotificationRequest request)
+        {
+            try
+            {
+                if (request == null)
+                {
+                    return Error("Request data is required", 400);
+                }
+
+                var title = string.IsNullOrEmpty(request.Title) ? "Test Notification" : request.Title;
+                var message = string.IsNullOrEmpty(request.Message) ? "This is a test notification" : request.Message;
+                var type = string.IsNullOrEmpty(request.Type) ? "Info" : request.Type;
+                
+                await _notificationService.CreateNotificationAsync(
+                    UserId,
+                    title,
+                    message,
+                    type);
+                
+                return Success($"Custom test notification sent successfully!");
+            }
+            catch (Exception ex)
+            {
+                return Error($"Failed to send custom test notification: {ex.Message}", 500);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Test notification request model
+    /// </summary>
+    public class TestNotificationRequest
+    {
+        public string Title { get; set; }
+        public string Message { get; set; }
+        public string Type { get; set; }
     }
 }

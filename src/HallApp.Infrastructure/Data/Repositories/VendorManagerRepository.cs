@@ -5,11 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HallApp.Infrastructure.Data.Repositories;
 
-public class VendorManagerRepository : IVendorManagerRepository
+public class VendorManagerRepository : GenericRepository<VendorManager>, IVendorManagerRepository
 {
     private readonly DataContext _context;
 
-    public VendorManagerRepository(DataContext context)
+    public VendorManagerRepository(DataContext context) : base(context)
     {
         _context = context;
     }
@@ -48,38 +48,5 @@ public class VendorManagerRepository : IVendorManagerRepository
                 .AnyAsync(vm => vm.AppUserId == userIdInt);
         }
         return false;
-    }
-
-    public async Task<bool> CommercialRegistrationExistsAsync(string commercialRegistrationNumber)
-    {
-        if (string.IsNullOrEmpty(commercialRegistrationNumber))
-            return false;
-
-        return await _context.VendorManagers
-            .AnyAsync(vm => vm.CommercialRegistrationNumber == commercialRegistrationNumber);
-    }
-
-    public async Task<bool> VatNumberExistsAsync(string vatNumber)
-    {
-        if (string.IsNullOrEmpty(vatNumber))
-            return false;
-
-        return await _context.VendorManagers
-            .AnyAsync(vm => vm.VatNumber == vatNumber);
-    }
-
-    public void Add(VendorManager vendorManager)
-    {
-        _context.VendorManagers.Add(vendorManager);
-    }
-
-    public void Update(VendorManager vendorManager)
-    {
-        _context.VendorManagers.Update(vendorManager);
-    }
-
-    public void Delete(VendorManager vendorManager)
-    {
-        _context.VendorManagers.Remove(vendorManager);
     }
 }

@@ -15,6 +15,8 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using BookingEntity = HallApp.Core.Entities.BookingEntities.Booking;
 
+#nullable enable
+
 namespace HallApp.Web.Controllers.Booking
 {
     /// <summary>
@@ -29,19 +31,25 @@ namespace HallApp.Web.Controllers.Booking
         private readonly IServiceItemService _serviceItemService;
         private readonly INotificationService _notificationService;
         private readonly IBookingFinancialService _financialService;
+        private readonly IHallAvailabilityService _availabilityService;
+        private readonly IPriceCalculationService _priceCalculationService;
 
         public BookingController(
-            IBookingService bookingService, 
-            IMapper mapper, 
-            IServiceItemService serviceItemService, 
+            IBookingService bookingService,
+            IMapper mapper,
+            IServiceItemService serviceItemService,
             INotificationService notificationService,
-            IBookingFinancialService financialService)
+            IBookingFinancialService financialService,
+            IHallAvailabilityService availabilityService,
+            IPriceCalculationService priceCalculationService)
         {
             _bookingService = bookingService;
             _mapper = mapper;
             _serviceItemService = serviceItemService;
             _notificationService = notificationService;
             _financialService = financialService;
+            _availabilityService = availabilityService;
+            _priceCalculationService = priceCalculationService;
         }
 
         /// <summary>
@@ -49,7 +57,7 @@ namespace HallApp.Web.Controllers.Booking
         /// </summary>
         /// <param name="bookingDto">Booking registration data with vendor services</param>
         /// <returns>Created booking details</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPost("with-services")]
         public async Task<ActionResult<ApiResponse<BookingDto>>> CreateBookingWithServices([FromBody] BookingRequestDto bookingDto)
         {
@@ -63,6 +71,18 @@ namespace HallApp.Web.Controllers.Booking
 
                 // Set the customer ID from the authenticated user
                 bookingDto.CustomerId = UserId;
+
+                // Validate booking time using availability service
+                var (isValid, errorMessage) = await _availabilityService.ValidateBookingTimeAsync(
+                    bookingDto.HallId,
+                    bookingDto.EventDate,
+                    bookingDto.StartTime,
+                    bookingDto.EndTime);
+
+                if (!isValid)
+                {
+                    return Error<BookingDto>(errorMessage, 400);
+                }
 
                 // Calculate comprehensive financial breakdown
                 var eventStart = bookingDto.EventDate.Add(bookingDto.StartTime);
@@ -210,7 +230,7 @@ namespace HallApp.Web.Controllers.Booking
         /// </summary>
         /// <param name="bookingId">Booking ID</param>
         /// <returns>Booking approval status</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer,HallManager,VendorManager")]
         [HttpGet("{bookingId:int}/approval-status")]
         public async Task<ActionResult<ApiResponse<object>>> GetBookingApprovalStatus(int bookingId)
         {
@@ -232,7 +252,7 @@ namespace HallApp.Web.Controllers.Booking
                     type = "hall",
                     hallId = booking.HallId,
                     vendorId = (int?)null,
-                    vendorName = (string)null,
+                    vendorName = (string?)null,
                     status = booking.Status == "Pending" ? "pending" : 
                             booking.Status.StartsWith("Hall") && booking.Status != "HallRejected" ? "approved" : 
                             booking.Status == "HallRejected" ? "rejected" : "pending",
@@ -278,7 +298,7 @@ namespace HallApp.Web.Controllers.Booking
         /// <param name="bookingId">Booking ID</param>
         /// <param name="eventDate">Event date</param>
         /// <returns>Available alternative halls</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("{bookingId:int}/alternative-halls")]
         public async Task<ActionResult<ApiResponse<object>>> GetAlternativeHalls(int bookingId, [FromQuery] string eventDate)
         {
@@ -315,7 +335,7 @@ namespace HallApp.Web.Controllers.Booking
         /// <param name="bookingId">Booking ID</param>
         /// <param name="approved">Approval status</param>
         /// <returns>Updated booking details</returns>
-        [Authorize(Roles = "HallManager")]
+        [Authorize(Roles = "Admin,HallManager")]
         [HttpPost("{bookingId:int}/hall-approval")]
         public async Task<ActionResult<ApiResponse<BookingDto>>> ApproveBookingByHall(int bookingId, [FromBody] bool approved)
         {
@@ -400,7 +420,7 @@ namespace HallApp.Web.Controllers.Booking
         /// <param name="vendorId">Vendor ID</param>
         /// <param name="approved">Approval status</param>
         /// <returns>Updated booking details</returns>
-        [Authorize(Roles = "VendorManager")]
+        [Authorize(Roles = "Admin,VendorManager")]
         [HttpPost("{bookingId:int}/vendor-approval/{vendorId:int}")]
         public async Task<ActionResult<ApiResponse<BookingDto>>> ApproveBookingByVendor(int bookingId, int vendorId, [FromBody] bool approved)
         {
@@ -471,7 +491,7 @@ namespace HallApp.Web.Controllers.Booking
                     booking.Status = "VendorRejected";
                     booking.IsBookingConfirmed = false;
                     
-                    var rejectedVendorNames = rejectedVendors.Select(vb => vb.Vendor.Name).ToList();
+                    var rejectedVendorNames = rejectedVendors.Select(vb => vb.Vendor?.Name ?? "Unknown").ToList();
                     
                     notificationTitle = "Vendor Rejected - Alternatives Available";
                     notificationMessage = $"Some vendors have rejected your booking for {booking.BookingDate:yyyy-MM-dd}. " +
@@ -524,7 +544,7 @@ namespace HallApp.Web.Controllers.Booking
         /// <param name="bookingId">Original booking ID</param>
         /// <param name="newHallId">New hall ID to replace rejected hall</param>
         /// <returns>Updated booking details</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPost("{bookingId:int}/replace-hall/{newHallId:int}")]
         public async Task<ActionResult<ApiResponse<BookingDto>>> ReplaceHallInBooking(int bookingId, int newHallId)
         {
@@ -599,7 +619,7 @@ namespace HallApp.Web.Controllers.Booking
         /// <param name="bookingId">Original booking ID</param>
         /// <param name="replacementDto">Vendor replacement data containing rejected and new vendor info</param>
         /// <returns>Updated booking details</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPost("{bookingId:int}/replace-vendor")]
         public async Task<ActionResult<ApiResponse<BookingDto>>> ReplaceVendorInBooking(
             int bookingId, 
@@ -671,7 +691,7 @@ namespace HallApp.Web.Controllers.Booking
         /// </summary>
         /// <param name="bookingDto">Booking registration data</param>
         /// <returns>Created booking details</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPost]
         public async Task<ActionResult<ApiResponse<BookingDto>>> CreateBooking([FromBody] BookingRegisterDto bookingDto)
         {
@@ -757,7 +777,7 @@ namespace HallApp.Web.Controllers.Booking
         /// Get current user's bookings
         /// </summary>
         /// <returns>List of user's bookings</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpGet("my-bookings")]
         public async Task<ActionResult<ApiResponse<IEnumerable<BookingDto>>>> GetMyBookings()
         {
@@ -794,12 +814,87 @@ namespace HallApp.Web.Controllers.Booking
         }
 
         /// <summary>
+        /// Get bookings by hall (Hall Manager and Admin)
+        /// </summary>
+        /// <param name="hallId">Hall ID</param>
+        /// <returns>List of bookings for the specified hall</returns>
+        [Authorize(Roles = "Admin,HallManager")]
+        [HttpGet("hall/{hallId:int}")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<BookingDto>>>> GetBookingsByHall(int hallId)
+        {
+            try
+            {
+                var bookings = await _bookingService.GetBookingsByHallIdAsync(hallId);
+                var bookingDtos = _mapper.Map<IEnumerable<BookingDto>>(bookings);
+                return Success(bookingDtos, $"Bookings for hall {hallId} retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<BookingDto>>($"Failed to retrieve bookings for hall: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get bookings by vendor (Vendor Manager and Admin)
+        /// </summary>
+        /// <param name="vendorId">Vendor ID</param>
+        /// <returns>List of bookings for the specified vendor</returns>
+        [Authorize(Roles = "Admin,VendorManager")]
+        [HttpGet("vendor/{vendorId:int}")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<BookingDto>>>> GetBookingsByVendor(int vendorId)
+        {
+            try
+            {
+                var bookings = await _bookingService.GetBookingsByVendorIdAsync(vendorId);
+                var bookingDtos = _mapper.Map<IEnumerable<BookingDto>>(bookings);
+                return Success(bookingDtos, $"Bookings for vendor {vendorId} retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<BookingDto>>($"Failed to retrieve bookings for vendor: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get bookings by customer (Customer and Admin)
+        /// </summary>
+        /// <param name="customerId">Customer ID</param>
+        /// <returns>List of bookings for the specified customer</returns>
+        [Authorize(Roles = "Admin,Customer")]
+        [HttpGet("customer/{customerId}")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<BookingDto>>>> GetBookingsByCustomer(string customerId)
+        {
+            try
+            {
+                // Parse customerId to int for comparison
+                if (!int.TryParse(customerId, out int customerIdInt))
+                {
+                    return Error<IEnumerable<BookingDto>>("Invalid customer ID format", 400);
+                }
+
+                // Customers can only access their own bookings
+                if (!IsAdmin && customerIdInt != UserId)
+                {
+                    return Error<IEnumerable<BookingDto>>("Access denied", 403);
+                }
+
+                var bookings = await _bookingService.GetCustomerBookingsAsync(customerId);
+                var bookingDtos = _mapper.Map<IEnumerable<BookingDto>>(bookings);
+                return Success(bookingDtos, $"Bookings for customer retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<BookingDto>>($"Failed to retrieve bookings for customer: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
         /// Update booking
         /// </summary>
         /// <param name="id">Booking ID</param>
         /// <param name="updateDto">Updated booking data</param>
         /// <returns>Updated booking details</returns>
-        [Authorize]
+        [Authorize(Roles = "Admin,Customer,HallManager")]
         [HttpPut("{id:int}")]
         public async Task<ActionResult<ApiResponse<BookingDto>>> UpdateBooking(int id, [FromBody] BookingUpdateDto updateDto)
         {
@@ -867,6 +962,9 @@ namespace HallApp.Web.Controllers.Booking
                     });
                 }
 
+                if (updatedBooking == null)
+                    return Error<BookingDto>("Failed to update booking", 500);
+                    
                 return Success(updatedBooking, "Booking updated successfully");
             }
             catch (Exception ex)
@@ -880,7 +978,7 @@ namespace HallApp.Web.Controllers.Booking
         /// </summary>
         /// <param name="id">Booking ID</param>
         /// <returns>Success response</returns>
-        [Authorize]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpDelete("{id:int}")]
         public async Task<ActionResult<ApiResponse<string>>> CancelBooking(int id)
         {
@@ -963,8 +1061,8 @@ namespace HallApp.Web.Controllers.Booking
         [AllowAnonymous]
         [HttpGet("availability")]
         public async Task<ActionResult<ApiResponse<HallAvailabilityDto>>> CheckHallAvailability(
-            [FromQuery] int hallId, 
-            [FromQuery] DateTime startDate, 
+            [FromQuery] int hallId,
+            [FromQuery] DateTime startDate,
             [FromQuery] DateTime endDate)
         {
             try
@@ -995,11 +1093,103 @@ namespace HallApp.Web.Controllers.Booking
         }
 
         /// <summary>
-        /// Calculate comprehensive booking pricing (Customer only)
+        /// Get available time slots for a specific hall and date
+        /// </summary>
+        /// <param name="hallId">Hall ID</param>
+        /// <param name="date">Date to check</param>
+        /// <returns>List of available time slots</returns>
+        [AllowAnonymous]
+        [HttpGet("availability/timeslots")]
+        public async Task<ActionResult<ApiResponse<object>>> GetAvailableTimeSlots(
+            [FromQuery] int hallId,
+            [FromQuery] DateTime date)
+        {
+            try
+            {
+                if (date.Date < DateTime.UtcNow.Date)
+                {
+                    return Error<object>("Date cannot be in the past", 400);
+                }
+
+                var timeSlots = await _availabilityService.GetAvailableTimeSlotsAsync(hallId, date);
+
+                var response = new
+                {
+                    hallId = hallId,
+                    date = date.Date,
+                    timeSlots = timeSlots.Select(ts => new
+                    {
+                        startTime = ts.StartTimeFormatted,
+                        endTime = ts.EndTimeFormatted,
+                        isAvailable = ts.IsAvailable,
+                        durationHours = ts.DurationHours
+                    })
+                };
+
+                return Success((object)response, "Time slots retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<object>($"Failed to get time slots: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get available dates for a hall within a date range
+        /// </summary>
+        /// <param name="hallId">Hall ID</param>
+        /// <param name="startDate">Start date</param>
+        /// <param name="endDate">End date</param>
+        /// <returns>List of available dates</returns>
+        [AllowAnonymous]
+        [HttpGet("availability/dates")]
+        public async Task<ActionResult<ApiResponse<object>>> GetAvailableDates(
+            [FromQuery] int hallId,
+            [FromQuery] DateTime startDate,
+            [FromQuery] DateTime endDate)
+        {
+            try
+            {
+                if (startDate.Date < DateTime.UtcNow.Date)
+                {
+                    return Error<object>("Start date cannot be in the past", 400);
+                }
+
+                if (startDate >= endDate)
+                {
+                    return Error<object>("Start date must be before end date", 400);
+                }
+
+                if ((endDate - startDate).Days > 90)
+                {
+                    return Error<object>("Date range cannot exceed 90 days", 400);
+                }
+
+                var availableDates = await _availabilityService.GetAvailableDatesAsync(hallId, startDate, endDate);
+
+                var response = new
+                {
+                    hallId = hallId,
+                    startDate = startDate.Date,
+                    endDate = endDate.Date,
+                    availableDates = availableDates.Select(d => d.Date.ToString("yyyy-MM-dd"))
+                };
+
+                return Success((object)response, "Available dates retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<object>($"Failed to get available dates: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Calculate comprehensive booking pricing (Admin/Customer)
+        /// Uses server-side price calculation service with dynamic pricing rules
         /// </summary>
         /// <param name="pricingRequest">Pricing calculation request with all parameters</param>
         /// <returns>Detailed pricing breakdown</returns>
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Admin,Customer")]
         [HttpPost("calculate-pricing")]
         public async Task<ActionResult<ApiResponse<object>>> CalculateBookingPricing([FromBody] BookingPricingRequestDto pricingRequest)
         {
@@ -1011,104 +1201,105 @@ namespace HallApp.Web.Controllers.Booking
                     return Error<object>($"Invalid pricing request: {errors}", 400);
                 }
 
-                // Calculate hall cost using existing booking service logic
-                var eventDate = pricingRequest.EventDate;
-                var eventEndDate = eventDate.AddHours(4); // Default 4-hour event
-                var hallCost = await _bookingService.CalculateBookingCostAsync(
-                    pricingRequest.HallId, 
-                    eventDate, 
-                    eventEndDate
+                // Extract service item IDs from selected services
+                List<int>? serviceItemIds = pricingRequest.SelectedServices?
+                    .Select(s => s.ServiceItemId)
+                    .ToList();
+
+                // Use PriceCalculationService for comprehensive pricing
+                var breakdown = await _priceCalculationService.CalculateBookingPriceAsync(
+                    pricingRequest.HallId,
+                    pricingRequest.EventDate,
+                    pricingRequest.StartTime,
+                    pricingRequest.EndTime,
+                    serviceItemIds,
+                    pricingRequest.DiscountCode
                 );
-                
-                var isWeekend = eventDate.DayOfWeek == DayOfWeek.Friday || eventDate.DayOfWeek == DayOfWeek.Saturday;
-                string genderType = pricingRequest.SelectedGender?.ToLower() ?? "mixed";
 
-                // Calculate vendor services cost
-                decimal vendorServicesCost = 0;
-                var vendorBreakdown = new List<object>();
-                
-                if (pricingRequest.SelectedServices?.Any() == true)
-                {
-                    var servicesByVendor = pricingRequest.SelectedServices.GroupBy(s => s.VendorId);
-                    
-                    foreach (var vendorGroup in servicesByVendor)
-                    {
-                        var vendorId = vendorGroup.Key;
-                        var services = vendorGroup.ToList();
-                        decimal vendorTotal = 0;
-                        var serviceDetails = new List<object>();
-                        
-                        foreach (var service in services)
-                        {
-                            var serviceItem = await _serviceItemService.GetServiceItemByIdAsync(service.ServiceItemId);
-                            if (serviceItem != null)
-                            {
-                                decimal servicePrice = serviceItem.Price;
-                                decimal serviceTotalPrice = servicePrice * service.Quantity;
-                                vendorTotal += serviceTotalPrice;
-                                vendorServicesCost += serviceTotalPrice;
-                                
-                                serviceDetails.Add(new
-                                {
-                                    serviceItemId = service.ServiceItemId,
-                                    serviceName = serviceItem.Name,
-                                    unitPrice = servicePrice,
-                                    quantity = service.Quantity,
-                                    totalPrice = serviceTotalPrice
-                                });
-                            }
-                        }
-                        
-                        // Get vendor name from service if available
-                        var vendorName = $"Vendor {vendorId}"; // Fallback name
-                        
-                        vendorBreakdown.Add(new
-                        {
-                            vendorId = vendorId,
-                            vendorName = vendorName,
-                            services = serviceDetails,
-                            vendorTotal = vendorTotal
-                        });
-                    }
-                }
-
-                // Calculate tax (15% VAT)
-                decimal subtotal = hallCost + vendorServicesCost;
-                decimal taxRate = 0.15m;
-                decimal taxAmount = subtotal * taxRate;
-                decimal totalAmount = subtotal + taxAmount;
+                // Build detailed response
+                var isWeekend = pricingRequest.EventDate.DayOfWeek == DayOfWeek.Friday ||
+                               pricingRequest.EventDate.DayOfWeek == DayOfWeek.Saturday;
+                var eventTime = pricingRequest.StartTime;
+                var isEvening = eventTime >= new TimeSpan(18, 0, 0);
+                var duration = (pricingRequest.EndTime - pricingRequest.StartTime).TotalHours;
 
                 var pricingBreakdown = new
                 {
                     hallCost = new
                     {
-                        amount = hallCost,
-                        genderType = genderType,
+                        amount = breakdown.HallCost,
+                        durationHours = duration,
                         isWeekend = isWeekend,
-                        dayType = isWeekend ? "Weekend" : "Weekday"
+                        isEvening = isEvening,
+                        dayType = isWeekend ? "Weekend" : "Weekday",
+                        timeType = isEvening ? "Evening" : "Daytime"
                     },
                     vendorServices = new
                     {
-                        totalAmount = vendorServicesCost,
-                        vendors = vendorBreakdown
+                        totalAmount = breakdown.VendorServicesCost,
+                        itemCount = serviceItemIds?.Count ?? 0
                     },
-                    subtotal = subtotal,
+                    subtotal = breakdown.Subtotal,
+                    discount = new
+                    {
+                        code = breakdown.DiscountCode,
+                        amount = breakdown.DiscountAmount,
+                        applied = breakdown.DiscountAmount > 0
+                    },
                     tax = new
                     {
-                        rate = taxRate,
-                        amount = taxAmount
+                        rate = breakdown.TaxRate,
+                        amount = breakdown.TaxAmount,
+                        percentage = $"{breakdown.TaxRate * 100}%"
                     },
-                    totalAmount = totalAmount,
-                    calculatedAt = DateTime.UtcNow
+                    totalAmount = breakdown.TotalAmount,
+                    currency = breakdown.Currency,
+                    calculatedAt = DateTime.UtcNow,
+                    pricingFactors = new
+                    {
+                        weekendPremium = isWeekend ? "25%" : "None",
+                        eveningPremium = isEvening ? "10%" : "None",
+                        longBookingDiscount = duration > 8 ? "5%" : "None"
+                    }
                 };
 
-                Console.WriteLine($"🧮 Pricing Calculation - Hall: {hallCost}, Services: {vendorServicesCost}, Tax: {taxAmount}, Total: {totalAmount}");
+                Console.WriteLine($"🧮 Pricing Calculation - Hall: {breakdown.HallCost} SAR, Services: {breakdown.VendorServicesCost} SAR, Discount: {breakdown.DiscountAmount} SAR, Tax: {breakdown.TaxAmount} SAR, Total: {breakdown.TotalAmount} SAR");
 
                 return Success((object)pricingBreakdown, "Pricing calculated successfully");
             }
             catch (Exception ex)
             {
                 return Error<object>($"Failed to calculate pricing: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Validate discount code (Admin/Customer)
+        /// </summary>
+        /// <param name="discountCode">Discount code to validate</param>
+        /// <returns>Discount validation result</returns>
+        [Authorize(Roles = "Admin,Customer")]
+        [HttpGet("validate-discount/{discountCode}")]
+        public async Task<ActionResult<ApiResponse<object>>> ValidateDiscountCode(string discountCode)
+        {
+            try
+            {
+                var (isValid, message, discountPercentage) = await _priceCalculationService.ValidateDiscountCodeAsync(discountCode);
+
+                var response = new
+                {
+                    code = discountCode,
+                    isValid = isValid,
+                    message = message,
+                    discountPercentage = discountPercentage,
+                    discountDisplay = isValid ? $"{discountPercentage * 100}% off" : null
+                };
+
+                return Success((object)response, message);
+            }
+            catch (Exception ex)
+            {
+                return Error<object>($"Failed to validate discount code: {ex.Message}", 500);
             }
         }
 

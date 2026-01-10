@@ -6,6 +6,7 @@ public interface IVendorService
 {
     Task<Vendor> CreateVendorAsync(Vendor vendor);
     Task<Vendor> UpdateVendorAsync(int id, Vendor vendor);
+    Task<Vendor> ToggleVendorActiveAsync(int id, bool isActive);
     Task<bool> DeleteVendorAsync(int id);
     Task<Vendor> GetVendorByIdAsync(int id);
     Task<IEnumerable<Vendor>> GetVendorsAsync(object vendorParams);

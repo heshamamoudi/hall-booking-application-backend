@@ -66,10 +66,8 @@ public class HallManagerProfileService : IHallManagerProfileService
         var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(userIdInt);
         if (hallManager == null) return false;
 
-        hallManager.CompanyName = hallManagerData.CompanyName;
-        hallManager.CommercialRegistrationNumber = hallManagerData.CommercialRegistrationNumber;
-        hallManager.IsApproved = hallManagerData.IsApproved;
-
+        // Business properties are now on Hall entity, not HallManager
+        // HallManager only links AppUser to managed Halls
         await _hallManagerService.UpdateHallManagerAsync(hallManager);
         return true;
     }
@@ -129,23 +127,11 @@ public class HallManagerProfileService : IHallManagerProfileService
         var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(userIdInt);
         if (hallManager == null) return false;
 
-        // Update business-specific preferences
-        hallManager.CompanyName = businessData.CompanyName;
-        hallManager.CommercialRegistrationNumber = businessData.CommercialRegistrationNumber;
-        hallManager.IsApproved = businessData.IsApproved;
-
+        // Business properties are now on Hall entity
+        // This method is deprecated - use Hall update endpoints instead
         var updatedHallManager = await _hallManagerService.UpdateHallManagerAsync(hallManager);
         return updatedHallManager != null;
     }
 
-    public async Task<bool> ApproveHallManagerAsync(string userId, bool isApproved)
-    {
-        if (!int.TryParse(userId, out int userIdInt))
-            return false;
-
-        var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(userIdInt);
-        if (hallManager == null) return false;
-
-        return await _hallManagerService.ApproveHallManagerAsync(hallManager.Id, isApproved);
-    }
+    // Approval is now done at Hall level, not HallManager level
 }

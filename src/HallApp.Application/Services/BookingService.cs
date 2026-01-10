@@ -38,6 +38,21 @@ public class BookingService : IBookingService
         return new List<Booking>();
     }
 
+    public async Task<IEnumerable<Booking>> GetCustomerBookingsAsync(string customerId)
+    {
+        // Same implementation as GetBookingsByCustomerIdAsync - both serve the same purpose
+        if (int.TryParse(customerId, out int customerIdInt))
+        {
+            return await _unitOfWork.BookingRepository.GetBookingsByCustomerIdAsync(customerIdInt);
+        }
+        return new List<Booking>();
+    }
+
+    public async Task<IEnumerable<Booking>> GetBookingsByVendorIdAsync(int vendorId)
+    {
+        return await _unitOfWork.BookingRepository.GetBookingsByVendorIdAsync(vendorId);
+    }
+
     public async Task<IEnumerable<Booking>> GetAllBookingsAsync()
     {
         return await _unitOfWork.BookingRepository.GetAllAsync();
@@ -45,9 +60,65 @@ public class BookingService : IBookingService
 
     public async Task<Booking> UpdateBookingAsync(Booking booking)
     {
-        _unitOfWork.BookingRepository.Update(booking);
+        var existingBooking = await _unitOfWork.BookingRepository.GetByIdAsync(booking.Id);
+        if (existingBooking == null) return new Booking();
+        
+        // Update basic properties
+        existingBooking.HallId = booking.HallId;
+        existingBooking.CustomerId = booking.CustomerId;
+        existingBooking.PaymentMethod = booking.PaymentMethod ?? existingBooking.PaymentMethod;
+        existingBooking.Coupon = booking.Coupon ?? existingBooking.Coupon;
+        existingBooking.Status = booking.Status ?? existingBooking.Status;
+        existingBooking.Comments = booking.Comments ?? existingBooking.Comments;
+        
+        // Update date/time properties
+        existingBooking.VisitDate = booking.VisitDate;
+        existingBooking.BookingDate = booking.BookingDate;
+        existingBooking.EventDate = booking.EventDate;
+        existingBooking.StartTime = booking.StartTime;
+        existingBooking.EndTime = booking.EndTime;
+        existingBooking.IsVisitCompleted = booking.IsVisitCompleted;
+        existingBooking.IsBookingConfirmed = booking.IsBookingConfirmed;
+        
+        // Update event details
+        existingBooking.EventType = booking.EventType ?? existingBooking.EventType;
+        existingBooking.GuestCount = booking.GuestCount;
+        existingBooking.GenderPreference = booking.GenderPreference;
+        
+        // Update financial information
+        existingBooking.HallCost = booking.HallCost;
+        existingBooking.VendorServicesCost = booking.VendorServicesCost;
+        existingBooking.Subtotal = booking.Subtotal;
+        existingBooking.DiscountAmount = booking.DiscountAmount;
+        existingBooking.TaxAmount = booking.TaxAmount;
+        existingBooking.TaxRate = booking.TaxRate;
+        existingBooking.TotalAmount = booking.TotalAmount;
+        existingBooking.Currency = booking.Currency ?? existingBooking.Currency;
+        
+        // Update payment status
+        existingBooking.PaymentStatus = booking.PaymentStatus ?? existingBooking.PaymentStatus;
+        existingBooking.PaidAt = booking.PaidAt;
+        
+        // Update timestamps
+        existingBooking.Updated = DateTime.UtcNow;
+        existingBooking.UpdatedAt = DateTime.UtcNow;
+        
+        // Update PackageDetails if provided
+        if (booking.PackageDetails != null)
+        {
+            existingBooking.PackageDetails = booking.PackageDetails;
+        }
+        
+        // Update VendorBookings collection if provided
+        if (booking.VendorBookings != null)
+        {
+            existingBooking.VendorBookings?.Clear();
+            existingBooking.VendorBookings = booking.VendorBookings;
+        }
+        
+        _unitOfWork.BookingRepository.Update(existingBooking);
         await _unitOfWork.Complete();
-        return booking;
+        return existingBooking;
     }
 
     public async Task<Booking> UpdateCustomerBookingAsync(string customerId, Booking booking)

@@ -4,6 +4,7 @@ using HallApp.Core.Interfaces.IServices;
 using HallApp.Application.Services;
 using HallApp.Core.Interfaces.IRepositories;
 using HallApp.Infrastructure.Data.Repositories;
+using HallApp.Web.Services;
 
 namespace HallApp.Web.Extensions;
 
@@ -25,9 +26,17 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IServiceItemRepository, ServiceItemRepository>();
         services.AddScoped<IVendorAvailabilityRepository, VendorAvailabilityRepository>();
         services.AddScoped<IVendorManagerRepository, VendorManagerRepository>();
+        services.AddScoped<IChatRepository, ChatRepository>();
 
         // Register services with validation
         services.AddScoped<ITokenService, TokenService>();
+        
+        // Register file upload service
+        services.AddSingleton<IFileUploadService>(provider =>
+        {
+            var env = provider.GetRequiredService<IWebHostEnvironment>();
+            return new FileUploadService(env.ContentRootPath);
+        });
         
         // Validate that all required service interfaces and implementations exist
         try 
@@ -41,6 +50,9 @@ public static class ApplicationServiceExtensions
             services.AddScoped<IBookingService, BookingService>();
             services.AddScoped<IServiceItemService, ServiceItemService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IDashboardService, DashboardService>();
+            services.AddScoped<IDashboardExportService, DashboardExportService>();
+            services.AddScoped<IChatService, ChatService>();
             // Register BookingFinancialService in the DI container
             services.AddScoped<IBookingFinancialService>(provider =>
                 new BookingFinancialService(
@@ -67,6 +79,7 @@ public static class ApplicationServiceExtensions
         // AutoMapper configuration - ensure we scan all assemblies with profiles
         services.AddAutoMapper(
             typeof(HallApp.Application.Helpers.AutoMapperProfiles).Assembly,
+            typeof(HallApp.Web.Helpers.WebAutoMapperProfiles).Assembly,
             typeof(Program).Assembly
         );
 

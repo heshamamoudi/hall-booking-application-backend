@@ -23,12 +23,23 @@ public class Vendor
     public string Phone { get; set; } = string.Empty;
 
     public string WhatsApp { get; set; } = string.Empty;
+    public string Website { get; set; } = string.Empty;
 
     public string LogoUrl { get; set; } = string.Empty;
     public string CoverImageUrl { get; set; } = string.Empty;
+    
+    // Business registration details
+    [StringLength(50)]
+    public string CommercialRegistrationNumber { get; set; } = string.Empty;
+    
+    [StringLength(50)]
+    public string VatNumber { get; set; } = string.Empty;
+    
     public bool IsActive { get; set; } = true;
+    public bool IsApproved { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+    public DateTime? ApprovedAt { get; set; }
     public double Rating { get; set; }
     public int ReviewCount { get; set; }
 

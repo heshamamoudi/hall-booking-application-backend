@@ -1,71 +1,92 @@
 [
   {
-    "UserName": "hesham8",
-    "Email": "hesham8@example.com",
-    "PhoneNumber": "697477818",
+    "Name": "Mohammed Al-Rashid",
+    "UserName": "mohammed.rashid",
+    "Email": "mohammed.rashid@example.com",
+    "PhoneNumber": "+966501234567",
     "Customer": {
-      "PhoneNumber": "697477818",
-      "CreditMoney": 11,
-      "NumberOfOrders": 1,
+      "PhoneNumber": "+966501234567",
+      "CreditMoney": 0,
+      "NumberOfOrders": 0,
       "SelectedAddressId": 0,
       "Addresses": [
         {
-          "AddressName": "hesham8"
+          "AddressName": "Home - Riyadh"
         }
       ],
       "Cards": [
         {
-          "CardNumber": "12345678910",
-          "CardHolder": "hesham8",
-          "Expiration": "2000-01-01T12:00:00"
+          "CardNumber": "4111111111111111",
+          "CardHolder": "Mohammed Al-Rashid",
+          "Expiration": "2027-12-31T23:59:59"
         }
       ]
     }
   },
   {
-    "UserName": "Hesham1",
-    "Email": "Hesham1@example.com",
-    "PhoneNumber": "697477812",
+    "Name": "Fatima Ahmed",
+    "UserName": "fatima.ahmed",
+    "Email": "fatima.ahmed@example.com",
+    "PhoneNumber": "+966502345678",
     "Customer": {
-      "PhoneNumber": "697477812",
-      "CreditMoney": 11,
-      "NumberOfOrders": 1,
+      "PhoneNumber": "+966502345678",
+      "CreditMoney": 0,
+      "NumberOfOrders": 0,
       "SelectedAddressId": 0,
       "Addresses": [
         {
-          "AddressName": "Hesham1"
+          "AddressName": "Home - Jeddah"
         }
       ],
       "Cards": [
         {
-          "CardNumber": "12345678910",
-          "CardHolder": "Hesham1",
-          "Expiration": "2000-01-01T12:00:00"
+          "CardNumber": "5500000000000004",
+          "CardHolder": "Fatima Ahmed",
+          "Expiration": "2027-12-31T23:59:59"
         }
       ]
     }
   },
   {
-    "UserName": "Hesham2",
-    "Email": "Hesham2@example.com",
-    "PhoneNumber": "697477811",
+    "Name": "Ali Hassan",
+    "UserName": "ali.hassan",
+    "Email": "ali.hassan@example.com",
+    "PhoneNumber": "+966503456789",
     "Customer": {
-      "PhoneNumber": "697477811",
-      "CreditMoney": 11,
-      "NumberOfOrders": 1,
+      "PhoneNumber": "+966503456789",
+      "CreditMoney": 0,
+      "NumberOfOrders": 0,
       "SelectedAddressId": 0,
       "Addresses": [
         {
-          "AddressName": "Hesham2"
+          "AddressName": "Office - Riyadh"
         }
       ],
       "Cards": [
         {
-          "CardNumber": "12345678910",
-          "CardHolder": "Hesham2",
-          "Expiration": "2000-01-01T12:00:00"
+          "CardNumber": "340000000000009",
+          "CardHolder": "Ali Hassan",
+          "Expiration": "2027-12-31T23:59:59"
         }
       ]
+    }
+  },
+  {
+    "Name": "Ahmed Al-Mansour",
+    "UserName": "ahmed.mansour",
+    "Email": "ahmed.mansour@grandhall.com",
+    "PhoneNumber": "+966504567890",
+    "HallManager": {
+      "HallId": 1
+    }
+  },
+  {
+    "Name": "Sara Al-Zahrani",
+    "UserName": "sara.zahrani",
+    "Email": "sara.zahrani@royalpalace.com",
+    "PhoneNumber": "+966505678901",
+    "HallManager": {
+      "HallId": 2
     }
   }
 ]
