@@ -47,6 +47,27 @@ public class NotificationHub : Hub
         await base.OnConnectedAsync();
     }
 
+    // Client-callable method for explicitly joining user group
+    public async Task JoinUserGroup()
+    {
+        var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier)
+                         ?? Context.User?.FindFirst(JwtRegisteredClaimNames.NameId)
+                         ?? Context.User?.FindFirst(JwtRegisteredClaimNames.Sub)
+                         ?? Context.User?.FindFirst("nameid")
+                         ?? Context.User?.FindFirst("sub");
+
+        if (userIdClaim != null && !string.IsNullOrEmpty(userIdClaim.Value))
+        {
+            var userId = userIdClaim.Value;
+            await Groups.AddToGroupAsync(Context.ConnectionId, userId);
+            Console.WriteLine($"👥 User {userId} explicitly joined notification group");
+        }
+        else
+        {
+            Console.WriteLine("⚠️ JoinUserGroup called but no valid user ID found in claims");
+        }
+    }
+
     // Method to send a notification to a specific user (based on connection ID)
     public async Task SendNotificationToUser(int userId, Notification notification)
     {

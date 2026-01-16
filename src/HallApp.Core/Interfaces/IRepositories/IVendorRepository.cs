@@ -12,6 +12,7 @@ public interface IVendorRepository : IGenericRepository<Vendor>
     Task<Vendor> GetVendorByIdAsync(int id);
     Task<List<Vendor>> GetVendorsByTypeAsync(int typeId);
     Task<List<Vendor>> GetVendorsByManagerAsync(int managerId);
+    Task<List<Vendor>> GetVendorsByManagerIdAsync(string userId);
     Task<List<Vendor>> SearchVendorsAsync(string searchTerm);
 
     // Update

@@ -3,6 +3,7 @@ using HallApp.Core.Interfaces;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Core.Entities.BookingEntities;
 using HallApp.Application.DTOs.Booking;
+using Microsoft.Extensions.Logging;
 
 namespace HallApp.Application.Services;
 
@@ -10,11 +11,19 @@ public class BookingService : IBookingService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly IInvoiceService _invoiceService;
+    private readonly ILogger<BookingService> _logger;
 
-    public BookingService(IUnitOfWork unitOfWork, IMapper mapper)
+    public BookingService(
+        IUnitOfWork unitOfWork,
+        IMapper mapper,
+        IInvoiceService invoiceService,
+        ILogger<BookingService> logger)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _invoiceService = invoiceService;
+        _logger = logger;
     }
 
     public async Task<Booking> CreateBookingAsync(Booking booking)
@@ -256,9 +265,27 @@ public class BookingService : IBookingService
         var booking = await _unitOfWork.BookingRepository.GetByIdAsync(bookingId);
         if (booking == null) return false;
 
+        var previousStatus = booking.Status;
         booking.Status = status;
         _unitOfWork.BookingRepository.Update(booking);
         await _unitOfWork.Complete();
+
+        // Generate invoice when booking is confirmed
+        if (status == "Confirmed" && previousStatus != "Confirmed")
+        {
+            try
+            {
+                _logger.LogInformation("Booking {BookingId} confirmed - generating invoice", bookingId);
+                var invoice = await _invoiceService.GenerateInvoiceForBookingAsync(bookingId, "System");
+                _logger.LogInformation("Invoice {InvoiceNumber} generated for booking {BookingId}", invoice.InvoiceNumber, bookingId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to generate invoice for booking {BookingId}", bookingId);
+                // Don't fail the status update even if invoice generation fails
+            }
+        }
+
         return true;
     }
 

@@ -11,15 +11,14 @@ using HallApp.Application.DTOs;
 using HallApp.Application.DTOs.Vendors;
 using HallApp.Application.DTOs.Customer;
 using HallApp.Application.DTOs.Auth;
-using HallApp.Application.DTOs.Vendor;
-using HallApp.Application.DTOs.HallManager;
-using HallApp.Application.DTOs.Champer.Hall;
-using HallApp.Application.DTOs.Champer.HallManager;
-using HallApp.Application.DTOs.Champer.Contact;
-using HallApp.Application.DTOs.Champer.Location;
-using HallApp.Application.DTOs.Champer.Media;
-using HallApp.Application.DTOs.Champer.Package;
-using HallApp.Application.DTOs.Champer.Service;
+using HallApp.Application.DTOs.Halls.HallManager;
+using HallApp.Application.DTOs.Halls.Hall;
+using HallApp.Application.DTOs.Halls.HallManager;
+using HallApp.Application.DTOs.Halls.Contact;
+using HallApp.Application.DTOs.Halls.Location;
+using HallApp.Application.DTOs.Halls.Media;
+using HallApp.Application.DTOs.Halls.Package;
+using HallApp.Application.DTOs.Halls.Service;
 
 namespace HallApp.Application.Helpers;
 
@@ -28,7 +27,7 @@ public class AutoMapperProfiles : Profile
     public AutoMapperProfiles()
     {
         // User mappings
-        CreateMap<AppUser, HallApp.Application.DTOs.UserDto>()
+        CreateMap<AppUser, HallApp.Application.DTOs.Auth.UserDto>()
             .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FirstName))
             .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.LastName))
             .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
@@ -306,7 +305,7 @@ public class AutoMapperProfiles : Profile
         CreateMap<Hall, HallDto>()
             .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-            .ForMember(dest => dest.CommercialRegisteration, opt => opt.MapFrom(src => src.CommercialRegisteration))
+            .ForMember(dest => dest.CommercialRegistration, opt => opt.MapFrom(src => src.CommercialRegistration))
             .ForMember(dest => dest.Vat, opt => opt.MapFrom(src => src.Vat))
             .ForMember(dest => dest.BothWeekDays, opt => opt.MapFrom(src => src.BothWeekDays))
             .ForMember(dest => dest.BothWeekEnds, opt => opt.MapFrom(src => src.BothWeekEnds))
@@ -336,7 +335,7 @@ public class AutoMapperProfiles : Profile
         CreateMap<HallDto, Hall>()
             .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-            .ForMember(dest => dest.CommercialRegisteration, opt => opt.MapFrom(src => src.CommercialRegisteration))
+            .ForMember(dest => dest.CommercialRegistration, opt => opt.MapFrom(src => src.CommercialRegistration))
             .ForMember(dest => dest.Vat, opt => opt.MapFrom(src => src.Vat))
             .ForMember(dest => dest.BothWeekDays, opt => opt.MapFrom(src => src.BothWeekDays))
             .ForMember(dest => dest.BothWeekEnds, opt => opt.MapFrom(src => src.BothWeekEnds))
@@ -363,12 +362,12 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.Description, opt => opt.Ignore())
             .ForMember(dest => dest.Reviews, opt => opt.Ignore())
             .ForMember(dest => dest.AverageRating, opt => opt.Ignore())
-            .ForMember(dest => dest.Active, opt => opt.Ignore());
+            .ForMember(dest => dest.IsActive, opt => opt.Ignore());
 
         CreateMap<HallCreateDto, Hall>()
             .ForMember(dest => dest.ID, opt => opt.Ignore())
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-            .ForMember(dest => dest.CommercialRegisteration, opt => opt.MapFrom(src => src.CommercialRegisteration))
+            .ForMember(dest => dest.CommercialRegistration, opt => opt.MapFrom(src => src.CommercialRegistration))
             .ForMember(dest => dest.Vat, opt => opt.MapFrom(src => src.Vat))
             .ForMember(dest => dest.BothWeekDays, opt => opt.MapFrom(src => src.BothWeekDays))
             .ForMember(dest => dest.BothWeekEnds, opt => opt.MapFrom(src => src.BothWeekEnds))
@@ -395,12 +394,12 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.Managers, opt => opt.Ignore())
             .ForMember(dest => dest.Reviews, opt => opt.Ignore())
             .ForMember(dest => dest.AverageRating, opt => opt.Ignore())
-            .ForMember(dest => dest.Active, opt => opt.MapFrom(src => true));
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive));
 
         CreateMap<HallUpdateDto, Hall>()
             .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-            .ForMember(dest => dest.CommercialRegisteration, opt => opt.MapFrom(src => src.CommercialRegisteration))
+            .ForMember(dest => dest.CommercialRegistration, opt => opt.MapFrom(src => src.CommercialRegistration))
             .ForMember(dest => dest.Vat, opt => opt.MapFrom(src => src.Vat))
             .ForMember(dest => dest.BothWeekDays, opt => opt.MapFrom(src => src.BothWeekDays))
             .ForMember(dest => dest.BothWeekEnds, opt => opt.MapFrom(src => src.BothWeekEnds))
@@ -426,7 +425,7 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.Managers, opt => opt.Ignore())
             .ForMember(dest => dest.Reviews, opt => opt.Ignore())
             .ForMember(dest => dest.AverageRating, opt => opt.Ignore())
-            .ForMember(dest => dest.Active, opt => opt.Ignore())
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive))
             .ForMember(dest => dest.Created, opt => opt.Ignore());
 
         // Booking mappings - Enhanced with comprehensive customer information
@@ -520,7 +519,7 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
 
         // Hall to HallBookingDto mapping - enhanced for booking details
-        CreateMap<HallApp.Core.Entities.ChamperEntities.Hall, HallApp.Application.DTOs.Champer.Hall.HallBookingDto>()
+        CreateMap<HallApp.Core.Entities.ChamperEntities.Hall, HallApp.Application.DTOs.Halls.Hall.HallBookingDto>()
             .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
             .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
             .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
@@ -619,61 +618,80 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.ResolutionTime, opt => opt.Ignore());
 
         CreateMap<HallApp.Core.Entities.ChatEntities.ChatConversation, HallApp.Application.DTOs.Chat.ChatConversationDto>()
+            // IDs - use 0 for null values
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-            .ForMember(dest => dest.BookingId, opt => opt.MapFrom(src => src.BookingId))
-            .ForMember(dest => dest.HallId, opt => opt.MapFrom(src => src.HallId))
-            .ForMember(dest => dest.VendorId, opt => opt.MapFrom(src => src.VendorId))
-            .ForMember(dest => dest.CustomerId, opt => opt.MapFrom(src => src.CustomerId))
-            .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => 
-                src.ConversationType == "Customer" && src.Customer != null && src.Customer.AppUser != null
-                    ? $"{src.Customer.AppUser.FirstName} {src.Customer.AppUser.LastName}".Trim()
-                : src.ConversationType == "HallManager" && src.CreatedBy != null && src.Hall != null
-                    ? $"{src.CreatedBy.FirstName} {src.CreatedBy.LastName} - {src.Hall.Name}".Trim()
-                : src.ConversationType == "HallManager" && src.CreatedBy != null
-                    ? $"{src.CreatedBy.FirstName} {src.CreatedBy.LastName}".Trim()
-                : src.ConversationType == "VendorManager" && src.CreatedBy != null && src.Vendor != null
-                    ? $"{src.CreatedBy.FirstName} {src.CreatedBy.LastName} - {src.Vendor.Name}".Trim()
-                : src.ConversationType == "VendorManager" && src.CreatedBy != null
-                    ? $"{src.CreatedBy.FirstName} {src.CreatedBy.LastName}".Trim()
-                : "Unknown"))
-            .ForMember(dest => dest.CustomerEmail, opt => opt.MapFrom(src => src.Customer != null && src.Customer.AppUser != null
-                ? src.Customer.AppUser.Email
-                : ""))
-            .ForMember(dest => dest.SupportAgentId, opt => opt.MapFrom(src => src.SupportAgentId))
-            .ForMember(dest => dest.SupportAgentName, opt => opt.MapFrom(src => src.SupportAgent != null
-                ? $"{src.SupportAgent.FirstName} {src.SupportAgent.LastName}".Trim()
-                : ""))
-            .ForMember(dest => dest.Subject, opt => opt.MapFrom(src => src.Subject))
-            .ForMember(dest => dest.ConversationType, opt => opt.MapFrom(src => src.ConversationType))
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
-            .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category))
-            .ForMember(dest => dest.Priority, opt => opt.MapFrom(src => src.Priority))
+            .ForMember(dest => dest.BookingId, opt => opt.MapFrom(src => src.BookingId ?? 0))
+            .ForMember(dest => dest.HallId, opt => opt.MapFrom(src => src.HallId ?? 0))
+            .ForMember(dest => dest.VendorId, opt => opt.MapFrom(src => src.VendorId ?? 0))
+            .ForMember(dest => dest.CustomerId, opt => opt.MapFrom(src => src.CustomerId ?? 0))
+            
+            // Creator information - always from CreatedBy
+            .ForMember(dest => dest.CreatedByUserId, opt => opt.MapFrom(src => src.CreatedByUserId))
+            .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => 
+                src.CreatedBy != null
+                    ? (!string.IsNullOrWhiteSpace(src.CreatedBy.FirstName) || !string.IsNullOrWhiteSpace(src.CreatedBy.LastName)
+                        ? $"{src.CreatedBy.FirstName} {src.CreatedBy.LastName}".Trim()
+                        : !string.IsNullOrWhiteSpace(src.CreatedBy.UserName)
+                            ? src.CreatedBy.UserName
+                            : src.CreatedBy.Email ?? "User")
+                    : "User"))
+            .ForMember(dest => dest.CreatedByEmail, opt => opt.MapFrom(src => 
+                src.CreatedBy != null ? (src.CreatedBy.Email ?? "") : ""))
+            
+            // Context names
+            .ForMember(dest => dest.HallName, opt => opt.MapFrom(src => 
+                src.Hall != null ? src.Hall.Name : ""))
+            .ForMember(dest => dest.VendorName, opt => opt.MapFrom(src => 
+                src.Vendor != null ? src.Vendor.Name : ""))
+            
+            // Support agent - use 0 for null
+            .ForMember(dest => dest.SupportAgentId, opt => opt.MapFrom(src => src.SupportAgentId ?? 0))
+            .ForMember(dest => dest.SupportAgentName, opt => opt.MapFrom(src => 
+                src.SupportAgent != null
+                    ? (!string.IsNullOrWhiteSpace(src.SupportAgent.FirstName) || !string.IsNullOrWhiteSpace(src.SupportAgent.LastName)
+                        ? $"{src.SupportAgent.FirstName} {src.SupportAgent.LastName}".Trim()
+                        : src.SupportAgent.UserName ?? "Support Agent")
+                    : ""))
+            
+            // Conversation details
+            .ForMember(dest => dest.Subject, opt => opt.MapFrom(src => src.Subject ?? ""))
+            .ForMember(dest => dest.ConversationType, opt => opt.MapFrom(src => src.ConversationType ?? "Customer"))
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status ?? "Open"))
+            .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category ?? "General"))
+            .ForMember(dest => dest.Priority, opt => opt.MapFrom(src => src.Priority ?? "Normal"))
+            
+            // Timestamps - use DateTime.MinValue for null (frontend can check for this)
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
-            .ForMember(dest => dest.LastMessageAt, opt => opt.MapFrom(src => src.LastMessageAt))
-            .ForMember(dest => dest.ClaimedAt, opt => opt.MapFrom(src => src.ClaimedAt))
-            .ForMember(dest => dest.ResolvedAt, opt => opt.MapFrom(src => src.ResolvedAt))
-            .ForMember(dest => dest.ClosedAt, opt => opt.MapFrom(src => src.ClosedAt))
-            .ForMember(dest => dest.CustomerRating, opt => opt.MapFrom(src => src.CustomerRating))
-            .ForMember(dest => dest.CustomerFeedback, opt => opt.MapFrom(src => src.CustomerFeedback))
+            .ForMember(dest => dest.LastMessageAt, opt => opt.MapFrom(src => src.LastMessageAt ?? DateTime.MinValue))
+            .ForMember(dest => dest.ClaimedAt, opt => opt.MapFrom(src => src.ClaimedAt ?? DateTime.MinValue))
+            .ForMember(dest => dest.ResolvedAt, opt => opt.MapFrom(src => src.ResolvedAt ?? DateTime.MinValue))
+            .ForMember(dest => dest.ClosedAt, opt => opt.MapFrom(src => src.ClosedAt ?? DateTime.MinValue))
+            
+            // Feedback - use 0 for unrated
+            .ForMember(dest => dest.CustomerRating, opt => opt.MapFrom(src => src.CustomerRating ?? 0))
+            .ForMember(dest => dest.CustomerFeedback, opt => opt.MapFrom(src => src.CustomerFeedback ?? ""))
+            
+            // Statistics
             .ForMember(dest => dest.TotalMessages, opt => opt.MapFrom(src => src.TotalMessages))
-            .ForMember(dest => dest.UnreadCount, opt => opt.MapFrom(src => 0))  // Will be calculated per-user in controller
-            .ForMember(dest => dest.LastMessage, opt => opt.MapFrom(src => src.Messages != null && src.Messages.Any()
-                ? src.Messages.OrderByDescending(m => m.SentAt).First().Message
-                : ""))
-            .ForMember(dest => dest.ResponseTimeMinutes, opt => opt.MapFrom(src => src.ResponseTime != null
-                ? src.ResponseTime.Value.TotalMinutes
-                : (double?)null))
-            .ForMember(dest => dest.ResolutionTimeMinutes, opt => opt.MapFrom(src => src.ResolutionTime != null
-                ? src.ResolutionTime.Value.TotalMinutes
-                : (double?)null));
+            .ForMember(dest => dest.UnreadCount, opt => opt.MapFrom(src => 0))  // Calculated per-user in controller
+            .ForMember(dest => dest.LastMessage, opt => opt.MapFrom(src => 
+                src.Messages != null && src.Messages.Any()
+                    ? src.Messages.OrderByDescending(m => m.SentAt).First().Message
+                    : ""))
+            .ForMember(dest => dest.ResponseTimeMinutes, opt => opt.MapFrom(src => 
+                src.ResponseTime != null ? src.ResponseTime.Value.TotalMinutes : 0))
+            .ForMember(dest => dest.ResolutionTimeMinutes, opt => opt.MapFrom(src => 
+                src.ResolutionTime != null ? src.ResolutionTime.Value.TotalMinutes : 0));
 
         CreateMap<HallApp.Core.Entities.ChatEntities.ChatMessage, HallApp.Application.DTOs.Chat.ChatMessageDto>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.ConversationId, opt => opt.MapFrom(src => src.ConversationId))
             .ForMember(dest => dest.SenderId, opt => opt.MapFrom(src => src.SenderId))
             .ForMember(dest => dest.SenderName, opt => opt.MapFrom(src => src.Sender != null
-                ? $"{src.Sender.FirstName} {src.Sender.LastName}".Trim()
-                : "Unknown"))
+                ? (!string.IsNullOrWhiteSpace(src.Sender.FirstName) || !string.IsNullOrWhiteSpace(src.Sender.LastName)
+                    ? $"{src.Sender.FirstName} {src.Sender.LastName}".Trim()
+                    : src.Sender.UserName ?? src.Sender.Email ?? "User")
+                : "System"))
             .ForMember(dest => dest.SenderType, opt => opt.MapFrom(src => src.SenderType))
             .ForMember(dest => dest.Message, opt => opt.MapFrom(src => src.Message))
             .ForMember(dest => dest.MessageType, opt => opt.MapFrom(src => src.MessageType))
@@ -684,6 +702,39 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.ReadAt, opt => opt.MapFrom(src => src.ReadAt))
             .ForMember(dest => dest.SentAt, opt => opt.MapFrom(src => src.SentAt))
             .ForMember(dest => dest.IsSystemMessage, opt => opt.MapFrom(src => src.IsSystemMessage));
+
+        // Invoice mappings
+        CreateInvoiceMappings();
+    }
+
+    private void CreateInvoiceMappings()
+    {
+        CreateMap<HallApp.Core.Entities.BookingEntities.Invoice, HallApp.Application.DTOs.Invoice.InvoiceDto>()
+            .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src =>
+                src.Customer != null && src.Customer.AppUser != null
+                    ? $"{src.Customer.AppUser.FirstName} {src.Customer.AppUser.LastName}".Trim()
+                    : src.BuyerName))
+            .ForMember(dest => dest.HallName, opt => opt.MapFrom(src =>
+                src.Hall != null ? src.Hall.Name : ""));
+
+        CreateMap<HallApp.Core.Entities.BookingEntities.InvoiceLineItem, HallApp.Application.DTOs.Invoice.InvoiceLineItemDto>();
+
+        CreateMap<HallApp.Core.Entities.BookingEntities.Invoice, HallApp.Application.DTOs.Invoice.InvoiceListDto>()
+            .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src =>
+                src.Customer != null && src.Customer.AppUser != null
+                    ? $"{src.Customer.AppUser.FirstName} {src.Customer.AppUser.LastName}".Trim()
+                    : src.BuyerName))
+            .ForMember(dest => dest.HallName, opt => opt.MapFrom(src =>
+                src.Hall != null ? src.Hall.Name : ""));
+
+        CreateMap<HallApp.Application.DTOs.Invoice.CreateInvoiceDto, HallApp.Core.Entities.BookingEntities.Invoice>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.InvoiceNumber, opt => opt.Ignore())
+            .ForMember(dest => dest.InvoiceDate, opt => opt.MapFrom(_ => DateTime.UtcNow))
+            .ForMember(dest => dest.Customer, opt => opt.Ignore())
+            .ForMember(dest => dest.Hall, opt => opt.Ignore())
+            .ForMember(dest => dest.Booking, opt => opt.Ignore())
+            .ForMember(dest => dest.LineItems, opt => opt.Ignore());
     }
 
     // Helper method to calculate financial summary for BookingDto
@@ -847,6 +898,14 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.Email : ""))
             .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.PhoneNumber : ""))
             .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.UserName : ""));
+
+        // Business DTO for manager dropdown selection
+        CreateMap<HallManager, HallManagerBusinessDto>()
+            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.UserName : ""))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.Email : ""))
+            .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.FirstName : ""))
+            .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.LastName : ""))
+            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.PhoneNumber : ""));
 
         CreateMap<Hall, HallSimpleDto>();
     }

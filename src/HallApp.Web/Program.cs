@@ -7,6 +7,9 @@ using HallApp.Infrastructure.Data.Seed;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Collections;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using HallApp.Application.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,7 +29,15 @@ builder.Services.AddIdentityServices(builder.Configuration);
 builder.Services.AddSecurityServices(builder.Configuration, builder.Environment);
 builder.Services.AddCachingServices(builder.Configuration);
 builder.Services.AddApiRateLimiting();
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<HallApp.Web.Filters.ApiExceptionFilter>();
+});
+
+// Register FluentValidation validators
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerDocumentation();
 builder.Services.AddSignalR(options =>

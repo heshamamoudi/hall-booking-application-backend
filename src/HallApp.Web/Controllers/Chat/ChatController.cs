@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using AutoMapper;
 using System.Security.Claims;
+using Microsoft.Extensions.Logging;
 
 namespace HallApp.Web.Controllers.Chat
 {
@@ -23,14 +24,22 @@ namespace HallApp.Web.Controllers.Chat
         private readonly IHallManagerService _hallManagerService;
         private readonly IVendorManagerService _vendorManagerService;
         private readonly IBookingService _bookingService;
+        private readonly ILogger<ChatController> _logger;
 
-        public ChatController(IChatService chatService, IMapper mapper, IHallManagerService hallManagerService, IVendorManagerService vendorManagerService, IBookingService bookingService)
+        public ChatController(
+            IChatService chatService, 
+            IMapper mapper, 
+            IHallManagerService hallManagerService, 
+            IVendorManagerService vendorManagerService, 
+            IBookingService bookingService,
+            ILogger<ChatController> logger)
         {
             _chatService = chatService;
             _mapper = mapper;
             _hallManagerService = hallManagerService;
             _vendorManagerService = vendorManagerService;
             _bookingService = bookingService;
+            _logger = logger;
         }
 
         private int GetCurrentUserId()
@@ -137,11 +146,27 @@ namespace HallApp.Web.Controllers.Chat
                     if (hallManager != null)
                     {
                         var hallIds = hallManager.Halls.Select(h => h.ID).ToList();
-                        conversations = await _chatService.GetConversationsByConversationTypeAsync("HallManager");
-                        conversations = conversations.Where(c => c.HallId.HasValue && hallIds.Contains(c.HallId.Value) && (c.Status == "Open" || c.Status == "InProgress"));
+                        _logger.LogDebug("Hall Manager {UserId} - Assigned Hall IDs: [{HallIds}]", userId, string.Join(", ", hallIds));
+
+                        var allConversations = await _chatService.GetConversationsByConversationTypeAsync("HallManager");
+                        _logger.LogDebug("Total HallManager conversations: {Count}", allConversations.Count());
+
+                        foreach (var conv in allConversations)
+                        {
+                            var passes = conv.HallId.HasValue && hallIds.Contains(conv.HallId.Value) && (conv.Status == "Open" || conv.Status == "InProgress");
+                            _logger.LogTrace("Conv {ConvId}: HallId={HallId}, Status={Status}, PassesFilter={Passes}", conv.Id, conv.HallId, conv.Status, passes);
+                        }
+
+                        conversations = allConversations.Where(c =>
+                            c.HallId.HasValue &&
+                            hallIds.Contains(c.HallId.Value) &&
+                            (c.Status == "Open" || c.Status == "InProgress"));
+
+                        _logger.LogDebug("Filtered conversations for Hall Manager: {Count}", conversations.Count());
                     }
                     else
                     {
+                        _logger.LogWarning("Hall Manager not found for userId {UserId}", userId);
                         conversations = new List<ChatConversation>();
                     }
                 }
@@ -429,9 +454,9 @@ namespace HallApp.Web.Controllers.Chat
         }
 
         /// <summary>
-        /// Create new conversation (Customers and Managers can create support cases)
+        /// Create new conversation (Customers, Managers and Admins can create support cases)
         /// </summary>
-        [Authorize(Roles = "Customer,HallManager,VendorManager")]
+        [Authorize(Roles = "Customer,HallManager,VendorManager,Admin")]
         [HttpPost("conversations")]
         public async Task<ActionResult<ApiResponse<ChatConversationDto>>> CreateConversation([FromBody] CreateChatConversationDto dto)
         {
@@ -444,6 +469,7 @@ namespace HallApp.Web.Controllers.Chat
                 }
 
                 var userId = GetCurrentUserId();
+                _logger.LogInformation("Creating conversation for user {UserId}, Roles: {Roles}", userId, string.Join(",", User.Claims.Where(c => c.Type.Contains("role")).Select(c => c.Value)));
                 var conversation = _mapper.Map<ChatConversation>(dto);
                 conversation.CreatedByUserId = userId;
 
@@ -550,7 +576,9 @@ namespace HallApp.Web.Controllers.Chat
                     createdConversation.TotalMessages += 1;
                 }
 
-                var conversationDto = _mapper.Map<ChatConversationDto>(createdConversation);
+                // CRITICAL: Reload conversation with all navigation properties for proper DTO mapping
+                var fullConversation = await _chatService.GetConversationByIdAsync(createdConversation.Id);
+                var conversationDto = _mapper.Map<ChatConversationDto>(fullConversation);
 
                 return Success(conversationDto, "Conversation created successfully");
             }
@@ -671,7 +699,29 @@ namespace HallApp.Web.Controllers.Chat
             try
             {
                 var userId = GetCurrentUserId();
-                var senderType = User.IsInRole("Customer") ? "Customer" : "Admin";
+
+                // FIXED: Properly determine sender type based on role
+                string senderType;
+                if (User.IsInRole("Customer"))
+                {
+                    senderType = "Customer";
+                }
+                else if (User.IsInRole("HallManager"))
+                {
+                    senderType = "HallManager";
+                }
+                else if (User.IsInRole("VendorManager"))
+                {
+                    senderType = "VendorManager";
+                }
+                else if (User.IsInRole("Admin"))
+                {
+                    senderType = "Admin";
+                }
+                else
+                {
+                    senderType = "User"; // Fallback
+                }
 
                 var message = await _chatService.SendMessageAsync(id, userId, dto.Message, senderType);
                 var messageDto = _mapper.Map<ChatMessageDto>(message);

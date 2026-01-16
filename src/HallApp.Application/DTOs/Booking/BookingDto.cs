@@ -1,5 +1,5 @@
 using HallApp.Application.DTOs.Booking;
-using HallApp.Application.DTOs.Champer.Hall;
+using HallApp.Application.DTOs.Halls.Hall;
 using HallApp.Application.DTOs.Customer;
 using HallApp.Application.DTOs.Vendors;
 using HallApp.Core.Entities.BookingEntities;

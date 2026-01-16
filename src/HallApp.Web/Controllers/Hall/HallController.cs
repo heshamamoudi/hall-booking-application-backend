@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using AutoMapper;
 using HallApp.Core.Interfaces.IServices;
-using HallApp.Application.DTOs.Champer.Hall;
+using HallApp.Application.DTOs.Halls.Hall;
 using HallApp.Web.Controllers.Common;
 using HallApp.Application.Common.Models;
 using HallApp.Core.Entities.ChamperEntities;
+using HallApp.Web.Services;
+using HallApp.Web.DTOs;
 
 namespace HallApp.Web.Controllers.Hall
 {
@@ -19,11 +21,13 @@ namespace HallApp.Web.Controllers.Hall
     {
         private readonly IHallService _hallService;
         private readonly IMapper _mapper;
+        private readonly IFileUploadService _fileUploadService;
 
-        public HallController(IHallService hallService, IMapper mapper)
+        public HallController(IHallService hallService, IMapper mapper, IFileUploadService fileUploadService)
         {
             _hallService = hallService;
             _mapper = mapper;
+            _fileUploadService = fileUploadService;
         }
 
         /// <summary>
@@ -227,7 +231,7 @@ namespace HallApp.Web.Controllers.Hall
                 var allHalls = await _hallService.GetAllHallsAsync();
                 // Filter by HasSpecialOffer flag (set when hall has active discounts/offers)
                 var specialOfferHalls = allHalls
-                    .Where(h => h.HasSpecialOffer && h.Active)
+                    .Where(h => h.HasSpecialOffer && h.IsActive)
                     .OrderByDescending(h => h.AverageRating)
                     .Take(limit)
                     .ToList();
@@ -254,7 +258,7 @@ namespace HallApp.Web.Controllers.Hall
                 var allHalls = await _hallService.GetAllHallsAsync();
                 // Filter by IsFeatured flag (set when hall owner pays for featured placement)
                 var featuredHalls = allHalls
-                    .Where(h => h.IsFeatured && h.Active)
+                    .Where(h => h.IsFeatured && h.IsActive)
                     .OrderByDescending(h => h.AverageRating)
                     .ThenByDescending(h => Math.Max(h.MaleMax, h.FemaleMax))
                     .Take(limit)
@@ -284,7 +288,7 @@ namespace HallApp.Web.Controllers.Hall
                     .Where(h => h.Reviews != null && 
                                h.Reviews.Count >= 5 && 
                                h.AverageRating >= 3.8 && 
-                               h.Active)
+                               h.IsActive)
                     .OrderByDescending(h => h.Reviews.Count)
                     .ThenByDescending(h => h.AverageRating)
                     .Take(limit)
@@ -312,7 +316,7 @@ namespace HallApp.Web.Controllers.Hall
                 var allHalls = await _hallService.GetAllHallsAsync();
                 // Filter by IsPremium flag (set when hall has premium subscription)
                 var premiumHalls = allHalls
-                    .Where(h => h.IsPremium && h.Active)
+                    .Where(h => h.IsPremium && h.IsActive)
                     .OrderByDescending(h => h.AverageRating)
                     .ThenByDescending(h => h.MediaFiles?.Count ?? 0)
                     .Take(limit)
@@ -339,7 +343,7 @@ namespace HallApp.Web.Controllers.Hall
             {
                 var allHalls = await _hallService.GetAllHallsAsync();
                 var newlyAddedHalls = allHalls
-                    .Where(h => h.Active)
+                    .Where(h => h.IsActive)
                     .OrderByDescending(h => h.Created)
                     .Take(limit)
                     .ToList();
@@ -352,5 +356,267 @@ namespace HallApp.Web.Controllers.Hall
                 return Error<IEnumerable<HallDto>>($"Failed to get newly added halls: {ex.Message}", 500);
             }
         }
+
+        #region Hall Manager CRUD Operations
+
+        /// <summary>
+        /// Create a new hall (HallManager only)
+        /// </summary>
+        /// <param name="createHallDto">Hall creation data</param>
+        /// <returns>Created hall</returns>
+        [Authorize(Roles = "Admin,HallManager")]
+        [HttpPost]
+        public async Task<ActionResult<ApiResponse<HallDto>>> CreateHall([FromBody] HallCreateDto createHallDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                    return Error<HallDto>($"Invalid data: {errors}", 400);
+                }
+
+                var hallEntity = _mapper.Map<HallApp.Core.Entities.ChamperEntities.Hall>(createHallDto);
+                var createdHall = await _hallService.CreateHallAsync(hallEntity);
+                var hallDto = _mapper.Map<HallDto>(createdHall);
+
+                return CreatedAtAction(
+                    nameof(GetHallById),
+                    new { id = createdHall.ID },
+                    new ApiResponse<HallDto>
+                    {
+                        StatusCode = 201,
+                        Message = "Hall created successfully",
+                        IsSuccess = true,
+                        Data = hallDto
+                    }
+                );
+            }
+            catch (ArgumentException ex)
+            {
+                return Error<HallDto>(ex.Message, 400);
+            }
+            catch (Exception ex)
+            {
+                return Error<HallDto>($"Failed to create hall: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Update an existing hall (HallManager only)
+        /// </summary>
+        /// <param name="id">Hall ID</param>
+        /// <param name="updateHallDto">Updated hall data</param>
+        /// <returns>Updated hall</returns>
+        [Authorize(Roles = "Admin,HallManager")]
+        [HttpPut("{id:int}")]
+        public async Task<ActionResult<ApiResponse<HallDto>>> UpdateHall(int id, [FromBody] HallUpdateDto updateHallDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                    return Error<HallDto>($"Invalid data: {errors}", 400);
+                }
+
+                var existingHall = await _hallService.GetHallByIdAsync(id);
+                if (existingHall == null)
+                {
+                    return Error<HallDto>($"Hall with ID {id} not found", 404);
+                }
+
+                // Map update DTO to entity, preserving the ID
+                _mapper.Map(updateHallDto, existingHall);
+                existingHall.ID = id;
+
+                var updatedHall = await _hallService.UpdateHallAsync(existingHall);
+                var hallDto = _mapper.Map<HallDto>(updatedHall);
+
+                return Success(hallDto, "Hall updated successfully");
+            }
+            catch (ArgumentException ex)
+            {
+                return Error<HallDto>(ex.Message, 400);
+            }
+            catch (Exception ex)
+            {
+                return Error<HallDto>($"Failed to update hall: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Update hall with file uploads (recommended - replaces base64)
+        /// </summary>
+        [Authorize(Roles = "Admin,HallManager")]
+        [HttpPut("{id:int}/files")]
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<ApiResponse<HallDto>>> UpdateHallWithFiles(
+            int id,
+            [FromForm] HallUpdateWithFilesDto hallUpdateDto)
+        {
+            try
+            {
+                if (id != hallUpdateDto.ID)
+                {
+                    return Error<HallDto>("ID mismatch", 400);
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                    return Error<HallDto>($"Invalid data: {errors}", 400);
+                }
+
+                var hallEntity = _mapper.Map<HallApp.Core.Entities.ChamperEntities.Hall>(hallUpdateDto);
+                
+                // Build list of all image URLs (existing + new uploads)
+                var allImageUrls = new List<string>();
+                
+                // Add existing images that user wants to keep
+                if (hallUpdateDto.ExistingImageUrls != null && hallUpdateDto.ExistingImageUrls.Any())
+                {
+                    allImageUrls.AddRange(hallUpdateDto.ExistingImageUrls);
+                }
+                
+                // Upload new images and get their URLs
+                if (hallUpdateDto.NewImages != null && hallUpdateDto.NewImages.Any())
+                {
+                    var uploadedUrls = await _fileUploadService.SaveImagesAsync(
+                        hallUpdateDto.NewImages.ToList(), 
+                        "halls");
+                    allImageUrls.AddRange(uploadedUrls);
+                }
+                
+                // Create MediaFiles from all URLs
+                hallEntity.MediaFiles = new List<HallApp.Core.Entities.ChamperEntities.MediaEntities.HallMedia>();
+                int index = 0;
+                foreach (var url in allImageUrls)
+                {
+                    hallEntity.MediaFiles.Add(new HallApp.Core.Entities.ChamperEntities.MediaEntities.HallMedia
+                    {
+                        URL = url,
+                        HallID = hallEntity.ID,
+                        MediaType = "image",
+                        Gender = 3,
+                        index = index++
+                    });
+                }
+                
+                // Update the hall
+                var updatedHallEntity = await _hallService.UpdateHallAsync(hallEntity);
+                
+                if (updatedHallEntity == null)
+                {
+                    return Error<HallDto>("Couldn't update hall", 500);
+                }
+                
+                // Handle manager assignments if provided
+                if (hallUpdateDto.ManagerIds != null && hallUpdateDto.ManagerIds.Any())
+                {
+                    await _hallService.UpdateHallManagersAsync(id, hallUpdateDto.ManagerIds);
+                }
+                
+                // Reload the hall with all relationships
+                var reloadedHall = await _hallService.GetHallByIdAsync(id);
+                var updatedHall = _mapper.Map<HallDto>(reloadedHall);
+                return Success(updatedHall, "Hall updated successfully with file uploads");
+            }
+            catch (Exception ex)
+            {
+                return Error<HallDto>($"Failed to update hall: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Delete a hall (HallManager only)
+        /// </summary>
+        /// <param name="id">Hall ID</param>
+        /// <returns>Success response</returns>
+        [Authorize(Roles = "Admin,HallManager")]
+        [HttpDelete("{id:int}")]
+        public async Task<ActionResult<ApiResponse>> DeleteHall(int id)
+        {
+            try
+            {
+                var existingHall = await _hallService.GetHallByIdAsync(id);
+                if (existingHall == null)
+                {
+                    return Error($"Hall with ID {id} not found", 404);
+                }
+
+                var result = await _hallService.DeleteHallAsync(id);
+                if (!result)
+                {
+                    return Error($"Failed to delete hall with ID {id}", 500);
+                }
+
+                return Success("Hall deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error($"Failed to delete hall: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Toggle hall active status (HallManager only)
+        /// </summary>
+        /// <param name="id">Hall ID</param>
+        /// <param name="active">New active status</param>
+        /// <returns>Updated hall</returns>
+        [Authorize(Roles = "Admin,HallManager")]
+        [HttpPut("{id:int}/toggle-active")]
+        public async Task<ActionResult<ApiResponse<HallDto>>> ToggleHallActive(int id, [FromQuery] bool active)
+        {
+            try
+            {
+                var existingHall = await _hallService.GetHallByIdAsync(id);
+                if (existingHall == null)
+                {
+                    return Error<HallDto>($"Hall with ID {id} not found", 404);
+                }
+
+                existingHall.IsActive = active;
+                var updatedHall = await _hallService.UpdateHallAsync(existingHall);
+                var hallDto = _mapper.Map<HallDto>(updatedHall);
+
+                return Success(hallDto, $"Hall {(active ? "activated" : "deactivated")} successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<HallDto>($"Failed to toggle hall status: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get halls for the current hall manager
+        /// </summary>
+        /// <returns>List of halls managed by the current user</returns>
+        [Authorize(Roles = "HallManager")]
+        [HttpGet("my-halls")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetMyHalls()
+        {
+            try
+            {
+                // Get the current user's ID from claims
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Error<IEnumerable<HallDto>>("User not authenticated", 401);
+                }
+
+                var halls = await _hallService.GetHallsByManagerAsync(userId);
+                var hallDtos = _mapper.Map<List<HallDto>>(halls);
+
+                return Success<IEnumerable<HallDto>>(hallDtos, $"Found {hallDtos.Count} halls for manager");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<HallDto>>($"Failed to get halls: {ex.Message}", 500);
+            }
+        }
+
+        #endregion
     }
 }

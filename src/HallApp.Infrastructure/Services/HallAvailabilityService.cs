@@ -25,7 +25,7 @@ public class HallAvailabilityService : IHallAvailabilityService
         {
             // Check if hall exists and is active
             var hall = await _context.Halls.FindAsync(hallId);
-            if (hall == null || !hall.Active)
+            if (hall == null || !hall.IsActive)
             {
                 _logger.LogWarning("Hall {HallId} not found or inactive", hallId);
                 return false;

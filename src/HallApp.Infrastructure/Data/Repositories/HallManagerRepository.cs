@@ -22,11 +22,12 @@ public class HallManagerRepository : GenericRepository<HallManager>, IHallManage
         return null;
     }
 
-    // Override base methods to include AppUser relationship
+    // Override base methods to include AppUser and Halls relationships
     public new async Task<IEnumerable<HallManager>> GetAllAsync()
     {
         return await _context.HallManagers
             .Include(hm => hm.AppUser)
+            .Include(hm => hm.Halls)  // CRITICAL: Load Halls for filtering conversations
             .OrderBy(hm => hm.CreatedAt)
             .ToListAsync();
     }
@@ -35,6 +36,7 @@ public class HallManagerRepository : GenericRepository<HallManager>, IHallManage
     {
         return await _context.HallManagers
             .Include(hm => hm.AppUser)
+            .Include(hm => hm.Halls)  // CRITICAL: Load Halls for filtering conversations
             .FirstOrDefaultAsync(hm => hm.Id == id);
     }
 }

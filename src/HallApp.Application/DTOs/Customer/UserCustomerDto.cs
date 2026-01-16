@@ -1,4 +1,4 @@
-using HallApp.Application.DTOs.Customer;
+using HallApp.Application.DTOs.Auth;
 
 namespace HallApp.Application.DTOs.Customer;
 

@@ -57,7 +57,7 @@ public class DashboardService : IDashboardService
         return new DashboardStatistics
         {
             TotalHalls = halls.Count(),
-            ActiveHalls = halls.Count(h => h.Active),
+            ActiveHalls = halls.Count(h => h.IsActive),
             TotalVendors = vendors.Count(),
             ActiveVendors = vendors.Count(v => v.IsActive),
             TotalCustomers = customers.Count(),

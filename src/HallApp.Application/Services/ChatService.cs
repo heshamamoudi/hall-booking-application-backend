@@ -1,16 +1,24 @@
 using HallApp.Core.Entities.ChatEntities;
 using HallApp.Core.Interfaces;
 using HallApp.Core.Interfaces.IServices;
+using Microsoft.Extensions.Logging;
 
 namespace HallApp.Application.Services
 {
     public class ChatService : IChatService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IChatHubService _chatHubService;
+        private readonly ILogger<ChatService> _logger;
 
-        public ChatService(IUnitOfWork unitOfWork)
+        public ChatService(
+            IUnitOfWork unitOfWork,
+            IChatHubService chatHubService,
+            ILogger<ChatService> logger)
         {
             _unitOfWork = unitOfWork;
+            _chatHubService = chatHubService;
+            _logger = logger;
         }
 
         #region Conversation Management
@@ -225,7 +233,33 @@ namespace HallApp.Application.Services
                 IsSystemMessage = false
             };
 
-            return await _unitOfWork.ChatRepository.AddMessageAsync(chatMessage);
+            var createdMessage = await _unitOfWork.ChatRepository.AddMessageAsync(chatMessage);
+
+            // FIXED: Load Sender navigation property for SignalR
+            var messageWithSender = await _unitOfWork.ChatRepository.GetMessageByIdAsync(createdMessage.Id);
+
+            // Update conversation's last message time and count
+            var conversation = await _unitOfWork.ChatRepository.GetConversationByIdAsync(conversationId);
+            if (conversation != null)
+            {
+                conversation.LastMessageAt = DateTime.UtcNow;
+                conversation.TotalMessages += 1;
+                await _unitOfWork.ChatRepository.UpdateConversationAsync(conversation);
+            }
+
+            // Send real-time message via SignalR
+            try
+            {
+                // FIXED: Send message WITH Sender loaded for SenderName
+                await _chatHubService.SendMessageToConversationAsync(conversationId, messageWithSender);
+                _logger.LogInformation("📨 Real-time message sent to conversation {ConversationId}", conversationId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "⚠️ Failed to send real-time message for conversation {ConversationId}", conversationId);
+            }
+
+            return createdMessage; // Return original for API response
         }
 
         public async Task<IEnumerable<ChatMessage>> GetConversationMessagesAsync(int conversationId)
@@ -235,7 +269,23 @@ namespace HallApp.Application.Services
 
         public async Task<bool> MarkMessagesAsReadAsync(int conversationId, int userId)
         {
-            return await _unitOfWork.ChatRepository.MarkAllMessagesAsReadAsync(conversationId, userId);
+            var result = await _unitOfWork.ChatRepository.MarkAllMessagesAsReadAsync(conversationId, userId);
+
+            // Send real-time read notification via SignalR
+            if (result)
+            {
+                try
+                {
+                    await _chatHubService.SendMessageReadNotificationAsync(conversationId, userId);
+                    _logger.LogInformation("📖 Messages marked as read in conversation {ConversationId} by user {UserId}", conversationId, userId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "⚠️ Failed to send read notification for conversation {ConversationId}", conversationId);
+                }
+            }
+
+            return result;
         }
 
         public async Task<int> GetUnreadCountAsync(int conversationId, int userId)

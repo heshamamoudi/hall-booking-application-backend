@@ -135,9 +135,45 @@ public class VendorService : IVendorService
         return await _unitOfWork.VendorRepository.GetVendorsByManagerAsync(managerId);
     }
 
+    public async Task<List<Vendor>> GetVendorsByManagerIdAsync(string userId)
+    {
+        return await _unitOfWork.VendorRepository.GetVendorsByManagerIdAsync(userId);
+    }
+
     public async Task<List<Vendor>> SearchVendorsAsync(string searchTerm)
     {
         return await _unitOfWork.VendorRepository.SearchVendorsAsync(searchTerm);
+    }
+
+    public async Task<bool> UpdateVendorManagersAsync(int vendorId, List<int> managerIds)
+    {
+        try
+        {
+            var vendor = await _unitOfWork.VendorRepository.GetByIdAsync(vendorId);
+            if (vendor == null) return false;
+
+            // Get the vendor managers by their IDs
+            var managers = new List<VendorManager>();
+            foreach (var managerId in managerIds)
+            {
+                var manager = await _unitOfWork.VendorManagerRepository.GetByIdAsync(managerId);
+                if (manager != null)
+                {
+                    managers.Add(manager);
+                }
+            }
+
+            // Clear existing managers and add new ones
+            vendor.Managers?.Clear();
+            vendor.Managers = managers;
+
+            await _unitOfWork.Complete();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
     
     public async Task<bool> IsNameUniqueAsync(string name, int excludeId = 0)

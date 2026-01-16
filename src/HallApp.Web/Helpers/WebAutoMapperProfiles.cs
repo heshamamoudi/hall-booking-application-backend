@@ -12,7 +12,7 @@ namespace HallApp.Web.Helpers
             CreateMap<HallUpdateWithFilesDto, Hall>()
                 .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-                .ForMember(dest => dest.CommercialRegisteration, opt => opt.MapFrom(src => src.CommercialRegisteration))
+                .ForMember(dest => dest.CommercialRegistration, opt => opt.MapFrom(src => src.CommercialRegistration))
                 .ForMember(dest => dest.Vat, opt => opt.MapFrom(src => src.Vat))
                 .ForMember(dest => dest.BothWeekDays, opt => opt.MapFrom(src => src.BothWeekDays))
                 .ForMember(dest => dest.BothWeekEnds, opt => opt.MapFrom(src => src.BothWeekEnds))
@@ -37,7 +37,7 @@ namespace HallApp.Web.Helpers
                 .ForMember(dest => dest.Services, opt => opt.Ignore())
                 .ForMember(dest => dest.Reviews, opt => opt.Ignore())
                 .ForMember(dest => dest.AverageRating, opt => opt.Ignore())
-                .ForMember(dest => dest.Active, opt => opt.Ignore())
+                .ForMember(dest => dest.IsActive, opt => opt.Ignore())
                 .ForMember(dest => dest.Created, opt => opt.Ignore())
                 .ForMember(dest => dest.MaleActive, opt => opt.Ignore());
         }

@@ -459,11 +459,11 @@ namespace HallApp.Web.Controllers.Vendor
         }
 
         /// <summary>
-        /// Delete vendor (Admin only)
+        /// Delete vendor (Admin/VendorManager)
         /// </summary>
         /// <param name="id">Vendor ID</param>
         /// <returns>Success response</returns>
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,VendorManager")]
         [HttpDelete("{id:int}")]
         public async Task<ActionResult<ApiResponse>> DeleteVendor(int id)
         {
@@ -481,6 +481,64 @@ namespace HallApp.Web.Controllers.Vendor
             catch (Exception ex)
             {
                 return Error($"Failed to delete vendor: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Toggle vendor active status (VendorManager only)
+        /// </summary>
+        /// <param name="id">Vendor ID</param>
+        /// <param name="active">New active status</param>
+        /// <returns>Updated vendor</returns>
+        [Authorize(Roles = "Admin,VendorManager")]
+        [HttpPut("{id:int}/toggle-active")]
+        public async Task<ActionResult<ApiResponse<VendorDto>>> ToggleVendorActive(int id, [FromQuery] bool active)
+        {
+            try
+            {
+                var existingVendor = await _vendorService.GetVendorByIdAsync(id);
+                if (existingVendor == null)
+                {
+                    return Error<VendorDto>($"Vendor with ID {id} not found", 404);
+                }
+
+                existingVendor.IsActive = active;
+                var updatedVendor = await _vendorService.UpdateVendorAsync(id, existingVendor);
+                var vendorDto = _mapper.Map<VendorDto>(updatedVendor);
+
+                return Success(vendorDto, $"Vendor {(active ? "activated" : "deactivated")} successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<VendorDto>($"Failed to toggle vendor status: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get vendors for the current vendor manager
+        /// </summary>
+        /// <returns>List of vendors managed by the current user</returns>
+        [Authorize(Roles = "VendorManager")]
+        [HttpGet("my-vendors")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<VendorDto>>>> GetMyVendors()
+        {
+            try
+            {
+                // Get the current user's ID from claims
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Error<IEnumerable<VendorDto>>("User not authenticated", 401);
+                }
+
+                var vendors = await _vendorService.GetVendorsByManagerIdAsync(userId);
+                var vendorDtos = _mapper.Map<List<VendorDto>>(vendors);
+
+                return Success<IEnumerable<VendorDto>>(vendorDtos, $"Found {vendorDtos.Count} vendors for manager");
+            }
+            catch (Exception ex)
+            {
+                return Error<IEnumerable<VendorDto>>($"Failed to get vendors: {ex.Message}", 500);
             }
         }
 

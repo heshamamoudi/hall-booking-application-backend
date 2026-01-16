@@ -1,7 +1,7 @@
 using HallApp.Web.Controllers.Common;
 using HallApp.Application.Common.Models;
 using HallApp.Application.DTOs.Vendors;
-using HallApp.Application.DTOs.Champer.HallManager;
+using HallApp.Application.DTOs.Halls.HallManager;
 using HallApp.Core.Interfaces.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,163 +10,15 @@ using AutoMapper;
 namespace HallApp.Web.Controllers.Admin
 {
     /// <summary>
-    /// Vendor Management Extension for AdminController
-    /// Provides full vendor CRUD and vendor manager management for Admins
+    /// Vendor Manager Extension for AdminController
+    /// Provides vendor manager management for Admins
+    /// NOTE: Vendor CRUD operations moved to VendorController (/api/vendors)
     /// </summary>
     public partial class AdminController
     {
-        // Vendor Management Methods
-
-        /// <summary>
-        /// Get all vendors (Admin view)
-        /// </summary>
-        /// <returns>List of all vendors</returns>
-        [HttpGet("vendors")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<VendorDto>>>> GetAllVendors()
-        {
-            try
-            {
-                var vendors = await _vendorService.GetVendorsAsync(null);
-                var vendorDtos = _mapper.Map<IEnumerable<VendorDto>>(vendors);
-                return Success(vendorDtos, "Vendors retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                return Error<IEnumerable<VendorDto>>($"Failed to retrieve vendors: {ex.Message}", 500);
-            }
-        }
-
-        /// <summary>
-        /// Get vendor by ID (Admin view)
-        /// </summary>
-        /// <param name="id">Vendor ID</param>
-        /// <returns>Vendor details</returns>
-        [HttpGet("vendors/{id:int}")]
-        public async Task<ActionResult<ApiResponse<VendorDto>>> GetVendorByIdAdmin(int id)
-        {
-            try
-            {
-                var vendor = await _vendorService.GetVendorByIdAsync(id);
-                if (vendor == null)
-                {
-                    return Error<VendorDto>($"Vendor with ID {id} not found", 404);
-                }
-
-                var vendorDto = _mapper.Map<VendorDto>(vendor);
-                return Success(vendorDto, "Vendor retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                return Error<VendorDto>($"Failed to retrieve vendor: {ex.Message}", 500);
-            }
-        }
-
-        /// <summary>
-        /// Create new vendor (Admin)
-        /// </summary>
-        /// <param name="createDto">Vendor creation data</param>
-        /// <returns>Created vendor</returns>
-        [HttpPost("vendors")]
-        public async Task<ActionResult<ApiResponse<VendorDto>>> CreateVendorAdmin([FromBody] CreateVendorDto createDto)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
-                    return Error<VendorDto>($"Invalid data: {errors}", 400);
-                }
-
-                var vendorEntity = _mapper.Map<HallApp.Core.Entities.VendorEntities.Vendor>(createDto);
-                var vendor = await _vendorService.CreateVendorAsync(vendorEntity);
-                var vendorDto = _mapper.Map<VendorDto>(vendor);
-
-                return Success(vendorDto, "Vendor created successfully");
-            }
-            catch (Exception ex)
-            {
-                return Error<VendorDto>($"Failed to create vendor: {ex.Message}", 500);
-            }
-        }
-
-        /// <summary>
-        /// Update vendor (Admin)
-        /// </summary>
-        /// <param name="id">Vendor ID</param>
-        /// <param name="updateDto">Updated vendor data</param>
-        /// <returns>Updated vendor</returns>
-        [HttpPut("vendors/{id:int}")]
-        public async Task<ActionResult<ApiResponse<VendorDto>>> UpdateVendorAdmin(int id, [FromBody] UpdateVendorDto updateDto)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
-                    return Error<VendorDto>($"Invalid data: {errors}", 400);
-                }
-
-                var vendorEntity = _mapper.Map<HallApp.Core.Entities.VendorEntities.Vendor>(updateDto);
-                var updatedVendor = await _vendorService.UpdateVendorAsync(id, vendorEntity);
-                var vendorDto = _mapper.Map<VendorDto>(updatedVendor);
-
-                return Success(vendorDto, "Vendor updated successfully");
-            }
-            catch (Exception ex)
-            {
-                return Error<VendorDto>($"Failed to update vendor: {ex.Message}", 500);
-            }
-        }
-
-        /// <summary>
-        /// Delete vendor (Admin)
-        /// </summary>
-        /// <param name="id">Vendor ID</param>
-        /// <returns>Success response</returns>
-        [HttpDelete("vendors/{id:int}")]
-        public async Task<ActionResult<ApiResponse>> DeleteVendorAdmin(int id)
-        {
-            try
-            {
-                var result = await _vendorService.DeleteVendorAsync(id);
-                if (!result)
-                {
-                    return Error($"Vendor with ID {id} not found", 404);
-                }
-
-                return Success("Vendor deleted successfully");
-            }
-            catch (Exception ex)
-            {
-                return Error($"Failed to delete vendor: {ex.Message}", 500);
-            }
-        }
-
-        /// <summary>
-        /// Toggle vendor active status (Admin)
-        /// </summary>
-        /// <param name="id">Vendor ID</param>
-        /// <param name="active">Active status</param>
-        /// <returns>Updated vendor</returns>
-        [HttpPut("vendors/{id:int}/toggle-active")]
-        public async Task<ActionResult<ApiResponse<VendorDto>>> ToggleVendorActive(int id, [FromQuery] bool active)
-        {
-            try
-            {
-                var result = await _vendorService.ToggleVendorActiveAsync(id, active);
-                if (result == null)
-                {
-                    return Error<VendorDto>($"Vendor with ID {id} not found", 404);
-                }
-
-                var vendorDto = _mapper.Map<VendorDto>(result);
-                return Success(vendorDto, $"Vendor {(active ? "activated" : "deactivated")} successfully");
-            }
-            catch (Exception ex)
-            {
-                return Error<VendorDto>($"Failed to toggle vendor status: {ex.Message}", 500);
-            }
-        }
+        // NOTE: Vendor CRUD operations moved to VendorController (/api/vendors)
+        // Use /api/vendors for all vendor operations (GET, POST, PUT, DELETE)
+        // Admin can still access vendors via VendorController with Admin role
 
         // Vendor Manager Management Methods
 
@@ -185,8 +37,11 @@ namespace HallApp.Web.Controllers.Admin
                     id = vm.Id,
                     appUserId = vm.AppUserId,
                     createdAt = vm.CreatedAt,
-                    userName = vm.AppUser.UserName,
-                    email = vm.AppUser.Email
+                    userName = vm.AppUser?.UserName ?? "",
+                    email = vm.AppUser?.Email ?? "",
+                    firstName = vm.AppUser?.FirstName ?? "",
+                    lastName = vm.AppUser?.LastName ?? "",
+                    phoneNumber = vm.AppUser?.PhoneNumber ?? ""
                 });
 
                 return Success<IEnumerable<object>>(vendorManagerDtos, "Vendor managers retrieved successfully");

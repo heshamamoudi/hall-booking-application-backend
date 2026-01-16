@@ -12,7 +12,9 @@ public interface IVendorService
     Task<IEnumerable<Vendor>> GetVendorsAsync(object vendorParams);
     Task<List<Vendor>> GetVendorsByTypeAsync(int typeId);
     Task<List<Vendor>> GetVendorsByManagerAsync(int managerId);
+    Task<List<Vendor>> GetVendorsByManagerIdAsync(string userId);
     Task<List<Vendor>> SearchVendorsAsync(string searchTerm);
+    Task<bool> UpdateVendorManagersAsync(int vendorId, List<int> managerIds);
     
     // Validation methods
     Task<bool> IsNameUniqueAsync(string name, int excludeId = 0);

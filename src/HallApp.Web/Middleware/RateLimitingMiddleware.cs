@@ -37,6 +37,13 @@ public class RateLimitingMiddleware
             return;
         }
 
+        // Skip rate limiting for authenticated users
+        if (context.User?.Identity?.IsAuthenticated == true)
+        {
+            await _next(context);
+            return;
+        }
+
         // Get client identifier (IP address or API key if available)
         string clientId = GetClientIdentifier(context);
 

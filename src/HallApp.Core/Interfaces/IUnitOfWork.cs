@@ -19,5 +19,6 @@ public interface IUnitOfWork : IDisposable
     IUserRepository UserRepository { get; }
     INotificationRepository NotificationRepository { get; }
     IChatRepository ChatRepository { get; }
+    IInvoiceRepository InvoiceRepository { get; }
     Task<int> Complete();
 }

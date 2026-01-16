@@ -14,18 +14,20 @@ public class VendorManagerRepository : GenericRepository<VendorManager>, IVendor
         _context = context;
     }
 
-    public async Task<IEnumerable<VendorManager>> GetAllAsync()
+    public new async Task<IEnumerable<VendorManager>> GetAllAsync()
     {
         return await _context.VendorManagers
             .Include(vm => vm.AppUser)
+            .Include(vm => vm.Vendors)  // CRITICAL: Load Vendors for filtering conversations
             .OrderBy(vm => vm.CreatedAt)
             .ToListAsync();
     }
 
-    public async Task<VendorManager> GetByIdAsync(int id)
+    public new async Task<VendorManager> GetByIdAsync(int id)
     {
         return await _context.VendorManagers
             .Include(vm => vm.AppUser)
+            .Include(vm => vm.Vendors)  // CRITICAL: Load Vendors for filtering conversations
             .FirstOrDefaultAsync(vm => vm.Id == id) ?? new VendorManager();
     }
 

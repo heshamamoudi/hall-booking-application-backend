@@ -2,6 +2,7 @@ using HallApp.Core.Entities.VendorEntities;
 using HallApp.Core.Interfaces.IRepositories;
 using HallApp.Application.Common;
 using HallApp.Infrastructure.Data;
+using HallApp.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace HallApp.Infrastructure.Data.Repositories;
@@ -22,20 +23,14 @@ public class VendorRepository : GenericRepository<Vendor>, IVendorRepository
     public async Task<IEnumerable<Vendor>> GetAllVendorsAsync()
     {
         return await _context.Vendors
-            .Include(v => v.VendorType)
-            .Include(v => v.Location)
-            .Include(v => v.BusinessHours)
+            .IncludeForDetails()
             .ToListAsync();
     }
-
 
     public async Task<Vendor> GetVendorByIdAsync(int id)
     {
         return await _context.Vendors
-            .Include(v => v.VendorType)
-            .Include(v => v.Location)
-            .Include(v => v.BusinessHours)
-            .Include(v => v.ServiceItems)
+            .IncludeAllRelations()
             .AsSplitQuery()
             .FirstOrDefaultAsync(v => v.Id == id);
     }
@@ -43,8 +38,7 @@ public class VendorRepository : GenericRepository<Vendor>, IVendorRepository
     public async Task<List<Vendor>> GetVendorsByTypeAsync(int typeId)
     {
         return await _context.Vendors
-            .Include(v => v.VendorType)
-            .Include(v => v.Location)
+            .IncludeBasicRelations()
             .Where(v => v.VendorTypeId == typeId)
             .ToListAsync();
     }
@@ -52,17 +46,29 @@ public class VendorRepository : GenericRepository<Vendor>, IVendorRepository
     public async Task<List<Vendor>> GetVendorsByManagerAsync(int managerId)
     {
         return await _context.Vendors
-            .Include(v => v.VendorType)
-            .Include(v => v.Location)
+            .IncludeBasicRelations()
             .Include(v => v.Managers.Where(m => m.Id == managerId))
             .Where(v => v.Managers.Any(m => m.Id == managerId))
+            .ToListAsync();
+    }
+
+    public async Task<List<Vendor>> GetVendorsByManagerIdAsync(string userId)
+    {
+        if (!int.TryParse(userId, out int appUserId))
+        {
+            return new List<Vendor>();
+        }
+        
+        return await _context.Vendors
+            .IncludeForDetails()
+            .Where(v => v.Managers.Any(m => m.AppUserId == appUserId))
             .ToListAsync();
     }
 
     public async Task<List<Vendor>> SearchVendorsAsync(string searchTerm)
     {
         return await _context.Vendors
-            .Include(v => v.VendorType)
+            .IncludeBasicRelations()
             .Include(v => v.Location)
             .Where(v => v.Name.ToLower().Contains(searchTerm.ToLower()))
             .ToListAsync();

@@ -4,7 +4,7 @@ using HallApp.Application.DTOs.Booking;
 using HallApp.Application.DTOs.Booking.Registers;
 using HallApp.Application.DTOs.Booking.Updaters;
 using HallApp.Application.DTOs.Vendors;
-using HallApp.Application.DTOs.Champer.Hall;
+using HallApp.Application.DTOs.Halls.Hall;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Core.Entities.BookingEntities;
 using HallApp.Core.Entities.VendorEntities;

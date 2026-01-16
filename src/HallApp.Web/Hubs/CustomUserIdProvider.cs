@@ -1,12 +1,20 @@
 using Microsoft.AspNetCore.SignalR;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace HallApp.Web.Hubs;
 
 public class CustomUserIdProvider : IUserIdProvider
 {
-    public string GetUserId(HubConnectionContext connection)
+    public string? GetUserId(HubConnectionContext connection)
     {
-        // Map the UserIdentifier to the "nameid" claim
-        return connection.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        // Use same claim fallback logic as NotificationHub for consistency
+        var userIdClaim = connection.User?.FindFirst(ClaimTypes.NameIdentifier)
+                         ?? connection.User?.FindFirst(JwtRegisteredClaimNames.NameId)
+                         ?? connection.User?.FindFirst(JwtRegisteredClaimNames.Sub)
+                         ?? connection.User?.FindFirst("nameid")
+                         ?? connection.User?.FindFirst("sub");
+
+        return userIdClaim?.Value;
     }
 }

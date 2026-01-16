@@ -38,6 +38,9 @@ public static class DependencyInjection
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<ICustomerProfileService, CustomerProfileService>();
 
+        // Invoice Service (must be registered BEFORE BookingService due to dependency)
+        services.AddScoped<IInvoiceService, InvoiceService>();
+
         // Booking Services
         services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<IBookingFinancialService, BookingFinancialService>();

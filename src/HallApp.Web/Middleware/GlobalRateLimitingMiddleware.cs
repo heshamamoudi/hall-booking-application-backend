@@ -44,6 +44,13 @@ public class GlobalRateLimitingMiddleware
             return;
         }
 
+        // Skip rate limiting for authenticated users
+        if (context.User?.Identity?.IsAuthenticated == true)
+        {
+            await _next(context);
+            return;
+        }
+
         // Get or create token bucket for this client
         var bucket = _buckets.GetOrAdd(clientId, _ => new TokenBucket(
             MaxBucketSize,

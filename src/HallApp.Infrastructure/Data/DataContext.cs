@@ -433,6 +433,24 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
                 .HasForeignKey(c => c.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // CreatedBy - the user who created the conversation
+            entity.HasOne(c => c.CreatedBy)
+                .WithMany()
+                .HasForeignKey(c => c.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Hall context for HallManager conversations
+            entity.HasOne(c => c.Hall)
+                .WithMany()
+                .HasForeignKey(c => c.HallId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Vendor context for VendorManager conversations
+            entity.HasOne(c => c.Vendor)
+                .WithMany()
+                .HasForeignKey(c => c.VendorId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             entity.HasOne(c => c.SupportAgent)
                 .WithMany()
                 .HasForeignKey(c => c.SupportAgentId)
@@ -447,6 +465,7 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
             entity.HasIndex(c => c.Status);
             entity.HasIndex(c => c.CustomerId);
             entity.HasIndex(c => c.SupportAgentId);
+            entity.HasIndex(c => c.CreatedByUserId);
             entity.HasIndex(c => c.CreatedAt);
         });
 

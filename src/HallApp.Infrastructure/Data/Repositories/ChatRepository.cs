@@ -82,11 +82,12 @@ namespace HallApp.Infrastructure.Data.Repositories
             return await _context.ChatConversations
                 .Include(c => c.Customer)
                     .ThenInclude(cust => cust.AppUser)
-                .Include(c => c.CreatedBy)
+                .Include(c => c.CreatedBy)  // AppUser entity - loads FirstName, LastName from Users table
                 .Include(c => c.Hall)
                 .Include(c => c.Vendor)
                 .Include(c => c.SupportAgent)
                 .Include(c => c.Messages.OrderByDescending(m => m.SentAt).Take(1))
+                    .ThenInclude(m => m.Sender)  // Load message sender for last message preview
                 .Where(c => c.ConversationType == conversationType)
                 .OrderByDescending(c => c.LastMessageAt ?? c.CreatedAt)
                 .ToListAsync();

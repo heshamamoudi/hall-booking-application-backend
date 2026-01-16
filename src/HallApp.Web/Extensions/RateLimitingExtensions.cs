@@ -32,6 +32,12 @@ namespace HallApp.Web.Extensions
                             return RateLimitPartition.GetNoLimiter("localhost");
                         }
 
+                        // Skip rate limiting for authenticated users
+                        if (context.User?.Identity?.IsAuthenticated == true)
+                        {
+                            return RateLimitPartition.GetNoLimiter($"authenticated-{context.User.Identity.Name}");
+                        }
+
                         return RateLimitPartition.GetFixedWindowLimiter(
                             partitionKey: clientIp,
                             factory: _ => new FixedWindowRateLimiterOptions
@@ -54,6 +60,12 @@ namespace HallApp.Web.Extensions
                             return RateLimitPartition.GetNoLimiter("localhost");
                         }
 
+                        // Skip rate limiting for authenticated users
+                        if (context.User?.Identity?.IsAuthenticated == true)
+                        {
+                            return RateLimitPartition.GetNoLimiter($"authenticated-{context.User.Identity.Name}");
+                        }
+
                         return RateLimitPartition.GetFixedWindowLimiter(
                             partitionKey: clientIp,
                             factory: _ => new FixedWindowRateLimiterOptions
@@ -74,6 +86,12 @@ namespace HallApp.Web.Extensions
                         if (clientIp == "::1" || clientIp == "127.0.0.1" || clientIp == "::ffff:127.0.0.1")
                         {
                             return RateLimitPartition.GetNoLimiter("localhost");
+                        }
+
+                        // Skip rate limiting for authenticated users
+                        if (context.User?.Identity?.IsAuthenticated == true)
+                        {
+                            return RateLimitPartition.GetNoLimiter($"authenticated-{context.User.Identity.Name}");
                         }
 
                         return RateLimitPartition.GetFixedWindowLimiter(

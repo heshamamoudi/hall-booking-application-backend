@@ -229,7 +229,7 @@ public class Seed
                     var hall1 = halls[0];
                     var hall2 = halls[1];
                     
-                    if (hall1.Active && hall2.Active)
+                    if (hall1.IsActive && hall2.IsActive)
                     {
                         // Create HallManager for Ahmed and assign to Grand Hall
                         var ahmedManager = new HallManager

@@ -18,9 +18,11 @@ namespace HallApp.Web.Extensions
                 }).WithMetadata(new AllowAnonymousAttribute());
             }
 
-            // Map controllers and SignalR hub
+            // Map controllers and SignalR hubs
             app.MapControllers();
             app.MapHub<HallApp.Web.Hubs.NotificationHub>("/notificationsHub")
+                .RequireAuthorization(); // Ensure hub requires authentication
+            app.MapHub<HallApp.Web.Hubs.ChatHub>("/chatHub")
                 .RequireAuthorization(); // Ensure hub requires authentication
 
             // Handle 404s for API routes

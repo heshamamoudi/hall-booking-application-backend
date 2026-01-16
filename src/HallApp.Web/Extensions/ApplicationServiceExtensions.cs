@@ -30,7 +30,11 @@ public static class ApplicationServiceExtensions
 
         // Register services with validation
         services.AddScoped<ITokenService, TokenService>();
-        
+
+        // Register SignalR services
+        services.AddScoped<INotificationHubService, NotificationHubService>();
+        services.AddScoped<IChatHubService, ChatHubService>();
+
         // Register file upload service
         services.AddSingleton<IFileUploadService>(provider =>
         {

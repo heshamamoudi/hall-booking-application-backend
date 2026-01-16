@@ -628,9 +628,6 @@ namespace HallApp.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
-                    b.Property<bool>("Active")
-                        .HasColumnType("bit");
-
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("datetime2");
 
@@ -643,7 +640,7 @@ namespace HallApp.Infrastructure.Migrations
                     b.Property<decimal>("BothWeekEnds")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<long>("CommercialRegisteration")
+                    b.Property<long>("CommercialRegistration")
                         .HasColumnType("bigint");
 
                     b.Property<DateTime>("Created")
@@ -674,6 +671,9 @@ namespace HallApp.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<bool>("HasSpecialOffer")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsApproved")

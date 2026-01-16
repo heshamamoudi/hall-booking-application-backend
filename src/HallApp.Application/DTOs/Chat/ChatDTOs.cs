@@ -3,36 +3,59 @@ using System.ComponentModel.DataAnnotations;
 namespace HallApp.Application.DTOs.Chat
 {
     /// <summary>
-    /// Chat conversation DTO
+    /// Chat conversation DTO - Clean design with no nulls
     /// </summary>
     public class ChatConversationDto
     {
         public int Id { get; set; }
-        public int? BookingId { get; set; }
-        public int? HallId { get; set; }
-        public int? VendorId { get; set; }
-        public int? CustomerId { get; set; }
-        public string CustomerName { get; set; } = string.Empty;
-        public string CustomerEmail { get; set; } = string.Empty;
-        public int? SupportAgentId { get; set; }
+        
+        // Context IDs (0 if not applicable)
+        public int BookingId { get; set; }
+        public int HallId { get; set; }
+        public int VendorId { get; set; }
+        public int CustomerId { get; set; }
+        
+        // Creator information
+        public int CreatedByUserId { get; set; }
+        public string CreatedByName { get; set; } = string.Empty;
+        public string CreatedByEmail { get; set; } = string.Empty;
+        
+        // Context names (for display)
+        public string HallName { get; set; } = string.Empty;
+        public string VendorName { get; set; } = string.Empty;
+        
+        // Support agent
+        public int SupportAgentId { get; set; }
         public string SupportAgentName { get; set; } = string.Empty;
+        
+        // Conversation details
         public string Subject { get; set; } = string.Empty;
-        public string ConversationType { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
-        public string Category { get; set; } = string.Empty;
-        public string Priority { get; set; } = string.Empty;
+        public string ConversationType { get; set; } = string.Empty;  // Customer, HallManager, VendorManager
+        public string Status { get; set; } = string.Empty;  // Open, InProgress, Resolved, Closed
+        public string Category { get; set; } = string.Empty;  // General, Booking, Payment, Technical, Complaint
+        public string Priority { get; set; } = string.Empty;  // Low, Normal, High, Urgent
+        
+        // Timestamps
         public DateTime CreatedAt { get; set; }
-        public DateTime? LastMessageAt { get; set; }
-        public DateTime? ClaimedAt { get; set; }
-        public DateTime? ResolvedAt { get; set; }
-        public DateTime? ClosedAt { get; set; }
-        public int? CustomerRating { get; set; }
+        public DateTime LastMessageAt { get; set; }
+        public DateTime ClaimedAt { get; set; }
+        public DateTime ResolvedAt { get; set; }
+        public DateTime ClosedAt { get; set; }
+        
+        // Feedback
+        public int CustomerRating { get; set; }  // 0 if not rated, 1-5 if rated
         public string CustomerFeedback { get; set; } = string.Empty;
+        
+        // Statistics
         public int TotalMessages { get; set; }
         public int UnreadCount { get; set; }
         public string LastMessage { get; set; } = string.Empty;
-        public double? ResponseTimeMinutes { get; set; }
-        public double? ResolutionTimeMinutes { get; set; }
+        public double ResponseTimeMinutes { get; set; }  // 0 if not responded yet
+        public double ResolutionTimeMinutes { get; set; }  // 0 if not resolved yet
+        
+        // Legacy compatibility - maps to CreatedByName
+        public string CustomerName => CreatedByName;
+        public string CustomerEmail => CreatedByEmail;
     }
 
     /// <summary>

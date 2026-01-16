@@ -12,7 +12,7 @@ public class Hall
     public int ID { get; set; }
     public string Name { get; set; }
 
-    public long CommercialRegisteration { get; set; }
+    public long CommercialRegistration { get; set; }
 
     public long Vat { get; set; }
     // Properties for both
@@ -52,7 +52,7 @@ public class Hall
     public List<Service> Services { get; set; }
     public DateTime Created { get; set; } = DateTime.UtcNow;
     public DateTime Updated { get; set; } = DateTime.UtcNow;
-    public bool Active { get; set; } = true;
+    public bool IsActive { get; set; } = true;
     
     // Approval workflow
     public bool IsApproved { get; set; } = false;

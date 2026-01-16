@@ -53,7 +53,7 @@ public class HallService : IHallService
         {
             // Update all scalar properties
             existingHall.Name = hall.Name;
-            existingHall.CommercialRegisteration = hall.CommercialRegisteration;
+            existingHall.CommercialRegistration = hall.CommercialRegistration;
             existingHall.Vat = hall.Vat;
             existingHall.BothWeekDays = hall.BothWeekDays;
             existingHall.BothWeekEnds = hall.BothWeekEnds;
@@ -77,7 +77,7 @@ public class HallService : IHallService
             existingHall.Logo = hall.Logo ?? existingHall.Logo;
             
             // Update flags
-            existingHall.Active = hall.Active;
+            existingHall.IsActive = hall.IsActive;
             existingHall.HasSpecialOffer = hall.HasSpecialOffer;
             existingHall.IsFeatured = hall.IsFeatured;
             existingHall.IsPremium = hall.IsPremium;
@@ -186,7 +186,7 @@ public class HallService : IHallService
     {
         // Check if hall exists and is active
         var hall = await _unitOfWork.HallRepository.GetByIdAsync(hallId);
-        if (hall == null || !hall.Active) return false;
+        if (hall == null || !hall.IsActive) return false;
         
         var existingBookings = await _unitOfWork.BookingRepository.GetBookingsByHallIdAsync(hallId);
         return !existingBookings.Any(b => b.EventDate.Date >= startDate.Date && b.EventDate.Date <= endDate.Date);
@@ -238,7 +238,7 @@ public class HallService : IHallService
         var hall = await _unitOfWork.HallRepository.GetByIdAsync(hallId);
         if (hall == null) return new Hall();
         
-        hall.Active = !hall.Active;
+        hall.IsActive = !hall.IsActive;
         _unitOfWork.HallRepository.Update(hall);
         await _unitOfWork.Complete();
         return hall;
@@ -281,7 +281,7 @@ public class HallService : IHallService
     {
         var allHalls = await _unitOfWork.HallRepository.GetAllAsync();
         // Filter halls that need approval (assuming there's an approval status)
-        return allHalls.Where(h => !h.Active).ToList();
+        return allHalls.Where(h => !h.IsActive).ToList();
     }
 
     public async Task<bool> ApproveHallAsync(int hallId)
@@ -289,7 +289,7 @@ public class HallService : IHallService
         var hall = await _unitOfWork.HallRepository.GetByIdAsync(hallId);
         if (hall == null) return false;
         
-        hall.Active = true;
+        hall.IsActive = true;
         _unitOfWork.HallRepository.Update(hall);
         await _unitOfWork.Complete();
         return true;
@@ -301,7 +301,7 @@ public class HallService : IHallService
         if (hall == null) return false;
         
         // Mark hall as rejected (set Active to false)
-        hall.Active = false;
+        hall.IsActive = false;
         _unitOfWork.HallRepository.Update(hall);
         await _unitOfWork.Complete();
         return true;
@@ -344,7 +344,7 @@ public class HallService : IHallService
         if (hall == null) return false;
         
         // Set maintenance mode (using Active property as proxy)
-        hall.Active = !isMaintenanceMode;
+        hall.IsActive = !isMaintenanceMode;
         _unitOfWork.HallRepository.Update(hall);
         await _unitOfWork.Complete();
         return true;
@@ -354,7 +354,7 @@ public class HallService : IHallService
     {
         var allHalls = await _unitOfWork.HallRepository.GetAllAsync();
         // Return inactive halls as maintenance mode
-        return allHalls.Where(h => !h.Active).ToList();
+        return allHalls.Where(h => !h.IsActive).ToList();
     }
 
     public async Task<bool> UpdateHallRatingAsync(int hallId)
@@ -397,7 +397,7 @@ public class HallService : IHallService
     {
         // Get all active halls
         var allHalls = await _unitOfWork.HallRepository.GetAllAsync();
-        var activeHalls = allHalls.Where(h => h.Active).ToList();
+        var activeHalls = allHalls.Where(h => h.IsActive).ToList();
         
         // Exclude the specified hall if provided
         if (excludeHallId.HasValue)
@@ -422,4 +422,36 @@ public class HallService : IHallService
         
         return availableHalls;
     }
+
+    public async Task<bool> UpdateHallManagersAsync(int hallId, List<int> managerIds)
+    {
+        try
+        {
+            var hall = await _unitOfWork.HallRepository.GetByIdAsync(hallId);
+            if (hall == null) return false;
+
+            // Get the hall managers by their IDs
+            var managers = new List<HallManager>();
+            foreach (var managerId in managerIds)
+            {
+                var manager = await _unitOfWork.HallManagerRepository.GetByIdAsync(managerId);
+                if (manager != null)
+                {
+                    managers.Add(manager);
+                }
+            }
+
+            // Clear existing managers and add new ones
+            hall.Managers?.Clear();
+            hall.Managers = managers;
+
+            await _unitOfWork.Complete();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
 }

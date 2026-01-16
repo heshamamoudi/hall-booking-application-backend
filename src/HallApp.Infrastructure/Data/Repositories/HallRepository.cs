@@ -1,5 +1,6 @@
 using HallApp.Core.Entities.ChamperEntities;
 using HallApp.Core.Interfaces.IRepositories;
+using HallApp.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace HallApp.Infrastructure.Data.Repositories;
@@ -10,55 +11,35 @@ public class HallRepository : GenericRepository<Hall>, IHallRepository
     {
     }
 
-    // Override GetByIdAsync to include related entities
+    // Override GetByIdAsync to include related entities using extension method
     public override async Task<Hall> GetByIdAsync(int id)
     {
         return await _context.Halls
-            .Include(h => h.Location)
-            .Include(h => h.MediaFiles)
-            .Include(h => h.Packages)
-            .Include(h => h.Services)
-            .Include(h => h.Reviews)
-            .Include(h => h.Managers)
-                .ThenInclude(m => m.AppUser)
-            .Include(h => h.Contacts)
+            .IncludeAllRelations()
             .FirstOrDefaultAsync(h => h.ID == id);
     }
 
-    // Override GetAllAsync to include related entities
+    // Override GetAllAsync to include related entities using extension method
     public override async Task<IEnumerable<Hall>> GetAllAsync()
     {
         return await _context.Halls
-            .Include(h => h.Location)
-            .Include(h => h.MediaFiles)
-            .Include(h => h.Packages)
-            .Include(h => h.Services)
-            .Include(h => h.Reviews)
-            .Include(h => h.Managers)
-                .ThenInclude(m => m.AppUser)
-            .Include(h => h.Contacts)
+            .IncludeAllRelations()
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<Hall>> GetHallsByManagerIdAsync(int managerId)
+    public async Task<IEnumerable<Hall>> GetHallsByManagerIdAsync(int appUserId)
     {
         return await _context.Halls
-            .Where(h => h.Managers.Any(m => m.Id == managerId))
-            .Include(h => h.Location)
-            .Include(h => h.MediaFiles)
-            .Include(h => h.Packages)
-            .Include(h => h.Services)
-            .Include(h => h.Reviews)
-            .Where(h => h.Active)
+            .Where(h => h.Managers.Any(m => m.AppUserId == appUserId))
+            .IncludeForDetails()
             .ToListAsync();
     }
 
     public async Task<IEnumerable<Hall>> GetActiveHallsAsync()
     {
         return await _context.Halls
-            .Where(h => h.Active)
-            .Include(h => h.Location)
-            .Include(h => h.MediaFiles)
+            .Where(h => h.IsActive)
+            .IncludeBasicRelations()
             .Include(h => h.Reviews)
             .OrderBy(h => h.Name)
             .ToListAsync();
@@ -67,15 +48,8 @@ public class HallRepository : GenericRepository<Hall>, IHallRepository
     public async Task<Hall> GetHallWithDetailsAsync(int hallId)
     {
         return await _context.Halls
-            .Include(h => h.Location)
-            .Include(h => h.MediaFiles)
-            .Include(h => h.Packages)
-            .Include(h => h.Services)
-            .Include(h => h.Reviews)
-            .Include(h => h.Managers)
-                .ThenInclude(m => m.AppUser)
-            .Include(h => h.Contacts)
-            .FirstOrDefaultAsync(h => h.ID == hallId && h.Active);
+            .IncludeAllRelations()
+            .FirstOrDefaultAsync(h => h.ID == hallId && h.IsActive);
     }
 
     public async Task<IEnumerable<Hall>> SearchHallsAsync(string searchTerm)
@@ -86,7 +60,7 @@ public class HallRepository : GenericRepository<Hall>, IHallRepository
         var lowerSearchTerm = searchTerm.ToLower();
         
         return await _context.Halls
-            .Where(h => h.Active && 
+            .Where(h => h.IsActive && 
                        (h.Name.ToLower().Contains(lowerSearchTerm) ||
                         h.Description.ToLower().Contains(lowerSearchTerm) ||
                         h.Location.Address.ToLower().Contains(lowerSearchTerm) ||
@@ -100,7 +74,7 @@ public class HallRepository : GenericRepository<Hall>, IHallRepository
 
     public async Task<IEnumerable<Hall>> GetHallsByLocationAsync(string city, string state)
     {
-        var query = _context.Halls.Where(h => h.Active);
+        var query = _context.Halls.Where(h => h.IsActive);
 
         if (!string.IsNullOrEmpty(city))
             query = query.Where(h => h.Location.City.ToLower().Contains(city.ToLower()));
@@ -132,7 +106,7 @@ public class HallRepository : GenericRepository<Hall>, IHallRepository
     public async Task<IEnumerable<Hall>> GetHallsByGenderAsync(int gender)
     {
         return await _context.Halls
-            .Where(h => h.Active && h.Gender == gender)
+            .Where(h => h.IsActive && h.Gender == gender)
             .Include(h => h.Location)
             .Include(h => h.MediaFiles)
             .Include(h => h.Reviews)
@@ -143,7 +117,7 @@ public class HallRepository : GenericRepository<Hall>, IHallRepository
     public async Task<IEnumerable<Hall>> GetHallsByPriceRangeAsync(double minPrice, double maxPrice)
     {
         return await _context.Halls
-            .Where(h => h.Active && 
+            .Where(h => h.IsActive && 
                        ((h.MaleActive && h.MaleWeekDays >= minPrice && h.MaleWeekDays <= maxPrice) ||
                         (h.FemaleActive && h.FemaleWeekDays >= minPrice && h.FemaleWeekDays <= maxPrice) ||
                         (h.BothWeekDays >= minPrice && h.BothWeekDays <= maxPrice)))

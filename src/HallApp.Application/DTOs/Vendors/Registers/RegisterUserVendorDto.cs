@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using HallApp.Application.DTOs;
 using HallApp.Application.DTOs.Vendors;
 
 namespace HallApp.Application.DTOs.Vendors.Registers;

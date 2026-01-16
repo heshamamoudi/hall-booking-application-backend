@@ -9,11 +9,16 @@ namespace HallApp.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<NotificationService> _logger;
+        private readonly INotificationHubService _notificationHubService;
 
-        public NotificationService(IUnitOfWork unitOfWork, ILogger<NotificationService> logger)
+        public NotificationService(
+            IUnitOfWork unitOfWork,
+            ILogger<NotificationService> logger,
+            INotificationHubService notificationHubService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _notificationHubService = notificationHubService;
         }
 
         public async Task CreateNotificationAsync(int appUserId, string title, string message, string type = "General")
@@ -42,6 +47,18 @@ namespace HallApp.Application.Services
                 await _unitOfWork.Complete();
 
                 _logger.LogInformation("✅ Notification created successfully for User: {UserId}", appUserId);
+
+                // Send real-time notification via SignalR
+                try
+                {
+                    await _notificationHubService.SendNotificationToUserAsync(appUserId, notification);
+                    _logger.LogInformation("📡 Real-time notification sent via SignalR to User: {UserId}", appUserId);
+                }
+                catch (Exception signalREx)
+                {
+                    // Log SignalR errors but don't fail the notification creation
+                    _logger.LogWarning(signalREx, "⚠️ Failed to send real-time notification via SignalR for User: {UserId}", appUserId);
+                }
             }
             catch (Exception ex)
             {
