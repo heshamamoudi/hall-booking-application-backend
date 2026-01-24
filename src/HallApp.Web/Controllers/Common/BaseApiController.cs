@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using HallApp.Application.Common.Models;
+using HallApp.Core.Exceptions;
 using System.Security.Claims;
 
 namespace HallApp.Web.Controllers.Common

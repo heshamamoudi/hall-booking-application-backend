@@ -1,5 +1,5 @@
 using HallApp.Web.Controllers.Common;
-using HallApp.Application.Common.Models;
+using HallApp.Core.Exceptions;
 using HallApp.Application.DTOs.Vendors;
 using HallApp.Core.Interfaces.IServices;
 using Microsoft.AspNetCore.Authorization;

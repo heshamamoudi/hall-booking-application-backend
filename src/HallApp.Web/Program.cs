@@ -22,7 +22,7 @@ builder.ConfigureKestrelSecurity();
 
 // Add services to the container
 builder.Services.AddMemoryCache();
-builder.Services.AddApplication();
+builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddIdentityServices(builder.Configuration);
@@ -32,6 +32,13 @@ builder.Services.AddApiRateLimiting();
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<HallApp.Web.Filters.ApiExceptionFilter>();
+})
+.AddJsonOptions(options =>
+{
+    // Use camelCase for JSON property names to match frontend expectations
+    options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    // Allow case-insensitive deserialization (frontend sends camelCase, backend DTOs are PascalCase)
+    options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
 });
 
 // Register FluentValidation validators

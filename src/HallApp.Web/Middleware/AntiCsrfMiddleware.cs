@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Antiforgery;
-using HallApp.Web.Errors;
+using HallApp.Core.Exceptions;
 
 namespace HallApp.Web.Middleware;
 

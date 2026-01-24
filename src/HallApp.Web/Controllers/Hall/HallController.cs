@@ -4,7 +4,7 @@ using AutoMapper;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Application.DTOs.Halls.Hall;
 using HallApp.Web.Controllers.Common;
-using HallApp.Application.Common.Models;
+using HallApp.Core.Exceptions;
 using HallApp.Core.Entities.ChamperEntities;
 using HallApp.Web.Services;
 using HallApp.Web.DTOs;

@@ -14,6 +14,7 @@ public interface IInvoiceService
     Task<IEnumerable<Invoice>> GetAllInvoicesAsync();
     Task<IEnumerable<Invoice>> GetInvoicesByCustomerIdAsync(int customerId);
     Task<IEnumerable<Invoice>> GetInvoicesByHallIdAsync(int hallId);
+    Task<IEnumerable<Invoice>> GetInvoicesByVendorIdAsync(int vendorId);
     Task<IEnumerable<Invoice>> GetInvoicesByStatusAsync(string paymentStatus);
     Task<IEnumerable<Invoice>> GetInvoicesByDateRangeAsync(DateTime startDate, DateTime endDate);
 

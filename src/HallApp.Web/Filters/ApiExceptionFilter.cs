@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using HallApp.Application.Common.Models;
+using HallApp.Core.Exceptions;
 
 namespace HallApp.Web.Filters;
 

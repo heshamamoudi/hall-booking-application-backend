@@ -12,34 +12,42 @@ namespace HallApp.Web.Extensions
         /// <summary>
         /// Adds rate limiting services using the built-in ASP.NET Core Rate Limiting feature
         /// to prevent brute force and DoS attacks (OWASP A07:2021)
+        ///
+        /// Best Practice Implementation:
+        /// - Authenticated users: NO rate limiting (unlimited access)
+        /// - Unauthenticated users: Strict rate limiting to prevent abuse
+        /// - Login endpoints: Extra strict limits to prevent brute force attacks
+        /// - Localhost: No rate limiting for development
         /// </summary>
         public static IServiceCollection AddApiRateLimiting(this IServiceCollection services)
         {
             services.AddRateLimiter(options =>
             {
                 options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-                
-                // Global rate limit policy - applied to all endpoints
+
+                // Global rate limit policy - ONLY applies to unauthenticated requests
+                // Authenticated users bypass all global rate limits
                 options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
-                    // Burst protection: Only 10 requests per second from same IP (prevents 100 reqs in 1 sec)
+                    // Layer 1: Burst protection - prevents rapid-fire requests from bots/scripts
+                    // 10 requests per second per IP for unauthenticated users
                     PartitionedRateLimiter.Create<HttpContext, string>(context =>
                     {
-                        var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
-
-                        // Skip rate limiting for localhost
-                        if (clientIp == "::1" || clientIp == "127.0.0.1" || clientIp == "::ffff:127.0.0.1")
+                        // Skip rate limiting for localhost (development)
+                        if (IsLocalhost(context))
                         {
                             return RateLimitPartition.GetNoLimiter("localhost");
                         }
 
-                        // Skip rate limiting for authenticated users
+                        // BEST PRACTICE: Authenticated users have unlimited access
                         if (context.User?.Identity?.IsAuthenticated == true)
                         {
                             return RateLimitPartition.GetNoLimiter($"authenticated-{context.User.Identity.Name}");
                         }
 
+                        // Rate limit unauthenticated requests by IP
+                        var clientIp = GetClientIp(context);
                         return RateLimitPartition.GetFixedWindowLimiter(
-                            partitionKey: clientIp,
+                            partitionKey: $"burst:{clientIp}",
                             factory: _ => new FixedWindowRateLimiterOptions
                             {
                                 Window = TimeSpan.FromSeconds(1),
@@ -48,26 +56,24 @@ namespace HallApp.Web.Extensions
                                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst
                             });
                     }),
-                    
-                    // Layer 2: Short-term limit - protection against sustained medium-rate attacks
+
+                    // Layer 2: Short-term protection - prevents sustained attacks
+                    // 30 requests per 10 seconds for unauthenticated users
                     PartitionedRateLimiter.Create<HttpContext, string>(context =>
                     {
-                        var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
-
-                        // Skip rate limiting for localhost
-                        if (clientIp == "::1" || clientIp == "127.0.0.1" || clientIp == "::ffff:127.0.0.1")
+                        if (IsLocalhost(context))
                         {
                             return RateLimitPartition.GetNoLimiter("localhost");
                         }
 
-                        // Skip rate limiting for authenticated users
                         if (context.User?.Identity?.IsAuthenticated == true)
                         {
                             return RateLimitPartition.GetNoLimiter($"authenticated-{context.User.Identity.Name}");
                         }
 
+                        var clientIp = GetClientIp(context);
                         return RateLimitPartition.GetFixedWindowLimiter(
-                            partitionKey: clientIp,
+                            partitionKey: $"short:{clientIp}",
                             factory: _ => new FixedWindowRateLimiterOptions
                             {
                                 Window = TimeSpan.FromSeconds(10),
@@ -76,26 +82,24 @@ namespace HallApp.Web.Extensions
                                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst
                             });
                     }),
-                    
-                    // Layer 3: Overall limit - general rate limiting
+
+                    // Layer 3: Overall limit - general protection
+                    // 100 requests per minute for unauthenticated users
                     PartitionedRateLimiter.Create<HttpContext, string>(context =>
                     {
-                        var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
-
-                        // Skip rate limiting for localhost
-                        if (clientIp == "::1" || clientIp == "127.0.0.1" || clientIp == "::ffff:127.0.0.1")
+                        if (IsLocalhost(context))
                         {
                             return RateLimitPartition.GetNoLimiter("localhost");
                         }
 
-                        // Skip rate limiting for authenticated users
                         if (context.User?.Identity?.IsAuthenticated == true)
                         {
                             return RateLimitPartition.GetNoLimiter($"authenticated-{context.User.Identity.Name}");
                         }
 
+                        var clientIp = GetClientIp(context);
                         return RateLimitPartition.GetFixedWindowLimiter(
-                            partitionKey: clientIp,
+                            partitionKey: $"overall:{clientIp}",
                             factory: _ => new FixedWindowRateLimiterOptions
                             {
                                 Window = TimeSpan.FromMinutes(1),
@@ -161,6 +165,39 @@ namespace HallApp.Web.Extensions
             });
 
             return services;
+        }
+
+        /// <summary>
+        /// Check if the request is from localhost (development)
+        /// </summary>
+        private static bool IsLocalhost(HttpContext context)
+        {
+            var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "";
+            return clientIp == "::1" || clientIp == "127.0.0.1" || clientIp == "::ffff:127.0.0.1";
+        }
+
+        /// <summary>
+        /// Get the client IP address, considering proxy headers
+        /// </summary>
+        private static string GetClientIp(HttpContext context)
+        {
+            // Check for forwarded IP (behind load balancer/proxy)
+            var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(forwardedFor))
+            {
+                // Take the first IP in the chain (original client)
+                return forwardedFor.Split(',')[0].Trim();
+            }
+
+            // Check for real IP header
+            var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(realIp))
+            {
+                return realIp.Trim();
+            }
+
+            // Fall back to connection remote IP
+            return context.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
         }
     }
 }

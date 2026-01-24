@@ -83,8 +83,8 @@ public class VendorProfileService : IVendorProfileService
         var vendorManagerDeleted = await _vendorManagerService.DeleteVendorManagerAsync(vendorManager.Id);
         if (!vendorManagerDeleted) return false;
 
-        // Delete user (auth data) - handled by UserService
-        return await _userService.DeleteHallManagerAsync(userId);
+        // Deactivate user (auth data) - handled by UserService
+        return await _userService.DeactivateUserAsync(userId);
     }
 
     // Authentication-related profile operations

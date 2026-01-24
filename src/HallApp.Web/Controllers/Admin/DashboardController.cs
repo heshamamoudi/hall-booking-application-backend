@@ -1,4 +1,4 @@
-using HallApp.Application.Common.Models;
+using HallApp.Core.Exceptions;
 using HallApp.Application.DTOs.Dashboard;
 using HallApp.Application.Services;
 using HallApp.Web.Controllers.Common;

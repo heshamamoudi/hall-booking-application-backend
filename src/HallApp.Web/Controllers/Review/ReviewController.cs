@@ -1,7 +1,7 @@
 using AutoMapper;
 using HallApp.Web.Controllers.Common;
 using HallApp.Application.DTOs.Review;
-using HallApp.Application.Common.Models;
+using HallApp.Core.Exceptions;
 using HallApp.Core.Interfaces.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

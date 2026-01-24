@@ -1,5 +1,5 @@
 using AutoMapper;
-using HallApp.Application.Common.Models;
+using HallApp.Core.Exceptions;
 using HallApp.Application.DTOs.Invoice;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Web.Controllers.Common;
@@ -147,21 +147,79 @@ public class InvoiceController : BaseApiController
     }
 
     /// <summary>
-    /// Get customer's invoices (own invoices)
+    /// Get invoices based on user role:
+    /// - Customer: their own invoices
+    /// - HallManager: invoices for their assigned halls
+    /// - VendorManager: invoices containing their assigned vendors
+    /// - Admin: all invoices
     /// </summary>
     [HttpGet("my-invoices")]
-    public async Task<ActionResult<ApiResponse<IEnumerable<InvoiceListDto>>>> GetMyInvoices()
+    public async Task<ActionResult<ApiResponse<IEnumerable<InvoiceListDto>>>> GetMyInvoices(
+        [FromServices] IHallManagerService hallManagerService,
+        [FromServices] IVendorManagerService vendorManagerService)
     {
         try
         {
             var userId = UserId;
-            var invoices = await _invoiceService.GetInvoicesByCustomerIdAsync(userId);
+            IEnumerable<Core.Entities.BookingEntities.Invoice> invoices;
+
+            if (User.IsInRole("Admin"))
+            {
+                // Admin sees all invoices
+                invoices = await _invoiceService.GetAllInvoicesAsync();
+            }
+            else if (User.IsInRole("HallManager"))
+            {
+                // Hall Manager sees invoices for their assigned halls
+                var hallManager = await hallManagerService.GetHallManagerByAppUserIdAsync(userId);
+                if (hallManager != null && hallManager.Halls.Any())
+                {
+                    var hallIds = hallManager.Halls.Select(h => h.ID).ToList();
+                    var allInvoices = new List<Core.Entities.BookingEntities.Invoice>();
+                    foreach (var hallId in hallIds)
+                    {
+                        var hallInvoices = await _invoiceService.GetInvoicesByHallIdAsync(hallId);
+                        allInvoices.AddRange(hallInvoices);
+                    }
+                    invoices = allInvoices.DistinctBy(i => i.Id).ToList();
+                }
+                else
+                {
+                    invoices = new List<Core.Entities.BookingEntities.Invoice>();
+                }
+            }
+            else if (User.IsInRole("VendorManager"))
+            {
+                // Vendor Manager sees invoices containing their assigned vendors
+                var vendorManager = await vendorManagerService.GetVendorManagerByAppUserIdAsync(userId);
+                if (vendorManager != null && vendorManager.Vendors.Any())
+                {
+                    var vendorIds = vendorManager.Vendors.Select(v => v.Id).ToList();
+                    var allInvoices = new List<Core.Entities.BookingEntities.Invoice>();
+                    foreach (var vendorId in vendorIds)
+                    {
+                        var vendorInvoices = await _invoiceService.GetInvoicesByVendorIdAsync(vendorId);
+                        allInvoices.AddRange(vendorInvoices);
+                    }
+                    invoices = allInvoices.DistinctBy(i => i.Id).ToList();
+                }
+                else
+                {
+                    invoices = new List<Core.Entities.BookingEntities.Invoice>();
+                }
+            }
+            else
+            {
+                // Customer sees their own invoices
+                invoices = await _invoiceService.GetInvoicesByCustomerIdAsync(userId);
+            }
+
             var invoiceDtos = _mapper.Map<IEnumerable<InvoiceListDto>>(invoices);
             return Success(invoiceDtos, "Your invoices retrieved successfully");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving customer invoices");
+            _logger.LogError(ex, "Error retrieving invoices for user {UserId}", UserId);
             return Error<IEnumerable<InvoiceListDto>>($"Failed to retrieve invoices: {ex.Message}", 500);
         }
     }

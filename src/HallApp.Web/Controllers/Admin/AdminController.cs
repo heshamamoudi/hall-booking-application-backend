@@ -1,7 +1,7 @@
 using HallApp.Web.Controllers.Common;
 using HallApp.Web.Services;
 using HallApp.Web.DTOs;
-using HallApp.Application.Common.Models;
+using HallApp.Core.Exceptions;
 using HallApp.Application.DTOs.Admin;
 using HallApp.Application.DTOs.Halls.Hall;
 using HallApp.Application.DTOs.Halls.HallManager;

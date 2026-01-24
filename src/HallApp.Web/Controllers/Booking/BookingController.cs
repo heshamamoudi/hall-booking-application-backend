@@ -1,5 +1,5 @@
 using AutoMapper;
-using HallApp.Application.Common.Models;
+using HallApp.Core.Exceptions;
 using HallApp.Application.DTOs.Booking;
 using HallApp.Application.DTOs.Booking.Registers;
 using HallApp.Application.DTOs.Booking.Updaters;

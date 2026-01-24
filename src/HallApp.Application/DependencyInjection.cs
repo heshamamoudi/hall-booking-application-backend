@@ -1,14 +1,20 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using HallApp.Application.Configuration;
 using HallApp.Application.Services;
+using HallApp.Application.Services.Payment;
 using HallApp.Core.Interfaces.IServices;
+using Microsoft.Extensions.Configuration;
 
 namespace HallApp.Application;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
+    public static IServiceCollection AddApplication(this IServiceCollection services, IConfiguration configuration)
     {
+        // Payment Settings Configuration
+        services.Configure<PaymentSettings>(configuration.GetSection(PaymentSettings.SectionName));
+
         // AutoMapper
         services.AddAutoMapper(typeof(DependencyInjection));
         
@@ -49,6 +55,16 @@ public static class DependencyInjection
         services.AddScoped<IServiceItemService, ServiceItemService>();
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IAddressService, AddressService>();
+
+        // Payment Provider Services
+        services.AddScoped<IPaymentProviderService, HyperPayPaymentService>();
+        services.AddScoped<IPaymentProviderService, TabbyPaymentService>();
+        services.AddScoped<IPaymentProviderService, TamaraPaymentService>();
+
+        // HTTP Clients for Payment Providers
+        services.AddHttpClient("HyperPay");
+        services.AddHttpClient("Tabby");
+        services.AddHttpClient("Tamara");
 
         return services;
     }

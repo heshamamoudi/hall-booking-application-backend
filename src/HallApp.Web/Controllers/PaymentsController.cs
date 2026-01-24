@@ -1,129 +1,131 @@
+using HallApp.Application.Configuration;
 using HallApp.Application.DTOs.Payment;
+using HallApp.Application.Services.Payment;
 using HallApp.Core.Entities.PaymentEntities;
-using HallApp.Infrastructure.Data;
-using HallApp.Web.Middleware;
+using HallApp.Core.Exceptions;
+using HallApp.Core.Interfaces;
+using HallApp.Core.Interfaces.IServices;
+using HallApp.Web.Controllers.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using System.Net.Http.Headers;
-using System.Text.Json;
 
 namespace HallApp.Web.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-public class PaymentsController : ControllerBase
+/// <summary>
+/// Controller for payment operations - card payments and BNPL (Buy Now Pay Later)
+/// Supports HyperPay, Tabby, and Tamara payment providers
+/// </summary>
+public class PaymentsController : BaseApiController
 {
-    private readonly DataContext _context;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<PaymentsController> _logger;
-    private readonly HttpClient _httpClient;
-    private readonly HyperPaySettings _settings;
+    private readonly PaymentSettings _paymentSettings;
+    private readonly IEnumerable<IPaymentProviderService> _paymentProviders;
 
     public PaymentsController(
-        DataContext context,
+        IUnitOfWork unitOfWork,
         ILogger<PaymentsController> logger,
-        IHttpClientFactory httpClientFactory,
-        IOptions<HyperPaySettings> settings)
+        IOptions<PaymentSettings> paymentSettings,
+        IEnumerable<IPaymentProviderService> paymentProviders)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
         _logger = logger;
-        _httpClient = httpClientFactory.CreateClient("HyperPay");
-        _settings = settings.Value;
+        _paymentSettings = paymentSettings.Value;
+        _paymentProviders = paymentProviders;
     }
 
     /// <summary>
-    /// Initialize payment checkout - Creates a checkout session with HyperPay
+    /// Get available payment providers
+    /// </summary>
+    [HttpGet("providers")]
+    public ActionResult<PaymentProvidersResponseDto> GetAvailableProviders()
+    {
+        var providers = _paymentProviders
+            .Where(p => p.IsEnabled)
+            .Select(p => new PaymentProviderDto
+            {
+                Id = p.Provider.ToString().ToLower(),
+                Name = GetProviderDisplayName(p.Provider),
+                Type = GetProviderType(p.Provider),
+                Description = GetProviderDescription(p.Provider),
+                MinAmount = GetProviderMinAmount(p.Provider),
+                MaxAmount = GetProviderMaxAmount(p.Provider),
+                SupportedBrands = GetProviderBrands(p.Provider)
+            })
+            .ToList();
+
+        return Ok(new PaymentProvidersResponseDto
+        {
+            Providers = providers,
+            DefaultCurrency = _paymentSettings.DefaultCurrency,
+            TestMode = _paymentSettings.TestMode
+        });
+    }
+
+    /// <summary>
+    /// Initialize payment checkout - Creates a checkout session with the specified provider
     /// </summary>
     [HttpPost("checkout")]
     [Authorize]
-    public async Task<ActionResult<PaymentCheckoutResponseDto>> InitiateCheckout(
+    public async Task<ActionResult<ApiResponse<PaymentCheckoutResponseDto>>> InitiateCheckout(
         [FromBody] PaymentCheckoutRequestDto request)
     {
         try
         {
             // Validate booking exists and is in correct status
-            var booking = await _context.Bookings
-                .Include(b => b.Customer)
-                    .ThenInclude(c => c.AppUser)
-                .Include(b => b.Hall)
-                .FirstOrDefaultAsync(b => b.Id == request.BookingId);
+            var booking = await _unitOfWork.BookingRepository.GetBookingWithDetailsAsync(request.BookingId);
 
             if (booking == null)
             {
-                return NotFound(new { message = "Booking not found" });
+                return Error<PaymentCheckoutResponseDto>("Booking not found", 404);
             }
 
             if (booking.Status == "Cancelled")
             {
-                return BadRequest(new { message = "Cannot process payment for cancelled booking" });
+                return Error<PaymentCheckoutResponseDto>("Cannot process payment for cancelled booking");
             }
 
             // Check if payment already exists for this booking
-            var existingPayment = await _context.Payments
-                .FirstOrDefaultAsync(p => p.BookingId == request.BookingId && p.Status == "Success");
+            var existingPayment = await _unitOfWork.PaymentRepository.GetSuccessfulPaymentByBookingIdAsync(request.BookingId);
 
             if (existingPayment != null)
             {
-                return BadRequest(new { message = "Payment already completed for this booking" });
+                return Error<PaymentCheckoutResponseDto>("Payment already completed for this booking");
             }
 
-            // Prepare HyperPay checkout request
-            var checkoutData = new Dictionary<string, string>
-            {
-                { "entityId", _settings.EntityId },
-                { "amount", booking.TotalAmount.ToString("F2") },
-                { "currency", _settings.Currency },
-                { "paymentType", "DB" }, // Debit (immediate capture)
-                { "customer.email", booking.Customer?.AppUser?.Email ?? "" },
-                { "customer.givenName", booking.Customer?.AppUser?.FirstName ?? "" },
-                { "customer.surname", booking.Customer?.AppUser?.LastName ?? "" },
-                { "customer.mobile", booking.Customer?.AppUser?.PhoneNumber ?? "" },
-                { "billing.country", "SA" },
-                { "merchantTransactionId", $"BOOKING-{booking.Id}-{DateTime.UtcNow.Ticks}" },
-                { "customParameters[BOOKING_ID]", booking.Id.ToString() },
-                { "customParameters[HALL_ID]", booking.HallId.ToString() },
-                { "customParameters[CUSTOMER_ID]", booking.CustomerId.ToString() },
-                { "risk.parameters[USER_IP]", HttpContext.Connection.RemoteIpAddress?.ToString() ?? "" }
-            };
+            // Get the requested payment provider
+            var providerType = ParseProvider(request.Provider);
+            var provider = _paymentProviders.FirstOrDefault(p => p.Provider == providerType && p.IsEnabled);
 
-            // Add 3D Secure if enabled
-            if (_settings.Enable3DSecure)
+            if (provider == null)
             {
-                checkoutData.Add("threeDSecure.verifyAttempt", "true");
+                return Error<PaymentCheckoutResponseDto>($"Payment provider '{request.Provider}' is not available");
             }
 
-            // Create request content
-            var content = new FormUrlEncodedContent(checkoutData);
+            // Build checkout request
+            var checkoutRequest = BuildCheckoutRequest(booking, request);
 
-            // Set authorization header
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _settings.AccessToken);
+            // Create checkout with provider
+            var result = await provider.CreateCheckoutAsync(checkoutRequest);
 
-            // Call HyperPay API
-            var response = await _httpClient.PostAsync(
-                $"{_settings.BaseUrl}/v1/checkouts",
-                content
-            );
-
-            var responseContent = await response.Content.ReadAsStringAsync();
-            var hyperPayResponse = JsonSerializer.Deserialize<HyperPayCheckoutResponse>(responseContent);
-
-            if (hyperPayResponse == null || string.IsNullOrEmpty(hyperPayResponse.Id))
+            if (!result.Success)
             {
-                _logger.LogError("HyperPay checkout creation failed: {Response}", responseContent);
-                return StatusCode(500, new { message = "Failed to create payment checkout" });
+                _logger.LogError("Payment checkout failed for booking {BookingId} with provider {Provider}: {Error}",
+                    request.BookingId, request.Provider, result.ErrorMessage);
+
+                return Error<PaymentCheckoutResponseDto>(result.ErrorMessage ?? "Payment checkout failed");
             }
 
             // Create payment record in database with Pending status
             var payment = new Payment
             {
                 BookingId = booking.Id,
-                CheckoutId = hyperPayResponse.Id,
+                CheckoutId = result.CheckoutId,
                 Amount = booking.TotalAmount,
-                Currency = _settings.Currency,
+                Currency = _paymentSettings.DefaultCurrency,
                 Status = "Pending",
-                PaymentGateway = "HyperPay",
+                PaymentGateway = provider.Provider.ToString(),
                 PaymentBrand = request.PaymentBrand ?? "CARD",
                 IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "",
                 CreatedAt = DateTime.UtcNow,
@@ -132,73 +134,72 @@ public class PaymentsController : ControllerBase
                 CustomerPhone = booking.Customer?.AppUser?.PhoneNumber ?? ""
             };
 
-            _context.Payments.Add(payment);
-            await _context.SaveChangesAsync();
-
-            var expiresAt = DateTime.UtcNow.AddMinutes(_settings.PaymentTimeoutMinutes);
+            await _unitOfWork.PaymentRepository.AddAsync(payment);
+            await _unitOfWork.Complete();
 
             _logger.LogInformation(
-                "Payment checkout created for booking {BookingId}, CheckoutId: {CheckoutId}",
+                "Payment checkout created for booking {BookingId} with provider {Provider}, CheckoutId: {CheckoutId}",
                 booking.Id,
-                hyperPayResponse.Id
+                provider.Provider.ToString(),
+                result.CheckoutId
             );
 
-            return Ok(new PaymentCheckoutResponseDto
+            return Success(new PaymentCheckoutResponseDto
             {
-                CheckoutId = hyperPayResponse.Id,
+                CheckoutId = result.CheckoutId,
                 Amount = booking.TotalAmount,
-                Currency = _settings.Currency,
-                PaymentUrl = $"{_settings.BaseUrl}/v1/paymentWidgets.js?checkoutId={hyperPayResponse.Id}",
-                ExpiresAt = expiresAt,
-                TestMode = _settings.TestMode
-            });
+                Currency = _paymentSettings.DefaultCurrency,
+                PaymentUrl = result.PaymentUrl,
+                ExpiresAt = result.ExpiresAt,
+                TestMode = _paymentSettings.TestMode,
+                Provider = provider.Provider.ToString()
+            }, "Payment checkout created successfully");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error initiating payment checkout for booking {BookingId}", request.BookingId);
-            return StatusCode(500, new { message = "An error occurred while processing your request" });
+            return Error<PaymentCheckoutResponseDto>("An error occurred while processing your request", 500);
         }
     }
 
     /// <summary>
-    /// Get payment status - Called after user completes payment on HyperPay
+    /// Get payment status - Called after user completes payment
     /// </summary>
     [HttpGet("status/{checkoutId}")]
     [Authorize]
-    public async Task<ActionResult<PaymentStatusResponseDto>> GetPaymentStatus(string checkoutId)
+    public async Task<ActionResult<ApiResponse<PaymentStatusResponseDto>>> GetPaymentStatus(string checkoutId)
     {
         try
         {
             // Get payment from database
-            var payment = await _context.Payments
-                .Include(p => p.Booking)
-                .FirstOrDefaultAsync(p => p.CheckoutId == checkoutId);
+            var payment = await _unitOfWork.PaymentRepository.GetPaymentWithBookingByCheckoutIdAsync(checkoutId);
 
             if (payment == null)
             {
-                return NotFound(new { message = "Payment not found" });
+                return Error<PaymentStatusResponseDto>("Payment not found", 404);
             }
 
-            // Query HyperPay for payment status
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _settings.AccessToken);
+            // Get the provider that was used for this payment
+            var providerType = Enum.TryParse<PaymentProvider>(payment.PaymentGateway, out var pt) ? pt : PaymentProvider.HyperPay;
+            var provider = _paymentProviders.FirstOrDefault(p => p.Provider == providerType);
 
-            var response = await _httpClient.GetAsync(
-                $"{_settings.BaseUrl}/v1/checkouts/{checkoutId}/payment?entityId={_settings.EntityId}"
-            );
-
-            var responseContent = await response.Content.ReadAsStringAsync();
-            var hyperPayStatus = JsonSerializer.Deserialize<HyperPayPaymentStatusResponse>(responseContent);
-
-            if (hyperPayStatus == null)
+            if (provider == null)
             {
-                _logger.LogError("Failed to get payment status from HyperPay for checkout {CheckoutId}", checkoutId);
-                return StatusCode(500, new { message = "Failed to retrieve payment status" });
+                return Error<PaymentStatusResponseDto>("Payment provider not available");
             }
 
-            // Update payment record based on HyperPay response
+            // Query provider for payment status
+            var statusResult = await provider.GetPaymentStatusAsync(checkoutId);
+
+            if (!statusResult.Success && statusResult.Status != "Pending")
+            {
+                _logger.LogError("Failed to get payment status for checkout {CheckoutId} from {Provider}",
+                    checkoutId, payment.PaymentGateway);
+            }
+
+            // Update payment record based on provider response
             var previousStatus = payment.Status;
-            UpdatePaymentStatus(payment, hyperPayStatus);
+            UpdatePaymentStatus(payment, statusResult);
 
             // Update booking status if payment was successful
             if (payment.Status == "Success" && previousStatus != "Success")
@@ -223,9 +224,9 @@ public class PaymentsController : ControllerBase
                 );
             }
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.Complete();
 
-            return Ok(new PaymentStatusResponseDto
+            return Success(new PaymentStatusResponseDto
             {
                 PaymentId = payment.Id,
                 BookingId = payment.BookingId,
@@ -242,39 +243,337 @@ public class PaymentsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting payment status for checkout {CheckoutId}", checkoutId);
-            return StatusCode(500, new { message = "An error occurred while checking payment status" });
+            return Error<PaymentStatusResponseDto>("An error occurred while checking payment status", 500);
         }
     }
 
     /// <summary>
     /// Webhook endpoint for HyperPay payment notifications
     /// </summary>
-    [HttpPost("webhook")]
-    [AllowAnonymous] // Webhook is authenticated via middleware signature validation
+    [HttpPost("webhook/hyperpay")]
+    [AllowAnonymous]
     public async Task<IActionResult> HyperPayWebhook([FromBody] HyperPayWebhookDto webhook)
+    {
+        return await ProcessWebhook(PaymentProvider.HyperPay, webhook.Id ?? "");
+    }
+
+    /// <summary>
+    /// Webhook endpoint for Tabby payment notifications
+    /// </summary>
+    [HttpPost("webhook/tabby")]
+    [AllowAnonymous]
+    public async Task<IActionResult> TabbyWebhook()
+    {
+        using var reader = new StreamReader(Request.Body);
+        var payload = await reader.ReadToEndAsync();
+        var signature = Request.Headers["X-Tabby-Signature"].FirstOrDefault() ?? "";
+
+        var provider = _paymentProviders.FirstOrDefault(p => p.Provider == PaymentProvider.Tabby);
+        if (provider == null || !provider.ValidateWebhookSignature(payload, signature))
+        {
+            _logger.LogWarning("Invalid Tabby webhook signature");
+            return new UnauthorizedResult();
+        }
+
+        var webhookData = provider.ParseWebhookPayload(payload);
+        return await ProcessWebhook(PaymentProvider.Tabby, webhookData.CheckoutId, webhookData);
+    }
+
+    /// <summary>
+    /// Webhook endpoint for Tamara payment notifications
+    /// </summary>
+    [HttpPost("webhook/tamara")]
+    [AllowAnonymous]
+    public async Task<IActionResult> TamaraWebhook()
+    {
+        using var reader = new StreamReader(Request.Body);
+        var payload = await reader.ReadToEndAsync();
+        var notificationToken = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "") ?? "";
+
+        var provider = _paymentProviders.FirstOrDefault(p => p.Provider == PaymentProvider.Tamara);
+        if (provider == null || !provider.ValidateWebhookSignature(payload, notificationToken))
+        {
+            _logger.LogWarning("Invalid Tamara webhook signature");
+            return new UnauthorizedResult();
+        }
+
+        var webhookData = provider.ParseWebhookPayload(payload);
+
+        // Tamara requires explicit authorization for approved orders
+        if (webhookData.Status == "Pending" && webhookData.AdditionalData.TryGetValue("event_type", out var eventType))
+        {
+            if (eventType?.ToString() == "order_approved")
+            {
+                var tamaraProvider = provider as TamaraPaymentService;
+                if (tamaraProvider != null)
+                {
+                    await tamaraProvider.AuthorizePaymentAsync(webhookData.CheckoutId);
+                }
+            }
+        }
+
+        return await ProcessWebhook(PaymentProvider.Tamara, webhookData.CheckoutId, webhookData);
+    }
+
+    /// <summary>
+    /// Initiate refund for a payment
+    /// </summary>
+    [HttpPost("{paymentId}/refund")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<ApiResponse<PaymentRefundResponseDto>>> RefundPayment(
+        int paymentId,
+        [FromBody] PaymentRefundRequestDto request)
     {
         try
         {
-            _logger.LogInformation(
-                "Webhook received for checkout {CheckoutId}, Type: {Type}",
-                webhook.Id,
-                webhook.Type
-            );
-
-            // Find payment by checkout ID
-            var payment = await _context.Payments
-                .Include(p => p.Booking)
-                .FirstOrDefaultAsync(p => p.CheckoutId == webhook.Id);
+            var payment = await _unitOfWork.PaymentRepository.GetPaymentWithBookingAsync(paymentId);
 
             if (payment == null)
             {
-                _logger.LogWarning("Payment not found for webhook checkout {CheckoutId}", webhook.Id);
-                return NotFound();
+                return Error<PaymentRefundResponseDto>("Payment not found", 404);
             }
 
-            // Update payment status based on webhook data
+            if (payment.Status != "Success")
+            {
+                return Error<PaymentRefundResponseDto>("Can only refund successful payments");
+            }
+
+            if (payment.IsRefunded)
+            {
+                return Error<PaymentRefundResponseDto>("Payment already refunded");
+            }
+
+            // Get the provider that was used for this payment
+            var providerType = Enum.TryParse<PaymentProvider>(payment.PaymentGateway, out var pt) ? pt : PaymentProvider.HyperPay;
+            var provider = _paymentProviders.FirstOrDefault(p => p.Provider == providerType);
+
+            if (provider == null)
+            {
+                return Error<PaymentRefundResponseDto>("Payment provider not available");
+            }
+
+            // Process refund with provider
+            var refundResult = await provider.ProcessRefundAsync(payment.TransactionId, request.Amount, request.Reason);
+
+            if (!refundResult.Success)
+            {
+                _logger.LogError("Refund failed for payment {PaymentId}: {Error}", paymentId, refundResult.ErrorMessage);
+                return Error<PaymentRefundResponseDto>(refundResult.ErrorMessage ?? "Refund failed");
+            }
+
+            // Create refund record
+            var refund = new PaymentRefund
+            {
+                PaymentId = payment.Id,
+                RefundTransactionId = refundResult.RefundId,
+                RefundAmount = request.Amount,
+                Reason = request.Reason,
+                Status = "Completed",
+                RequestedBy = UserId,
+                ProcessedAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.PaymentRefundRepository.AddAsync(refund);
+
+            // Update payment status
+            if (request.Amount >= payment.Amount)
+            {
+                payment.IsRefunded = true;
+                payment.RefundAmount = request.Amount;
+                payment.RefundedAt = DateTime.UtcNow;
+                payment.RefundReason = request.Reason;
+                payment.RefundedBy = UserId;
+            }
+            else
+            {
+                payment.RefundAmount += request.Amount;
+            }
+
+            await _unitOfWork.Complete();
+
+            _logger.LogInformation(
+                "Refund processed for payment {PaymentId}, Amount: {Amount}",
+                paymentId,
+                request.Amount
+            );
+
+            return Success(new PaymentRefundResponseDto
+            {
+                RefundId = refund.Id,
+                PaymentId = payment.Id,
+                Amount = refund.RefundAmount,
+                Status = refund.Status,
+                ProcessedAt = refund.ProcessedAt ?? DateTime.UtcNow
+            }, "Refund processed successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing refund for payment {PaymentId}", paymentId);
+            return Error<PaymentRefundResponseDto>("An error occurred while processing refund", 500);
+        }
+    }
+
+    #region Helper Methods
+
+    private PaymentProvider ParseProvider(string? provider)
+    {
+        return provider?.ToLowerInvariant() switch
+        {
+            "hyperpay" => PaymentProvider.HyperPay,
+            "tabby" => PaymentProvider.Tabby,
+            "tamara" => PaymentProvider.Tamara,
+            _ => PaymentProvider.HyperPay // Default to HyperPay
+        };
+    }
+
+    private PaymentCheckoutRequest BuildCheckoutRequest(
+        Core.Entities.BookingEntities.Booking booking,
+        PaymentCheckoutRequestDto request)
+    {
+        var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+        var checkoutRequest = new PaymentCheckoutRequest
+        {
+            BookingId = booking.Id,
+            CustomerId = booking.CustomerId,
+            Amount = booking.TotalAmount,
+            Currency = _paymentSettings.DefaultCurrency,
+            CustomerEmail = booking.Customer?.AppUser?.Email ?? "",
+            CustomerPhone = booking.Customer?.AppUser?.PhoneNumber ?? "",
+            CustomerFirstName = booking.Customer?.AppUser?.FirstName ?? "",
+            CustomerLastName = booking.Customer?.AppUser?.LastName ?? "",
+            Description = $"Booking #{booking.Id} - {booking.Hall?.Name ?? "Hall Booking"}",
+            ReturnUrl = request.ReturnUrl ?? $"{baseUrl}/payment/success",
+            CancelUrl = request.CancelUrl ?? $"{baseUrl}/payment/cancel",
+            WebhookUrl = $"{baseUrl}/api/payments/webhook/{request.Provider?.ToLower() ?? "hyperpay"}",
+            BillingAddress = new PaymentBillingAddress
+            {
+                City = "Riyadh",
+                Address = "Saudi Arabia",
+                Country = "SA"
+            }
+        };
+
+        // Build line items for BNPL providers
+        var lineItems = new List<PaymentLineItem>();
+
+        // Hall booking as a line item
+        lineItems.Add(new PaymentLineItem
+        {
+            Name = $"Hall Booking - {booking.Hall?.Name ?? "Hall"}",
+            Description = $"Event Date: {booking.EventDate:yyyy-MM-dd}",
+            Quantity = 1,
+            UnitPrice = booking.HallCost,
+            TotalPrice = booking.HallCost,
+            Category = "Event Services",
+            Sku = $"HALL-{booking.HallId}"
+        });
+
+        // Add vendor services
+        if (booking.VendorBookings != null)
+        {
+            foreach (var vendorBooking in booking.VendorBookings)
+            {
+                if (vendorBooking.Services != null)
+                {
+                    foreach (var service in vendorBooking.Services)
+                    {
+                        lineItems.Add(new PaymentLineItem
+                        {
+                            Name = service.ServiceItem?.Name ?? "Service",
+                            Description = service.ServiceItem?.Description ?? "",
+                            Quantity = service.Quantity,
+                            UnitPrice = service.UnitPrice,
+                            TotalPrice = service.TotalPrice,
+                            Category = "Vendor Services",
+                            Sku = $"SVC-{service.ServiceItemId}"
+                        });
+                    }
+                }
+            }
+        }
+
+        checkoutRequest.LineItems = lineItems;
+
+        return checkoutRequest;
+    }
+
+    private void UpdatePaymentStatus(Payment payment, PaymentStatusResult statusResult)
+    {
+        payment.TransactionId = string.IsNullOrEmpty(statusResult.TransactionId) ? payment.TransactionId : statusResult.TransactionId;
+        payment.ResultCode = statusResult.ErrorCode;
+        payment.StatusDescription = statusResult.ErrorMessage;
+
+        if (statusResult.Success || statusResult.Status == "Success")
+        {
+            payment.Status = "Success";
+            payment.CompletedAt = DateTime.UtcNow;
+            payment.PaymentBrand = string.IsNullOrEmpty(statusResult.PaymentMethod) ? payment.PaymentBrand : statusResult.PaymentMethod;
+            payment.Last4Digits = string.IsNullOrEmpty(statusResult.CardLast4) ? payment.Last4Digits : statusResult.CardLast4;
+            if (!string.IsNullOrEmpty(statusResult.CardExpiry))
+            {
+                payment.CardExpiryDate = statusResult.CardExpiry;
+            }
+        }
+        else if (statusResult.Status == "Pending")
+        {
+            payment.Status = "Pending";
+        }
+        else
+        {
+            payment.Status = "Failed";
+            payment.FailedAt = DateTime.UtcNow;
+            payment.FailureReason = statusResult.ErrorMessage ?? "Payment failed";
+        }
+    }
+
+    private async Task<IActionResult> ProcessWebhook(PaymentProvider providerType, string checkoutId, PaymentWebhookData? webhookData = null)
+    {
+        try
+        {
+            _logger.LogInformation("Webhook received for {Provider}, CheckoutId: {CheckoutId}", providerType, checkoutId);
+
+            var payment = await _unitOfWork.PaymentRepository.GetPaymentWithBookingByCheckoutIdAsync(checkoutId);
+
+            if (payment == null)
+            {
+                _logger.LogWarning("Payment not found for webhook checkout {CheckoutId}", checkoutId);
+                return new NotFoundResult();
+            }
+
             var previousStatus = payment.Status;
-            UpdatePaymentFromWebhook(payment, webhook);
+
+            if (webhookData != null)
+            {
+                // Use parsed webhook data
+                payment.TransactionId = string.IsNullOrEmpty(webhookData.TransactionId) ? payment.TransactionId : webhookData.TransactionId;
+
+                switch (webhookData.Status)
+                {
+                    case "Success":
+                        payment.Status = "Success";
+                        payment.CompletedAt = DateTime.UtcNow;
+                        break;
+                    case "Pending":
+                        payment.Status = "Pending";
+                        break;
+                    default:
+                        payment.Status = "Failed";
+                        payment.FailedAt = DateTime.UtcNow;
+                        payment.FailureReason = "Payment failed via webhook";
+                        break;
+                }
+            }
+            else
+            {
+                // Query provider for status
+                var provider = _paymentProviders.FirstOrDefault(p => p.Provider == providerType);
+                if (provider != null)
+                {
+                    var statusResult = await provider.GetPaymentStatusAsync(checkoutId);
+                    UpdatePaymentStatus(payment, statusResult);
+                }
+            }
 
             // Update booking if payment successful
             if (payment.Status == "Success" && previousStatus != "Success")
@@ -285,210 +584,81 @@ public class PaymentsController : ControllerBase
                 payment.Booking.UpdatedAt = DateTime.UtcNow;
             }
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.Complete();
 
             return Ok();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing webhook for checkout {CheckoutId}", webhook.Id);
+            _logger.LogError(ex, "Error processing webhook for {Provider}, CheckoutId: {CheckoutId}", providerType, checkoutId);
             return StatusCode(500);
         }
     }
 
-    /// <summary>
-    /// Initiate refund for a payment
-    /// </summary>
-    [HttpPost("{paymentId}/refund")]
-    [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<PaymentRefundResponseDto>> RefundPayment(
-        int paymentId,
-        [FromBody] PaymentRefundRequestDto request)
+    private string GetProviderDisplayName(PaymentProvider provider)
     {
-        try
+        return provider switch
         {
-            var payment = await _context.Payments
-                .Include(p => p.Booking)
-                .FirstOrDefaultAsync(p => p.Id == paymentId);
-
-            if (payment == null)
-            {
-                return NotFound(new { message = "Payment not found" });
-            }
-
-            if (payment.Status != "Success")
-            {
-                return BadRequest(new { message = "Can only refund successful payments" });
-            }
-
-            if (payment.IsRefunded)
-            {
-                return BadRequest(new { message = "Payment already refunded" });
-            }
-
-            // Prepare refund request to HyperPay
-            var refundData = new Dictionary<string, string>
-            {
-                { "entityId", _settings.EntityId },
-                { "amount", request.Amount.ToString("F2") },
-                { "currency", payment.Currency },
-                { "paymentType", "RF" } // Refund
-            };
-
-            var content = new FormUrlEncodedContent(refundData);
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _settings.AccessToken);
-
-            var response = await _httpClient.PostAsync(
-                $"{_settings.BaseUrl}/v1/payments/{payment.TransactionId}",
-                content
-            );
-
-            var responseContent = await response.Content.ReadAsStringAsync();
-            var refundResponse = JsonSerializer.Deserialize<HyperPayRefundResponse>(responseContent);
-
-            if (refundResponse == null || !IsSuccessCode(refundResponse.Result?.Code))
-            {
-                _logger.LogError("Refund failed for payment {PaymentId}: {Response}", paymentId, responseContent);
-                return BadRequest(new { message = "Refund failed", details = responseContent });
-            }
-
-            // Get user ID from claims
-            var userIdClaim = User.FindFirst("uid")?.Value;
-            int.TryParse(userIdClaim, out int userId);
-
-            // Create refund record
-            var refund = new PaymentRefund
-            {
-                PaymentId = payment.Id,
-                RefundTransactionId = refundResponse.Id ?? "",
-                RefundAmount = request.Amount,
-                Reason = request.Reason,
-                Status = "Completed",
-                RequestedBy = userId,
-                ProcessedAt = DateTime.UtcNow
-            };
-
-            _context.PaymentRefunds.Add(refund);
-
-            // Update payment status
-            if (request.Amount >= payment.Amount)
-            {
-                payment.IsRefunded = true;
-                payment.RefundAmount = request.Amount;
-                payment.RefundedAt = DateTime.UtcNow;
-                payment.RefundReason = request.Reason;
-                payment.RefundedBy = userId;
-            }
-            else
-            {
-                payment.RefundAmount += request.Amount;
-            }
-
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation(
-                "Refund processed for payment {PaymentId}, Amount: {Amount}",
-                paymentId,
-                request.Amount
-            );
-
-            return Ok(new PaymentRefundResponseDto
-            {
-                RefundId = refund.Id,
-                PaymentId = payment.Id,
-                Amount = refund.RefundAmount,
-                Status = refund.Status,
-                ProcessedAt = refund.ProcessedAt ?? DateTime.UtcNow
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing refund for payment {PaymentId}", paymentId);
-            return StatusCode(500, new { message = "An error occurred while processing refund" });
-        }
+            PaymentProvider.HyperPay => "HyperPay",
+            PaymentProvider.Tabby => "Tabby - Pay in 4",
+            PaymentProvider.Tamara => "Tamara - Buy Now Pay Later",
+            _ => provider.ToString()
+        };
     }
 
-    #region Helper Methods
-
-    private void UpdatePaymentStatus(Payment payment, HyperPayPaymentStatusResponse response)
+    private string GetProviderType(PaymentProvider provider)
     {
-        payment.TransactionId = response.Id ?? payment.TransactionId;
-        payment.ResultCode = response.Result?.Code ?? "";
-        payment.StatusDescription = response.Result?.Description ?? "";
-
-        // Determine status based on result code
-        if (IsSuccessCode(response.Result?.Code))
+        return provider switch
         {
-            payment.Status = "Success";
-            payment.CompletedAt = DateTime.UtcNow;
-            payment.PaymentBrand = response.PaymentBrand ?? payment.PaymentBrand;
-            payment.Last4Digits = response.Card?.Last4Digits ?? payment.Last4Digits;
-            payment.CardExpiryDate = $"{response.Card?.ExpiryMonth}/{response.Card?.ExpiryYear}";
-            payment.CardHolder = response.Card?.Holder ?? "";
-            payment.RiskScore = response.Risk?.Score ?? "";
-        }
-        else if (IsPendingCode(response.Result?.Code))
-        {
-            payment.Status = "Pending";
-        }
-        else
-        {
-            payment.Status = "Failed";
-            payment.FailedAt = DateTime.UtcNow;
-            payment.FailureReason = response.Result?.Description ?? "Payment failed";
-        }
+            PaymentProvider.HyperPay => "card",
+            PaymentProvider.Tabby => "bnpl",
+            PaymentProvider.Tamara => "bnpl",
+            _ => "card"
+        };
     }
 
-    private void UpdatePaymentFromWebhook(Payment payment, HyperPayWebhookDto webhook)
+    private string GetProviderDescription(PaymentProvider provider)
     {
-        payment.TransactionId = webhook.ReferencedId ?? payment.TransactionId;
-        payment.ResultCode = webhook.Result?.Code ?? "";
-        payment.StatusDescription = webhook.Result?.Description ?? "";
-        payment.WebhookPayload = JsonSerializer.Serialize(webhook);
-
-        if (IsSuccessCode(webhook.Result?.Code))
+        return provider switch
         {
-            payment.Status = "Success";
-            payment.CompletedAt = DateTime.UtcNow;
-        }
-        else if (IsPendingCode(webhook.Result?.Code))
-        {
-            payment.Status = "Pending";
-        }
-        else
-        {
-            payment.Status = "Failed";
-            payment.FailedAt = DateTime.UtcNow;
-            payment.FailureReason = webhook.Result?.Description ?? "Payment failed";
-        }
+            PaymentProvider.HyperPay => "Pay with credit/debit card (VISA, Mastercard, mada, Apple Pay, STC Pay)",
+            PaymentProvider.Tabby => "Split your purchase into 4 interest-free payments",
+            PaymentProvider.Tamara => "Pay in 30 days or split into 3 monthly payments",
+            _ => ""
+        };
     }
 
-    /// <summary>
-    /// Check if result code indicates success
-    /// HyperPay success codes: /^(000\.000\.|000\.100\.1|000\.[36])/
-    /// </summary>
-    private bool IsSuccessCode(string code)
+    private decimal GetProviderMinAmount(PaymentProvider provider)
     {
-        if (string.IsNullOrEmpty(code))
-            return false;
-
-        return code.StartsWith("000.000.") ||
-               code.StartsWith("000.100.1") ||
-               code.StartsWith("000.3") ||
-               code.StartsWith("000.6");
+        return provider switch
+        {
+            PaymentProvider.HyperPay => 0,
+            PaymentProvider.Tabby => _paymentSettings.Tabby.MinOrderAmount,
+            PaymentProvider.Tamara => _paymentSettings.Tamara.MinOrderAmount,
+            _ => 0
+        };
     }
 
-    /// <summary>
-    /// Check if result code indicates pending status
-    /// </summary>
-    private bool IsPendingCode(string code)
+    private decimal GetProviderMaxAmount(PaymentProvider provider)
     {
-        if (string.IsNullOrEmpty(code))
-            return false;
+        return provider switch
+        {
+            PaymentProvider.HyperPay => decimal.MaxValue,
+            PaymentProvider.Tabby => _paymentSettings.Tabby.MaxOrderAmount,
+            PaymentProvider.Tamara => _paymentSettings.Tamara.MaxOrderAmount,
+            _ => decimal.MaxValue
+        };
+    }
 
-        return code.StartsWith("000.200") || // Pending
-               code.StartsWith("800.400"); // Review
+    private List<string> GetProviderBrands(PaymentProvider provider)
+    {
+        return provider switch
+        {
+            PaymentProvider.HyperPay => _paymentSettings.HyperPay.EnabledPaymentBrands,
+            PaymentProvider.Tabby => new List<string> { "installments" },
+            PaymentProvider.Tamara => _paymentSettings.Tamara.PaymentTypes,
+            _ => new List<string>()
+        };
     }
 
     #endregion
@@ -496,47 +666,22 @@ public class PaymentsController : ControllerBase
 
 #region DTOs
 
-public class HyperPayCheckoutResponse
+public class PaymentProvidersResponseDto
 {
-    public string Id { get; set; } = string.Empty;
-    public ResultDto Result { get; set; } = new();
+    public List<PaymentProviderDto> Providers { get; set; } = new();
+    public string DefaultCurrency { get; set; } = "SAR";
+    public bool TestMode { get; set; }
 }
 
-public class HyperPayPaymentStatusResponse
+public class PaymentProviderDto
 {
     public string Id { get; set; } = string.Empty;
-    public string PaymentType { get; set; } = string.Empty;
-    public string PaymentBrand { get; set; } = string.Empty;
-    public decimal Amount { get; set; }
-    public string Currency { get; set; } = string.Empty;
-    public ResultDto Result { get; set; } = new();
-    public CardDto Card { get; set; } = new();
-    public RiskDto Risk { get; set; } = new();
-}
-
-public class HyperPayRefundResponse
-{
-    public string Id { get; set; } = string.Empty;
-    public ResultDto Result { get; set; } = new();
-}
-
-public class ResultDto
-{
-    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-}
-
-public class CardDto
-{
-    public string Last4Digits { get; set; } = string.Empty;
-    public string Holder { get; set; } = string.Empty;
-    public string ExpiryMonth { get; set; } = string.Empty;
-    public string ExpiryYear { get; set; } = string.Empty;
-}
-
-public class RiskDto
-{
-    public string Score { get; set; } = string.Empty;
+    public decimal MinAmount { get; set; }
+    public decimal MaxAmount { get; set; }
+    public List<string> SupportedBrands { get; set; } = new();
 }
 
 #endregion

@@ -5,7 +5,10 @@ namespace HallApp.Application.DTOs.Payment;
 public class PaymentCheckoutRequestDto
 {
     public int BookingId { get; set; }
+    public string? Provider { get; set; } // hyperpay, tabby, tamara
     public string? PaymentBrand { get; set; } // VISA, MASTER, MADA, APPLEPAY, STC_PAY
+    public string? ReturnUrl { get; set; }
+    public string? CancelUrl { get; set; }
 }
 
 public class PaymentCheckoutResponseDto
@@ -16,6 +19,7 @@ public class PaymentCheckoutResponseDto
     public string PaymentUrl { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }
     public bool TestMode { get; set; }
+    public string Provider { get; set; } = string.Empty;
 }
 
 public class PaymentStatusResponseDto

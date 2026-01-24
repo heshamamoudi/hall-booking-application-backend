@@ -65,6 +65,24 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Invoice>> GetInvoicesByVendorIdAsync(int vendorId)
+    {
+        // Get invoices that contain line items referencing this vendor
+        // or invoices where the booking includes vendor services from this vendor
+        return await _context.Invoices
+            .Include(i => i.Booking)
+                .ThenInclude(b => b.VendorBookings)
+            .Include(i => i.Customer)
+                .ThenInclude(c => c.AppUser)
+            .Include(i => i.Hall)
+            .Include(i => i.LineItems)
+            .Where(i => i.Booking != null &&
+                        i.Booking.VendorBookings != null &&
+                        i.Booking.VendorBookings.Any(vb => vb.VendorId == vendorId))
+            .OrderByDescending(i => i.InvoiceDate)
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<Invoice>> GetInvoicesByStatusAsync(string paymentStatus)
     {
         return await _context.Invoices

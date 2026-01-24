@@ -20,5 +20,7 @@ public interface IUnitOfWork : IDisposable
     INotificationRepository NotificationRepository { get; }
     IChatRepository ChatRepository { get; }
     IInvoiceRepository InvoiceRepository { get; }
+    IPaymentRepository PaymentRepository { get; }
+    IPaymentRefundRepository PaymentRefundRepository { get; }
     Task<int> Complete();
 }

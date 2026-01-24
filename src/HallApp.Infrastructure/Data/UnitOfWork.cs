@@ -26,6 +26,8 @@ public class UnitOfWork : IUnitOfWork
         NotificationRepository = new NotificationRepository(_context);
         ChatRepository = new ChatRepository(_context);
         InvoiceRepository = new InvoiceRepository(_context);
+        PaymentRepository = new PaymentRepository(_context);
+        PaymentRefundRepository = new PaymentRefundRepository(_context);
         // UserRepository requires additional dependencies - should be injected via DI
     }
 
@@ -45,6 +47,8 @@ public class UnitOfWork : IUnitOfWork
     public INotificationRepository NotificationRepository { get; private set; }
     public IChatRepository ChatRepository { get; private set; }
     public IInvoiceRepository InvoiceRepository { get; private set; }
+    public IPaymentRepository PaymentRepository { get; private set; }
+    public IPaymentRefundRepository PaymentRefundRepository { get; private set; }
 
     public async Task<int> Complete()
     {

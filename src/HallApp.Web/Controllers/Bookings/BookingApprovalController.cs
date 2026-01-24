@@ -1,6 +1,7 @@
-using HallApp.Application.Common.Models;
+using HallApp.Core.Exceptions;
 using HallApp.Application.DTOs.Booking;
 using HallApp.Core.Interfaces;
+using HallApp.Web.Controllers.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BookingStatusEnum = HallApp.Core.Enums.BookingStatus;
@@ -8,9 +9,11 @@ using ApprovalStatusEnum = HallApp.Core.Enums.ApprovalStatus;
 
 namespace HallApp.Web.Controllers.Bookings;
 
+/// <summary>
+/// Controller for managing booking approval workflow (Hall Manager and Vendor approvals)
+/// </summary>
 [Route("api/bookings")]
-[ApiController]
-public class BookingApprovalController : ControllerBase
+public class BookingApprovalController : BaseApiController
 {
     private readonly IUnitOfWork _unitOfWork;
 
@@ -33,26 +36,21 @@ public class BookingApprovalController : ControllerBase
             var booking = await _unitOfWork.BookingRepository.GetBookingWithDetailsAsync(bookingId);
             if (booking == null)
             {
-                return NotFound(new ApiResponse<ApprovalResponseDto> 
-                { 
-                    IsSuccess = false, 
-                    Message = "Booking not found",
-                    StatusCode = 404
-                });
+                return Error<ApprovalResponseDto>("Booking not found", 404);
             }
 
             // Verify hall manager owns this hall
-            // TODO: Add proper authorization check
+            // TODO: Add proper authorization check using UserId from BaseApiController
 
             if (request.Approved)
             {
                 booking.Status = BookingStatusEnum.HallApproved.ToString();
-                
+
                 // If there are vendor bookings, set status to VendorsApproving
                 if (booking.VendorBookings != null && booking.VendorBookings.Any())
                 {
                     booking.Status = BookingStatusEnum.VendorsApproving.ToString();
-                    
+
                     // Set all vendor bookings to pending
                     foreach (var vb in booking.VendorBookings)
                     {
@@ -67,48 +65,33 @@ public class BookingApprovalController : ControllerBase
 
                 await _unitOfWork.Complete();
 
-                return Ok(new ApiResponse<ApprovalResponseDto>
+                return Success(new ApprovalResponseDto
                 {
-                    IsSuccess = true,
-                    Message = "Hall approval successful",
-                    Data = new ApprovalResponseDto
-                    {
-                        Success = true,
-                        Message = "Booking approved successfully",
-                        NewStatus = booking.Status,
-                        CanProceedToPayment = booking.VendorBookings == null || !booking.VendorBookings.Any()
-                    }
-                });
+                    Success = true,
+                    Message = "Booking approved successfully",
+                    NewStatus = booking.Status,
+                    CanProceedToPayment = booking.VendorBookings == null || !booking.VendorBookings.Any()
+                }, "Hall approval successful");
             }
             else
             {
                 booking.Status = BookingStatusEnum.HallRejected.ToString();
                 booking.Comments = $"Hall Rejection: {request.RejectionReason ?? "No reason provided"}";
-                
+
                 await _unitOfWork.Complete();
 
-                return Ok(new ApiResponse<ApprovalResponseDto>
+                return Success(new ApprovalResponseDto
                 {
-                    IsSuccess = true,
-                    Message = "Hall rejection recorded",
-                    Data = new ApprovalResponseDto
-                    {
-                        Success = true,
-                        Message = "Booking rejected",
-                        NewStatus = booking.Status,
-                        CanProceedToPayment = false
-                    }
-                });
+                    Success = true,
+                    Message = "Booking rejected",
+                    NewStatus = booking.Status,
+                    CanProceedToPayment = false
+                }, "Hall rejection recorded");
             }
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new ApiResponse<ApprovalResponseDto> 
-            { 
-                IsSuccess = false, 
-                StatusCode = 500,
-                Message = $"Error processing hall approval: {ex.Message}" 
-            });
+            return Error<ApprovalResponseDto>($"Error processing hall approval: {ex.Message}", 500);
         }
     }
 
@@ -127,26 +110,16 @@ public class BookingApprovalController : ControllerBase
             var booking = await _unitOfWork.BookingRepository.GetBookingWithDetailsAsync(bookingId);
             if (booking == null)
             {
-                return NotFound(new ApiResponse<ApprovalResponseDto> 
-                { 
-                    IsSuccess = false, 
-                    Message = "Booking not found",
-                    StatusCode = 404
-                });
+                return Error<ApprovalResponseDto>("Booking not found", 404);
             }
 
             var vendorBooking = booking.VendorBookings?.FirstOrDefault(vb => vb.Id == vendorBookingId);
             if (vendorBooking == null)
             {
-                return NotFound(new ApiResponse<ApprovalResponseDto> 
-                { 
-                    IsSuccess = false, 
-                    Message = "Vendor booking not found",
-                    StatusCode = 404
-                });
+                return Error<ApprovalResponseDto>("Vendor booking not found", 404);
             }
 
-            // TODO: Verify vendor manager owns this vendor
+            // TODO: Verify vendor manager owns this vendor using UserId from BaseApiController
 
             if (request.Approved)
             {
@@ -161,14 +134,14 @@ public class BookingApprovalController : ControllerBase
 
             // Check if all vendors have responded
             var allVendorsResponded = booking.VendorBookings!
-                .All(vb => vb.Status == ApprovalStatusEnum.Approved.ToString() || 
+                .All(vb => vb.Status == ApprovalStatusEnum.Approved.ToString() ||
                           vb.Status == ApprovalStatusEnum.Rejected.ToString());
 
             if (allVendorsResponded)
             {
                 var allApproved = booking.VendorBookings
                     .All(vb => vb.Status == ApprovalStatusEnum.Approved.ToString());
-                
+
                 var allRejected = booking.VendorBookings
                     .All(vb => vb.Status == ApprovalStatusEnum.Rejected.ToString());
 
@@ -185,27 +158,17 @@ public class BookingApprovalController : ControllerBase
 
             await _unitOfWork.Complete();
 
-            return Ok(new ApiResponse<ApprovalResponseDto>
+            return Success(new ApprovalResponseDto
             {
-                IsSuccess = true,
-                Message = "Vendor approval processed",
-                Data = new ApprovalResponseDto
-                {
-                    Success = true,
-                    Message = request.Approved ? "Vendor service approved" : "Vendor service rejected",
-                    NewStatus = booking.Status,
-                    CanProceedToPayment = booking.Status == BookingStatusEnum.ReadyForPayment.ToString()
-                }
-            });
+                Success = true,
+                Message = request.Approved ? "Vendor service approved" : "Vendor service rejected",
+                NewStatus = booking.Status,
+                CanProceedToPayment = booking.Status == BookingStatusEnum.ReadyForPayment.ToString()
+            }, "Vendor approval processed");
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new ApiResponse<ApprovalResponseDto> 
-            { 
-                IsSuccess = false, 
-                StatusCode = 500,
-                Message = $"Error processing vendor approval: {ex.Message}" 
-            });
+            return Error<ApprovalResponseDto>($"Error processing vendor approval: {ex.Message}", 500);
         }
     }
 
@@ -221,16 +184,11 @@ public class BookingApprovalController : ControllerBase
             var booking = await _unitOfWork.BookingRepository.GetBookingWithDetailsAsync(bookingId);
             if (booking == null)
             {
-                return NotFound(new ApiResponse<VendorApprovalStatusDto> 
-                { 
-                    IsSuccess = false, 
-                    Message = "Booking not found",
-                    StatusCode = 404
-                });
+                return Error<VendorApprovalStatusDto>("Booking not found", 404);
             }
 
             var vendorBookings = booking.VendorBookings ?? new List<Core.Entities.VendorEntities.VendorBooking>();
-            
+
             var approvedCount = vendorBookings.Count(vb => vb.Status == ApprovalStatusEnum.Approved.ToString());
             var rejectedCount = vendorBookings.Count(vb => vb.Status == ApprovalStatusEnum.Rejected.ToString());
             var pendingCount = vendorBookings.Count(vb => vb.Status == ApprovalStatusEnum.Pending.ToString() || string.IsNullOrEmpty(vb.Status));
@@ -249,21 +207,11 @@ public class BookingApprovalController : ControllerBase
                 CanProceedToPayment = canProceedToPayment
             };
 
-            return Ok(new ApiResponse<VendorApprovalStatusDto>
-            {
-                IsSuccess = true,
-                Message = "Vendor approval status retrieved",
-                Data = status
-            });
+            return Success(status, "Vendor approval status retrieved");
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new ApiResponse<VendorApprovalStatusDto> 
-            { 
-                IsSuccess = false, 
-                StatusCode = 500,
-                Message = $"Error retrieving vendor approval status: {ex.Message}" 
-            });
+            return Error<VendorApprovalStatusDto>($"Error retrieving vendor approval status: {ex.Message}", 500);
         }
     }
 }
