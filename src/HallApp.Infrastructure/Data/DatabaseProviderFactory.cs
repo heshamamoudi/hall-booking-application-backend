@@ -14,12 +14,12 @@ public static class DatabaseProviderFactory
         {
             // Convert URI format to standard connection string if needed
             var npgsqlConnectionString = ConvertToNpgsqlConnectionString(connectionString);
-            Console.WriteLine($"🔍 Using PostgreSQL with connection: {MaskConnectionString(npgsqlConnectionString)}");
+            Console.WriteLine("🔍 Using PostgreSQL");
             options.UseNpgsql(npgsqlConnectionString);
         }
         else
         {
-            Console.WriteLine($"🔍 Using SQL Server with connection: {MaskConnectionString(connectionString)}");
+            Console.WriteLine("🔍 Using SQL Server");
             options.UseSqlServer(connectionString);
         }
     }
@@ -38,10 +38,16 @@ public static class DatabaseProviderFactory
 
     private static string ConvertToNpgsqlConnectionString(string connectionString)
     {
-        // If it's already in standard format, return as-is
+        // If it's already in standard format, return as-is (with SSL added)
         if (!connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) &&
             !connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
         {
+            // Add SSL settings if not present
+            if (!connectionString.Contains("SSL Mode", StringComparison.OrdinalIgnoreCase) &&
+                !connectionString.Contains("SslMode", StringComparison.OrdinalIgnoreCase))
+            {
+                connectionString = connectionString.TrimEnd(';') + ";SSL Mode=Prefer;Trust Server Certificate=true";
+            }
             return connectionString;
         }
 
@@ -56,34 +62,13 @@ public static class DatabaseProviderFactory
             var port = uri.Port > 0 ? uri.Port : 5432;
             var database = uri.AbsolutePath.TrimStart('/');
 
-            // Build standard Npgsql connection string
-            var builder = new Npgsql.NpgsqlConnectionStringBuilder
-            {
-                Host = host,
-                Port = port,
-                Database = database,
-                Username = username,
-                Password = password,
-                SslMode = Npgsql.SslMode.Prefer, // Railway requires SSL
-                TrustServerCertificate = true
-            };
-
-            return builder.ConnectionString;
+            // Build standard connection string manually (no Npgsql types needed)
+            return $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Prefer;Trust Server Certificate=true";
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"⚠️ Failed to parse PostgreSQL URI, using as-is: {ex.Message}");
+            Console.WriteLine($"⚠️ Failed to parse PostgreSQL URI: {ex.Message}");
             return connectionString;
         }
-    }
-
-    private static string MaskConnectionString(string connectionString)
-    {
-        // Mask password in connection string for logging
-        return System.Text.RegularExpressions.Regex.Replace(
-            connectionString,
-            @"(password|pwd)=([^;]*)",
-            "$1=****",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     }
 }
