@@ -32,11 +32,17 @@ namespace HallApp.Web.Extensions
             // Static files - serve from wwwroot
             app.UseStaticFiles();
 
+            // Ensure uploads directory exists before configuring static files
+            var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads");
+            if (!Directory.Exists(uploadsPath))
+            {
+                Directory.CreateDirectory(uploadsPath);
+            }
+
             // Serve uploaded files from wwwroot/uploads
             app.UseStaticFiles(new StaticFileOptions
             {
-                FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-                    Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads")),
+                FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
                 RequestPath = "/uploads"
             });
 
