@@ -220,38 +220,84 @@ namespace HallApp.Web.Controllers
         {
             try
             {
+                _logger.LogInformation("Login attempt for: {Login}", loginDto.Login);
+
                 if (!ModelState.IsValid)
                 {
+                    _logger.LogWarning("Invalid model state for login: {Login}", loginDto.Login);
                     return BadRequest(new ApiResponse(400, "Invalid login data"));
                 }
 
-                var user = await _userManager.FindByEmailAsync(loginDto.Login) ??
-                          await _userManager.FindByNameAsync(loginDto.Login);
+                AppUser user = null;
+                try
+                {
+                    _logger.LogDebug("Finding user by email or username: {Login}", loginDto.Login);
+                    user = await _userManager.FindByEmailAsync(loginDto.Login) ??
+                              await _userManager.FindByNameAsync(loginDto.Login);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error finding user: {Login}. Error: {Error}", loginDto.Login, ex.Message);
+                    return StatusCode(500, new ApiResponse(500, "Database error while finding user"));
+                }
 
                 if (user == null)
                 {
+                    _logger.LogWarning("User not found: {Login}", loginDto.Login);
                     return Unauthorized(new ApiResponse(401, "Invalid credentials"));
                 }
 
-                var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, false);
-
-                if (!result.Succeeded)
+                try
                 {
-                    return Unauthorized(new ApiResponse(401, "Invalid credentials"));
+                    _logger.LogDebug("Checking password for user: {UserId}", user.Id);
+                    var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, false);
+
+                    if (!result.Succeeded)
+                    {
+                        _logger.LogWarning("Password check failed for user: {UserId}", user.Id);
+                        return Unauthorized(new ApiResponse(401, "Invalid credentials"));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error checking password for user: {UserId}. Error: {Error}", user.Id, ex.Message);
+                    return StatusCode(500, new ApiResponse(500, "Error verifying password"));
                 }
 
-                // Generate tokens
-                var accessToken = await _tokenService.CreateToken(user);
-                var refreshToken = await _tokenService.CreateRefreshToken(user);
+                string accessToken;
+                string refreshToken;
+                try
+                {
+                    _logger.LogDebug("Generating access token for user: {UserId}", user.Id);
+                    accessToken = await _tokenService.CreateToken(user);
+                    
+                    _logger.LogDebug("Generating refresh token for user: {UserId}", user.Id);
+                    refreshToken = await _tokenService.CreateRefreshToken(user);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error generating tokens for user: {UserId}. Error: {Error}. InnerException: {InnerError}", 
+                        user.Id, ex.Message, ex.InnerException?.Message ?? "None");
+                    return StatusCode(500, new ApiResponse(500, "Error generating authentication tokens"));
+                }
 
-                // Store tokens in database for tracking
-                await _userRepository.RegisterOrUpdateTokenAsync(user, accessToken, refreshToken);
+                try
+                {
+                    _logger.LogDebug("Storing tokens in database for user: {UserId}", user.Id);
+                    await _userRepository.RegisterOrUpdateTokenAsync(user, accessToken, refreshToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error storing tokens for user: {UserId}. Error: {Error}", user.Id, ex.Message);
+                    // Continue anyway - tokens are generated, storage is secondary
+                    _logger.LogWarning("Continuing login despite token storage failure for user: {UserId}", user.Id);
+                }
 
                 var response = new AuthResponseDto
                 {
                     AccessToken = accessToken,
                     RefreshToken = refreshToken,
-                    ExpiresAt = DateTime.UtcNow.AddHours(1), // Match TokenService expiry
+                    ExpiresAt = DateTime.UtcNow.AddHours(1),
                     User = new UserDto
                     {
                         Id = user.Id,
@@ -271,8 +317,12 @@ namespace HallApp.Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during login");
-                return StatusCode(500, new ApiResponse(500, "Login failed"));
+                _logger.LogError(ex, "Unexpected error during login for {Login}. Exception: {ExceptionMessage}. Stack trace: {StackTrace}. Inner exception: {InnerException}", 
+                    loginDto.Login, 
+                    ex.Message, 
+                    ex.StackTrace, 
+                    ex.InnerException?.Message ?? "None");
+                return StatusCode(500, new ApiResponse(500, $"Login failed: {ex.Message}"));
             }
         }
 
