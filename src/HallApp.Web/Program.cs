@@ -81,15 +81,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-var port = Environment.GetEnvironmentVariable("PORT");
-
-// Configure Kestrel to listen on Railway's port (Nixpacks deployment)
-if (!string.IsNullOrEmpty(port))
-{
-    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
-}
-// Remove hardcoded fallback - let --urls parameter work
-
 var app = builder.Build();
 
 // Configure middleware pipeline using extension
@@ -98,16 +89,9 @@ app.ConfigureMiddlewarePipeline();
 // Configure endpoints using extension
 app.ConfigureEndpoints();
 
-// Configure URLs
-if (!app.Urls.Any())
-{
-    app.Urls.Add("http://localhost:5235");
-    app.Urls.Add("http://0.0.0.0:5235");
-}
-
 // Log startup information
 var logger = app.Services.GetService<ILogger<Program>>();
-logger?.LogInformation("Server starting on: {Urls}", string.Join(", ", app.Urls));
+logger?.LogInformation("Server starting...");
 
 // Run database setup in background after server starts (non-blocking for health checks)
 app.Lifetime.ApplicationStarted.Register(() =>
