@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HallApp.Infrastructure.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20260126203924_InitialCreate")]
+    [Migration("20260126204315_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1402,7 +1402,7 @@ namespace HallApp.Infrastructure.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<string>("WebhookPayload")
-                        .HasColumnType("nvarchar(MAX)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -1451,7 +1451,7 @@ namespace HallApp.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("ResponsePayload")
-                        .HasColumnType("nvarchar(MAX)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Status")
                         .IsRequired()

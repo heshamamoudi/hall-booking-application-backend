@@ -1399,7 +1399,7 @@ namespace HallApp.Infrastructure.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<string>("WebhookPayload")
-                        .HasColumnType("nvarchar(MAX)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -1448,7 +1448,7 @@ namespace HallApp.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("ResponsePayload")
-                        .HasColumnType("nvarchar(MAX)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Status")
                         .IsRequired()

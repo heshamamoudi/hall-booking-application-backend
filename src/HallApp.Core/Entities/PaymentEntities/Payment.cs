@@ -88,7 +88,7 @@ public class Payment
     public DateTime? FailedAt { get; set; }
 
     // Webhook data (for audit trail)
-    [Column(TypeName = "nvarchar(MAX)")]
+    [Column(TypeName = "text")]
     public string WebhookPayload { get; set; } = string.Empty;
 
     [StringLength(500)]
@@ -141,6 +141,6 @@ public class PaymentRefund
     public int RequestedBy { get; set; }  // Admin user ID
     public AppUser? RequestedByUser { get; set; }
 
-    [Column(TypeName = "nvarchar(MAX)")]
+    [Column(TypeName = "text")]
     public string ResponsePayload { get; set; } = string.Empty;
 }

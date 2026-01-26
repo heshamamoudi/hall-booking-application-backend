@@ -1026,7 +1026,7 @@ namespace HallApp.Infrastructure.Migrations
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     FailedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    WebhookPayload = table.Column<string>(type: "nvarchar(MAX)", nullable: true),
+                    WebhookPayload = table.Column<string>(type: "text", nullable: true),
                     FailureReason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     IsRefunded = table.Column<bool>(type: "boolean", nullable: false),
                     RefundedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -1203,7 +1203,7 @@ namespace HallApp.Infrastructure.Migrations
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ProcessedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     RequestedBy = table.Column<int>(type: "integer", nullable: false),
-                    ResponsePayload = table.Column<string>(type: "nvarchar(MAX)", nullable: true)
+                    ResponsePayload = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
