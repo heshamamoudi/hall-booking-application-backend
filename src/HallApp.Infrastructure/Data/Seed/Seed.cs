@@ -79,7 +79,7 @@ public class Seed
             FirstName = "Hesham",
             LastName = "Amoudi",
             Gender = "Male",
-            DOB = new DateTime(1990, 1, 1),
+            DOB = DateTime.SpecifyKind(new DateTime(1990, 1, 1), DateTimeKind.Utc),
             Created = DateTime.UtcNow,
             Updated = DateTime.UtcNow,
             Active = true
@@ -100,7 +100,7 @@ public class Seed
                 FirstName = "Mohammed",
                 LastName = "Al-Rashid",
                 Gender = "Male",
-                DOB = new DateTime(1985, 5, 15),
+                DOB = DateTime.SpecifyKind(new DateTime(1985, 5, 15), DateTimeKind.Utc),
                 Created = DateTime.UtcNow,
                 Updated = DateTime.UtcNow,
                 Active = true
@@ -113,7 +113,7 @@ public class Seed
                 FirstName = "Fatima",
                 LastName = "Ahmed",
                 Gender = "Female",
-                DOB = new DateTime(1990, 8, 20),
+                DOB = DateTime.SpecifyKind(new DateTime(1990, 8, 20), DateTimeKind.Utc),
                 Created = DateTime.UtcNow,
                 Updated = DateTime.UtcNow,
                 Active = true
@@ -126,7 +126,7 @@ public class Seed
                 FirstName = "Ali",
                 LastName = "Hassan",
                 Gender = "Male",
-                DOB = new DateTime(1988, 3, 10),
+                DOB = DateTime.SpecifyKind(new DateTime(1988, 3, 10), DateTimeKind.Utc),
                 Created = DateTime.UtcNow,
                 Updated = DateTime.UtcNow,
                 Active = true
@@ -150,7 +150,7 @@ public class Seed
                 FirstName = "Ahmed",
                 LastName = "Al-Mansour",
                 Gender = "Male",
-                DOB = new DateTime(1980, 4, 12),
+                DOB = DateTime.SpecifyKind(new DateTime(1980, 4, 12), DateTimeKind.Utc),
                 Created = DateTime.UtcNow,
                 Updated = DateTime.UtcNow,
                 Active = true
@@ -163,7 +163,7 @@ public class Seed
                 FirstName = "Sara",
                 LastName = "Al-Zahrani",
                 Gender = "Female",
-                DOB = new DateTime(1987, 9, 25),
+                DOB = DateTime.SpecifyKind(new DateTime(1987, 9, 25), DateTimeKind.Utc),
                 Created = DateTime.UtcNow,
                 Updated = DateTime.UtcNow,
                 Active = true
@@ -187,7 +187,7 @@ public class Seed
                 FirstName = "Khalid",
                 LastName = "Al-Otaibi",
                 Gender = "Male",
-                DOB = new DateTime(1982, 11, 8),
+                DOB = DateTime.SpecifyKind(new DateTime(1982, 11, 8), DateTimeKind.Utc),
                 Created = DateTime.UtcNow,
                 Updated = DateTime.UtcNow,
                 Active = true
@@ -200,7 +200,7 @@ public class Seed
                 FirstName = "Noura",
                 LastName = "Al-Dosari",
                 Gender = "Female",
-                DOB = new DateTime(1989, 6, 19),
+                DOB = DateTime.SpecifyKind(new DateTime(1989, 6, 19), DateTimeKind.Utc),
                 Created = DateTime.UtcNow,
                 Updated = DateTime.UtcNow,
                 Active = true
