@@ -48,6 +48,9 @@ namespace HallApp.Web.Extensions
                         new List<string>()
                     }
                 });
+
+                // Resolve conflicting actions when multiple controllers share the same route
+                c.ResolveConflictingActions(apiDescriptions => apiDescriptions.First());
             });
 
             return services;
