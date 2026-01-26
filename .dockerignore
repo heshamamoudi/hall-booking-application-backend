@@ -1,0 +1,34 @@
+# Git
+.git
+.gitignore
+
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Documentation
+*.md
+docs/
+
+# Tests
+tests/
+
+# Local settings
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
+!appsettings.Production.template.json
+
+# Other
+.env*
+*.log
+logs/
+DataProtection-Keys/
