@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HallApp.Infrastructure.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20260126204315_InitialCreate")]
+    [Migration("20260126204850_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1944,7 +1944,7 @@ namespace HallApp.Infrastructure.Migrations
 
                     b.HasIndex("VendorId", "IsPrimary")
                         .IsUnique()
-                        .HasFilter("[IsPrimary] = 1");
+                        .HasFilter("\"IsPrimary\" = true");
 
                     b.ToTable("VendorLocations");
                 });

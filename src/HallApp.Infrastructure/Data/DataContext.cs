@@ -157,7 +157,7 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
         builder.Entity<VendorLocation>(entity =>
         {
             entity.HasIndex(l => new { l.VendorId, l.IsPrimary })
-                .HasFilter("[IsPrimary] = 1")
+                .HasFilter("\"IsPrimary\" = true")
                 .IsUnique();
 
             entity.Property(l => l.Latitude)

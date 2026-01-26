@@ -1574,7 +1574,7 @@ namespace HallApp.Infrastructure.Migrations
                 table: "VendorLocations",
                 columns: new[] { "VendorId", "IsPrimary" },
                 unique: true,
-                filter: "[IsPrimary] = 1");
+                filter: "\"IsPrimary\" = true");
 
             migrationBuilder.CreateIndex(
                 name: "IX_VendorManagers_AppUserId",

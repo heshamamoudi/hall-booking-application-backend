@@ -1941,7 +1941,7 @@ namespace HallApp.Infrastructure.Migrations
 
                     b.HasIndex("VendorId", "IsPrimary")
                         .IsUnique()
-                        .HasFilter("[IsPrimary] = 1");
+                        .HasFilter("\"IsPrimary\" = true");
 
                     b.ToTable("VendorLocations");
                 });
