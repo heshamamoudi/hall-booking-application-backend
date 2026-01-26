@@ -52,32 +52,47 @@ builder.Services.AddSignalR(options =>
 });
 
 // Configure CORS for SignalR and API calls
-var allowedOrigins = builder.Configuration["CORS:AllowedOrigins"]?.Split(',', StringSplitOptions.RemoveEmptyEntries)
-    ?? Array.Empty<string>();
+var allowedOriginsConfig = builder.Configuration["CORS:AllowedOrigins"]?.Trim() ?? "";
+var allowedOrigins = allowedOriginsConfig.Split(',', StringSplitOptions.RemoveEmptyEntries)
+    .Select(o => o.Trim())
+    .ToArray();
 
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        // Default local development origins
-        var origins = new List<string>
+        // Check if wildcard is configured (allow any origin)
+        if (allowedOrigins.Contains("*"))
         {
-            "http://localhost:4200",
-            "https://localhost:4200",
-            "http://localhost:5235",
-            "http://127.0.0.1:4200",
-            "https://127.0.0.1:4200",
-            "http://127.0.0.1:5235"
-        };
+            // When using wildcard, use SetIsOriginAllowed to allow any origin WITH credentials
+            // Note: WithOrigins("*") + AllowCredentials() is not allowed by CORS spec
+            policy.SetIsOriginAllowed(_ => true)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
+        else
+        {
+            // Specific origins mode
+            var origins = new List<string>
+            {
+                "http://localhost:4200",
+                "https://localhost:4200",
+                "http://localhost:5235",
+                "http://127.0.0.1:4200",
+                "https://127.0.0.1:4200",
+                "http://127.0.0.1:5235"
+            };
 
-        // Add configured origins (from CORS__AllowedOrigins env var)
-        origins.AddRange(allowedOrigins);
+            // Add configured origins (from CORS__AllowedOrigins env var)
+            origins.AddRange(allowedOrigins);
 
-        policy.WithOrigins(origins.ToArray())
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials()
-              .SetIsOriginAllowedToAllowWildcardSubdomains();
+            policy.WithOrigins(origins.ToArray())
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials()
+                  .SetIsOriginAllowedToAllowWildcardSubdomains();
+        }
     });
 });
 

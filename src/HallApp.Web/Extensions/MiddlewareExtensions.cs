@@ -1,5 +1,6 @@
 using HallApp.Web.Middleware;
 using HallApp.Web.Middleware.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 using System.Security.Authentication;
 
 namespace HallApp.Web.Extensions
@@ -19,7 +20,15 @@ namespace HallApp.Web.Extensions
 
         public static void ConfigureMiddlewarePipeline(this WebApplication app)
         {
-            // Exception handling first
+            // Forwarded headers - MUST be first for Railway/cloud proxies
+            // Railway terminates TLS at the edge and forwards HTTP internally.
+            // This ensures the app sees the original scheme (https) and client IP.
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            });
+
+            // Exception handling
             app.UseMiddleware<ExceptionMiddleware>();
 
             // Enable working security middleware
@@ -46,8 +55,10 @@ namespace HallApp.Web.Extensions
                 RequestPath = "/uploads"
             });
 
-            // Swagger in development
-            if (app.Environment.IsDevelopment())
+            // Swagger - configurable via SWAGGER__ENABLED env var (defaults to true in Development)
+            var swaggerEnabled = app.Configuration["Swagger:Enabled"]
+                ?? (app.Environment.IsDevelopment() ? "true" : "false");
+            if (string.Equals(swaggerEnabled, "true", StringComparison.OrdinalIgnoreCase))
             {
                 app.UseSwaggerDocumentation();
             }

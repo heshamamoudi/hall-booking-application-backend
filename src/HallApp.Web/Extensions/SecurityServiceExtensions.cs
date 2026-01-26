@@ -33,8 +33,11 @@ namespace HallApp.Web.Extensions
 
         public static IApplicationBuilder UseSecurityHeadersAndCookies(this IApplicationBuilder app, IWebHostEnvironment environment)
         {
-            // Apply HSTS header
-            app.UseHsts();
+            // NOTE: Do NOT use UseHsts() when behind a reverse proxy like Railway/Heroku/Render.
+            // The proxy handles TLS termination and forwards HTTP to the app internally.
+            // UseHsts() would cause an infinite redirect loop because the browser sees HSTS,
+            // tries HTTPS, but the proxy always sends HTTP to the app.
+            // app.UseHsts();
 
             // Enable cookie policy
             app.UseCookiePolicy();
@@ -46,43 +49,23 @@ namespace HallApp.Web.Extensions
             .UseXXssProtection(options => options.EnabledWithBlockMode()) // Cross-site scripting protection
             .UseXfo(options => options.Deny()); // X-Frame-Options deny to prevent clickjacking
 
-            // Configure Content Security Policy
-            if (environment.IsProduction())
-            {
-                // Production CSP with HTTPS enforcement
-                app.UseCsp(opts => opts
-                    .DefaultSources(s => s.Self())
-                    .ScriptSources(s => s.Self())
-                    .StyleSources(s => s.Self())
-                    .ImageSources(s => s.Self().CustomSources("data:"))
-                    .FontSources(s => s.Self())
-                    .ConnectSources(s => s.Self())
-                    .ObjectSources(s => s.None())
-                    .FrameSources(s => s.None())
-                    .FrameAncestors(s => s.None())
-                    .BaseUris(s => s.Self())
-                    .FormActions(s => s.Self())
-                    .UpgradeInsecureRequests() // Enforce HTTPS in production
-                );
-            }
-            else
-            {
-                // Development CSP without HTTPS enforcement
-                app.UseCsp(opts => opts
-                    .DefaultSources(s => s.Self())
-                    .ScriptSources(s => s.Self())
-                    .StyleSources(s => s.Self())
-                    .ImageSources(s => s.Self().CustomSources("data:"))
-                    .FontSources(s => s.Self())
-                    .ConnectSources(s => s.Self())
-                    .ObjectSources(s => s.None())
-                    .FrameSources(s => s.None())
-                    .FrameAncestors(s => s.None())
-                    .BaseUris(s => s.Self())
-                    .FormActions(s => s.Self())
-                    // No UpgradeInsecureRequests() in development
-                );
-            }
+            // Configure Content Security Policy - same for all environments
+            // NOTE: Do NOT use UpgradeInsecureRequests() behind a reverse proxy (Railway/Heroku/Render)
+            // as it causes redirect loops similar to HSTS.
+            app.UseCsp(opts => opts
+                .DefaultSources(s => s.Self())
+                .ScriptSources(s => s.Self())
+                .StyleSources(s => s.Self())
+                .ImageSources(s => s.Self().CustomSources("data:"))
+                .FontSources(s => s.Self())
+                .ConnectSources(s => s.Self())
+                .ObjectSources(s => s.None())
+                .FrameSources(s => s.None())
+                .FrameAncestors(s => s.None())
+                .BaseUris(s => s.Self())
+                .FormActions(s => s.Self())
+                // No UpgradeInsecureRequests() - Railway handles HTTPS at the edge
+            );
 
             // Add Permissions-Policy header (formerly Feature-Policy)
             app.Use(async (context, next) => {
