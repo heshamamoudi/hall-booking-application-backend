@@ -6,7 +6,6 @@ using HallApp.Infrastructure.Data;
 using HallApp.Infrastructure.Data.Seed;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System.Collections;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using HallApp.Application.Validators;
@@ -53,54 +52,36 @@ builder.Services.AddSignalR(options =>
 });
 
 // Configure CORS for SignalR and API calls
+var allowedOrigins = builder.Configuration["CORS:AllowedOrigins"]?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+    ?? Array.Empty<string>();
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:4200",
-                "https://localhost:4200",
-                "http://localhost:5235",
-                "http://127.0.0.1:4200",
-                 "https://127.0.0.1:4200",
-                "http://127.0.0.1:5235"
-              )
+        // Default local development origins
+        var origins = new List<string>
+        {
+            "http://localhost:4200",
+            "https://localhost:4200",
+            "http://localhost:5235",
+            "http://127.0.0.1:4200",
+            "https://127.0.0.1:4200",
+            "http://127.0.0.1:5235"
+        };
+
+        // Add configured origins (from CORS__AllowedOrigins env var)
+        origins.AddRange(allowedOrigins);
+
+        policy.WithOrigins(origins.ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials()
               .SetIsOriginAllowedToAllowWildcardSubdomains();
     });
 });
-// Debug environment variables for Railway deployment
-var env = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
-var config = builder.Configuration.GetConnectionString("DefaultConnection");
+
 var port = Environment.GetEnvironmentVariable("PORT");
-var jwtSecret = Environment.GetEnvironmentVariable("JWT__SecretKey");
-var jwtSecretConfig = builder.Configuration["JWT:SecretKey"];
-
-Console.WriteLine($"🔍 ENV ConnectionString: {env}");
-Console.WriteLine($"🔍 CONFIG ConnectionString: {config}");
-Console.WriteLine($"🔍 PORT: {port}");
-Console.WriteLine($"🔍 JWT Secret ENV: {(string.IsNullOrEmpty(jwtSecret) ? "NULL/MISSING" : "PRESENT")}");
-Console.WriteLine($"🔍 JWT Secret CONFIG: {(string.IsNullOrEmpty(jwtSecretConfig) ? "NULL/MISSING" : "PRESENT")}");
-
-// List all environment variables starting with JWT
-Console.WriteLine("🔍 All JWT Environment Variables:");
-foreach (DictionaryEntry envVar in Environment.GetEnvironmentVariables())
-{
-    var key = envVar.Key.ToString();
-    if (key.StartsWith("JWT"))
-    {
-        Console.WriteLine($"   {key} = {envVar.Value}");
-    }
-}
-
-// List all configuration keys related to JWT
-Console.WriteLine("🔍 Configuration JWT Values:");
-Console.WriteLine($"   JWT:SecretKey = {(string.IsNullOrEmpty(builder.Configuration["JWT:SecretKey"]) ? "NULL/MISSING" : "PRESENT")}");
-Console.WriteLine($"   JWT:Issuer = {builder.Configuration["JWT:Issuer"]}");
-Console.WriteLine($"   JWT:Audience = {builder.Configuration["JWT:Audience"]}");
-Console.WriteLine($"   JWT:ExpiryInHours = {builder.Configuration["JWT:ExpiryInHours"]}");
 
 // Configure Kestrel to listen on Railway's port (Nixpacks deployment)
 if (!string.IsNullOrEmpty(port))
