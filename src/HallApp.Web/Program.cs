@@ -117,9 +117,6 @@ app.ConfigureMiddlewarePipeline();
 // Configure endpoints using extension
 app.ConfigureEndpoints();
 
-// Database setup using extension
-await app.Services.SetupDatabaseAsync();
-
 // Configure URLs
 if (!app.Urls.Any())
 {
@@ -128,8 +125,23 @@ if (!app.Urls.Any())
 }
 
 // Log startup information
-
 var logger = app.Services.GetService<ILogger<Program>>();
 logger?.LogInformation("Server starting on: {Urls}", string.Join(", ", app.Urls));
+
+// Run database setup in background after server starts (non-blocking for health checks)
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    _ = Task.Run(async () =>
+    {
+        try
+        {
+            await app.Services.SetupDatabaseAsync();
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Background database setup failed");
+        }
+    });
+});
 
 app.Run();
