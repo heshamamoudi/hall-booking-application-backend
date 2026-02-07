@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using HallApp.Core.Entities;
 using HallApp.Application.DTOs.Auth;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Core.Interfaces.IRepositories;
+using HallApp.Infrastructure.Data;
 
 namespace HallApp.Web.Controllers;
 
@@ -22,7 +24,7 @@ public class AuthV2Controller : ControllerBase
     private readonly UserManager<AppUser> _userManager;
     private readonly SignInManager<AppUser> _signInManager;
     private readonly ITokenService _tokenService;
-    private readonly ICustomerService _customerService;
+    private readonly DataContext _context;
     private readonly IUserRepository _userRepository;
     private readonly ILogger<AuthV2Controller> _logger;
 
@@ -30,14 +32,14 @@ public class AuthV2Controller : ControllerBase
         UserManager<AppUser> userManager,
         SignInManager<AppUser> signInManager,
         ITokenService tokenService,
-        ICustomerService customerService,
+        DataContext context,
         IUserRepository userRepository,
         ILogger<AuthV2Controller> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _tokenService = tokenService;
-        _customerService = customerService;
+        _context = context;
         _userRepository = userRepository;
         _logger = logger;
     }
@@ -113,7 +115,20 @@ public class AuthV2Controller : ControllerBase
             // Check duplicate email
             var existingUser = await _userManager.FindByEmailAsync(dto.Email);
             if (existingUser != null)
-                return BadRequest(ErrorResponse("User with this email already exists"));
+            {
+                // Check if this is an orphaned user (user exists but no Customer record)
+                var hasCustomer = await _context.Customers.AnyAsync(c => c.AppUserId == existingUser.Id);
+                if (!hasCustomer)
+                {
+                    // Orphaned user from a previous failed registration — delete and re-register
+                    _logger.LogWarning("Cleaning up orphaned user {Email} (no Customer record)", dto.Email);
+                    await _userManager.DeleteAsync(existingUser);
+                }
+                else
+                {
+                    return BadRequest(ErrorResponse("User with this email already exists"));
+                }
+            }
 
             // Generate username from email (part before @)
             var baseUserName = dto.Email.Split('@')[0];
@@ -132,7 +147,7 @@ public class AuthV2Controller : ControllerBase
                 LastName = dto.LastName,
                 PhoneNumber = dto.PhoneNumber,
                 Gender = dto.Gender ?? "NotSpecified",
-                DOB = new DateTime(1900, 1, 1),
+                DOB = new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 Created = DateTime.UtcNow,
                 Updated = DateTime.UtcNow,
                 Active = true
@@ -149,7 +164,7 @@ public class AuthV2Controller : ControllerBase
 
             await _userManager.AddToRoleAsync(user, "Customer");
 
-            // Create Customer entity
+            // Create Customer entity directly via DataContext (avoids UnitOfWork tracking conflicts)
             try
             {
                 var customer = new HallApp.Core.Entities.CustomerEntities.Customer
@@ -157,17 +172,19 @@ public class AuthV2Controller : ControllerBase
                     AppUserId = user.Id,
                     CreditMoney = 0,
                     Active = true,
-                    Confirmed = false
+                    Confirmed = false,
+                    Created = DateTime.UtcNow,
+                    Updated = DateTime.UtcNow
                 };
-                await _customerService.CreateCustomerAsync(customer);
+                _context.Customers.Add(customer);
+                await _context.SaveChangesAsync();
             }
             catch (Exception custEx)
             {
-                _logger.LogError(custEx, "Failed to create Customer entity for user {UserId}, continuing", user.Id);
-                // Don't fail registration if customer creation fails — user is already created
+                _logger.LogError(custEx, "Failed to create Customer entity for user {UserId}: {Msg}", user.Id, custEx.InnerException?.Message ?? custEx.Message);
             }
 
-            // Generate tokens without storing in DB (matches v1 register behavior)
+            // Generate tokens
             var accessToken = await _tokenService.CreateToken(user);
             var refreshToken = await _tokenService.CreateRefreshToken(user);
 
@@ -184,8 +201,9 @@ public class AuthV2Controller : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error during v2 registration for {Email}: {Message}", dto.Email, ex.Message);
-            return StatusCode(500, ErrorResponse($"Registration error: {ex.Message}"));
+            var innerMsg = ex.InnerException?.Message ?? "no inner exception";
+            _logger.LogError(ex, "Unexpected error during v2 registration for {Email}: {Message} | Inner: {Inner}", dto.Email, ex.Message, innerMsg);
+            return StatusCode(500, ErrorResponse($"Registration error: {ex.Message} | {innerMsg}"));
         }
     }
 

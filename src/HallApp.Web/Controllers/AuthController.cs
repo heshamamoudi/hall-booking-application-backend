@@ -72,7 +72,7 @@ namespace HallApp.Web.Controllers
                     LastName = registerDto.LastName,
                     PhoneNumber = registerDto.PhoneNumber,
                     Gender = registerDto.Gender ?? "NotSpecified", // Provide default value if not specified
-                    DOB = registerDto.DOB ?? new DateTime(1900, 1, 1),
+                    DOB = registerDto.DOB ?? new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                     Created = DateTime.UtcNow,
                     Updated = DateTime.UtcNow,
                     Active = true
@@ -165,7 +165,7 @@ namespace HallApp.Web.Controllers
                     LastName = registerDto.LastName,
                     PhoneNumber = registerDto.PhoneNumber,
                     Gender = registerDto.Gender ?? "NotSpecified",
-                    DOB = registerDto.DOB ?? new DateTime(1900, 1, 1),
+                    DOB = registerDto.DOB ?? new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                     Created = DateTime.UtcNow,
                     Updated = DateTime.UtcNow,
                     Active = true

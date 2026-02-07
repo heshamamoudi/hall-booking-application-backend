@@ -46,7 +46,7 @@ public class TokenService : ITokenService
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.Now.AddHours(1),  // Token expiry time - shorter for access tokens
+            Expires = DateTime.UtcNow.AddHours(1),  // Token expiry time - shorter for access tokens
             SigningCredentials = creds,
             Audience = _config["JWT:Audience"] ?? "hallbookingapp",
             Issuer = _config["JWT:Issuer"] ?? "hallbookingapi"
@@ -74,7 +74,7 @@ public class TokenService : ITokenService
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.Now.AddDays(7),  // Refresh tokens last longer
+            Expires = DateTime.UtcNow.AddDays(7),  // Refresh tokens last longer
             SigningCredentials = creds,
             Audience = _config["JWT:Audience"] ?? "hallbookingapp",
             Issuer = _config["JWT:Issuer"] ?? "hallbookingapi"

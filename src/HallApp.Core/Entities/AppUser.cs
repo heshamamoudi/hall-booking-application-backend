@@ -21,12 +21,12 @@ public class AppUser : IdentityUser<int>
     public List<Notification> Notifications { get; set; } = new List<Notification>();
 
     [DataType(DataType.Date)]
-    public DateTime DOB { get; set; } = DateTime.Today;
+    public DateTime DOB { get; set; } = DateTime.UtcNow;
     public DateTime Created { get; set; } = DateTime.UtcNow;
     public DateTime Updated { get; set; } = DateTime.UtcNow;
     public bool Active { get; set; } = true;
-    
+
     // Refresh token properties
     public string RefreshToken { get; set; } = string.Empty;
-    public DateTime RefreshTokenExpiryTime { get; set; }
+    public DateTime RefreshTokenExpiryTime { get; set; } = DateTime.UtcNow;
 }

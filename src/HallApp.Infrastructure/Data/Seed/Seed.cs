@@ -8,6 +8,42 @@ namespace HallApp.Infrastructure.Data.Seed;
 
 public class Seed
 {
+    /// <summary>
+    /// Resolves the path to a seed data JSON file in the Data/ directory at the repo root.
+    /// </summary>
+    public static string GetSeedDataPath(string filename)
+    {
+        // Data/ folder is at the repo root: hall-booking-application-backend/Data/
+        // dotnet run CWD = src/HallApp.Web, BaseDirectory = src/HallApp.Web/bin/Debug/net8.0/
+        var cwd = Directory.GetCurrentDirectory();
+        var baseDir = AppContext.BaseDirectory;
+
+        var candidates = new[]
+        {
+            // From CWD (src/HallApp.Web) → go up 2 levels to repo root
+            Path.GetFullPath(Path.Combine(cwd, "..", "..", "Data", filename)),
+            // From BaseDirectory (bin/Debug/net8.0/) → go up 5 levels to repo root
+            Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "..", "Data", filename)),
+            // From CWD if running from repo root
+            Path.GetFullPath(Path.Combine(cwd, "Data", filename)),
+            // From BaseDirectory if published
+            Path.GetFullPath(Path.Combine(baseDir, "Data", filename)),
+        };
+
+        foreach (var path in candidates)
+        {
+            if (File.Exists(path))
+            {
+                Console.WriteLine($"📂 Found seed file: {path}");
+                return path;
+            }
+        }
+
+        // Fallback: return the first candidate (will fail gracefully later)
+        Console.WriteLine($"⚠️ Seed file '{filename}' not found in any known location");
+        return candidates[0];
+    }
+
     public static async Task SeedInformation(UserManager<AppUser> userManager, RoleManager<AppRole> roleManager, DataContext context)
     {
         Console.WriteLine("🌱 Starting database seeding...");
@@ -41,7 +77,7 @@ public class Seed
         {
             try
             {
-                var hallsPath = "/Users/heshamamoudi/Application Development/Hesham/HallAppBackend/Data/halls.json";
+                var hallsPath = GetSeedDataPath("halls.json");
                 var hallsData = await File.ReadAllTextAsync(hallsPath);
                 var halls = JsonSerializer.Deserialize<List<Hall>>(hallsData, new JsonSerializerOptions
                 {

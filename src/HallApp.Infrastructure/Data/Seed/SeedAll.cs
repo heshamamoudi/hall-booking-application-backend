@@ -119,7 +119,7 @@ public class SeedAll
         try
         {
             // Read service items from JSON file - direct absolute path
-            var jsonFilePath = "/Users/heshamamoudi/Application Development/Hesham/HallAppBackend/Data/serviceItems.json";
+            var jsonFilePath = Seed.GetSeedDataPath("serviceItems.json");
             
             if (!File.Exists(jsonFilePath))
             {
@@ -194,7 +194,7 @@ public class SeedAll
         try
         {
             // Read customers from JSON file
-            var customersPath = "/Users/heshamamoudi/Application Development/Hesham/HallAppBackend/Data/customers.json";
+            var customersPath = Seed.GetSeedDataPath("customers.json");
             
             if (!File.Exists(customersPath))
             {
@@ -242,7 +242,7 @@ public class SeedAll
         try
         {
             // Use direct absolute path
-            var bookingsPath = "/Users/heshamamoudi/Application Development/Hesham/HallAppBackend/Data/bookings.json";
+            var bookingsPath = Seed.GetSeedDataPath("bookings.json");
             var bookingsData = await File.ReadAllTextAsync(bookingsPath);
                 
             var bookings = JsonSerializer.Deserialize<List<Booking>>(bookingsData, new JsonSerializerOptions
@@ -259,11 +259,19 @@ public class SeedAll
                 {
                     var booking = bookings[i];
                     var customer = customers[i];
-                    
+
                     // Map booking to actual customer ID
                     booking.CustomerId = customer.Id;
                     booking.Created = DateTime.UtcNow;
                     booking.Updated = DateTime.UtcNow;
+                    booking.CreatedAt = DateTime.UtcNow;
+                    booking.UpdatedAt = DateTime.UtcNow;
+                    // Ensure all DateTime fields are UTC (PostgreSQL requires it)
+                    booking.BookingDate = DateTime.SpecifyKind(booking.BookingDate, DateTimeKind.Utc);
+                    booking.VisitDate = DateTime.SpecifyKind(booking.VisitDate, DateTimeKind.Utc);
+                    booking.EventDate = DateTime.SpecifyKind(booking.EventDate, DateTimeKind.Utc);
+                    if (booking.PaidAt.HasValue)
+                        booking.PaidAt = DateTime.SpecifyKind(booking.PaidAt.Value, DateTimeKind.Utc);
                     context.Bookings.Add(booking);
                 }
                 
@@ -306,7 +314,7 @@ public class SeedAll
                     
                 foreach (var vendor in selectedVendors)
                 {
-                    var startTime = DateTime.Today.AddHours(random.Next(10, 16)); // Random start time between 10 AM and 4 PM
+                    var startTime = DateTime.UtcNow.Date.AddHours(random.Next(10, 16)); // Random start time between 10 AM and 4 PM
                     var endTime = startTime.AddHours(random.Next(3, 6)); // 3-6 hours duration
                         
                     vendorBookings.Add(new VendorBooking
