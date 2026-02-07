@@ -74,7 +74,8 @@ namespace HallApp.Web.Controllers
                     Gender = registerDto.Gender ?? "NotSpecified", // Provide default value if not specified
                     DOB = registerDto.DOB ?? new DateTime(1900, 1, 1),
                     Created = DateTime.UtcNow,
-                    Updated = DateTime.UtcNow
+                    Updated = DateTime.UtcNow,
+                    Active = true
                 };
 
                 var result = await _userManager.CreateAsync(user, registerDto.Password);
@@ -166,7 +167,8 @@ namespace HallApp.Web.Controllers
                     Gender = registerDto.Gender ?? "NotSpecified",
                     DOB = registerDto.DOB ?? new DateTime(1900, 1, 1),
                     Created = DateTime.UtcNow,
-                    Updated = DateTime.UtcNow
+                    Updated = DateTime.UtcNow,
+                    Active = true
                 };
 
                 var result = await _userManager.CreateAsync(user, registerDto.Password);

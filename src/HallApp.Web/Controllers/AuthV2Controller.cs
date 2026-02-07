@@ -71,6 +71,12 @@ public class AuthV2Controller : ControllerBase
                 return Unauthorized(ErrorResponse("Invalid email or password"));
             }
 
+            if (!user.Active)
+            {
+                _logger.LogWarning("Login failed — account deactivated: {Email}", dto.Email);
+                return Unauthorized(ErrorResponse("Your account has been deactivated. Please contact support."));
+            }
+
             var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, true);
             if (!result.Succeeded)
             {
@@ -124,7 +130,7 @@ public class AuthV2Controller : ControllerBase
                 Email = dto.Email,
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
-                PhoneNumber = dto.PhoneNumber ?? string.Empty,
+                PhoneNumber = dto.PhoneNumber,
                 Gender = dto.Gender ?? "NotSpecified",
                 DOB = new DateTime(1900, 1, 1),
                 Created = DateTime.UtcNow,
@@ -144,14 +150,22 @@ public class AuthV2Controller : ControllerBase
             await _userManager.AddToRoleAsync(user, "Customer");
 
             // Create Customer entity
-            var customer = new HallApp.Core.Entities.CustomerEntities.Customer
+            try
             {
-                AppUserId = user.Id,
-                CreditMoney = 0,
-                Active = true,
-                Confirmed = false
-            };
-            await _customerService.CreateCustomerAsync(customer);
+                var customer = new HallApp.Core.Entities.CustomerEntities.Customer
+                {
+                    AppUserId = user.Id,
+                    CreditMoney = 0,
+                    Active = true,
+                    Confirmed = false
+                };
+                await _customerService.CreateCustomerAsync(customer);
+            }
+            catch (Exception custEx)
+            {
+                _logger.LogError(custEx, "Failed to create Customer entity for user {UserId}, continuing", user.Id);
+                // Don't fail registration if customer creation fails — user is already created
+            }
 
             // Generate tokens without storing in DB (matches v1 register behavior)
             var accessToken = await _tokenService.CreateToken(user);
@@ -170,8 +184,8 @@ public class AuthV2Controller : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error during v2 registration for {Email}", dto.Email);
-            return StatusCode(500, ErrorResponse("An unexpected error occurred. Please try again."));
+            _logger.LogError(ex, "Unexpected error during v2 registration for {Email}: {Message}", dto.Email, ex.Message);
+            return StatusCode(500, ErrorResponse($"Registration error: {ex.Message}"));
         }
     }
 

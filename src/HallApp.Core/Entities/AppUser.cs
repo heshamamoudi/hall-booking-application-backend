@@ -24,7 +24,7 @@ public class AppUser : IdentityUser<int>
     public DateTime DOB { get; set; } = DateTime.Today;
     public DateTime Created { get; set; } = DateTime.UtcNow;
     public DateTime Updated { get; set; } = DateTime.UtcNow;
-    public bool Active { get; set; } = false;
+    public bool Active { get; set; } = true;
     
     // Refresh token properties
     public string RefreshToken { get; set; } = string.Empty;

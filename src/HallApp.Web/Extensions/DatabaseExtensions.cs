@@ -47,6 +47,20 @@ namespace HallApp.Web.Extensions
                     throw;
                 }
                 
+                // Step 1b: Set all existing users to Active = true
+                // (AppUser.Active was previously defaulting to false; fix existing data)
+                try
+                {
+                    var updated = await context.Database.ExecuteSqlRawAsync(
+                        @"UPDATE ""Users"" SET ""Active"" = true WHERE ""Active"" = false");
+                    if (updated > 0)
+                        logger?.LogInformation("Set {Count} existing users to Active = true", updated);
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogWarning(ex, "Failed to update existing users Active status");
+                }
+
                 // Step 2: Verify database connection after creation/migration
                 bool canConnect = false;
                 try
