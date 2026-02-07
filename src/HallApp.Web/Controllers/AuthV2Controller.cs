@@ -71,12 +71,6 @@ public class AuthV2Controller : ControllerBase
                 return Unauthorized(ErrorResponse("Invalid email or password"));
             }
 
-            if (!user.Active)
-            {
-                _logger.LogWarning("Login failed — account deactivated: {Email}", dto.Email);
-                return Unauthorized(ErrorResponse("Account is deactivated"));
-            }
-
             var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, true);
             if (!result.Succeeded)
             {
@@ -159,7 +153,18 @@ public class AuthV2Controller : ControllerBase
             };
             await _customerService.CreateCustomerAsync(customer);
 
-            var response = await BuildAuthResponse(user);
+            // Generate tokens without storing in DB (matches v1 register behavior)
+            var accessToken = await _tokenService.CreateToken(user);
+            var refreshToken = await _tokenService.CreateRefreshToken(user);
+
+            var response = new AuthV2ResponseDto
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                ExpiresAt = DateTime.UtcNow.AddHours(1),
+                User = MapToUserDto(user)
+            };
+
             _logger.LogInformation("Customer {Email} registered (v2)", user.Email);
             return CreatedAtAction(nameof(GetCurrentUser), response);
         }
