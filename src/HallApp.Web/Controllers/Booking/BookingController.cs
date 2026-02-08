@@ -33,6 +33,7 @@ namespace HallApp.Web.Controllers.Booking
         private readonly IBookingFinancialService _financialService;
         private readonly IHallAvailabilityService _availabilityService;
         private readonly IPriceCalculationService _priceCalculationService;
+        private readonly ICustomerService _customerService;
 
         public BookingController(
             IBookingService bookingService,
@@ -41,7 +42,8 @@ namespace HallApp.Web.Controllers.Booking
             INotificationService notificationService,
             IBookingFinancialService financialService,
             IHallAvailabilityService availabilityService,
-            IPriceCalculationService priceCalculationService)
+            IPriceCalculationService priceCalculationService,
+            ICustomerService customerService)
         {
             _bookingService = bookingService;
             _mapper = mapper;
@@ -50,6 +52,7 @@ namespace HallApp.Web.Controllers.Booking
             _financialService = financialService;
             _availabilityService = availabilityService;
             _priceCalculationService = priceCalculationService;
+            _customerService = customerService;
         }
 
         /// <summary>
@@ -69,8 +72,16 @@ namespace HallApp.Web.Controllers.Booking
                     return Error<BookingDto>($"Invalid booking data: {errors}", 400);
                 }
 
-                // Set the customer ID from the authenticated user
-                bookingDto.CustomerId = UserId;
+                // Resolve Customer entity ID from AppUser ID (they are different!)
+                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (customer == null)
+                {
+                    return Error<BookingDto>("Customer profile not found. Please complete your profile first.", 404);
+                }
+                bookingDto.CustomerId = customer.Id;
+
+                // Ensure EventDate has UTC kind for PostgreSQL timestamptz columns
+                bookingDto.EventDate = DateTime.SpecifyKind(bookingDto.EventDate, DateTimeKind.Utc);
 
                 // Validate booking time using availability service
                 var (isValid, errorMessage) = await _availabilityService.ValidateBookingTimeAsync(
@@ -237,7 +248,9 @@ namespace HallApp.Web.Controllers.Booking
             try
             {
                 var booking = await _bookingService.GetBookingByIdAsync(bookingId);
-                if (booking == null || booking.CustomerId != UserId)
+                // Resolve Customer entity ID for ownership check
+                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (booking == null || (customer != null && booking.CustomerId != customer.Id && !IsAdmin))
                 {
                     return Error<object>("Booking not found", 404);
                 }
@@ -305,7 +318,8 @@ namespace HallApp.Web.Controllers.Booking
             try
             {
                 var booking = await _bookingService.GetBookingByIdAsync(bookingId);
-                if (booking == null || booking.CustomerId != UserId)
+                var altCustomer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (booking == null || (altCustomer != null && booking.CustomerId != altCustomer.Id && !IsAdmin))
                 {
                     return Error<object>("Booking not found", 404);
                 }
@@ -356,8 +370,9 @@ namespace HallApp.Web.Controllers.Booking
                     return Error<BookingDto>("Booking not found", 404);
                 }
 
-                // Verify the booking belongs to the customer
-                if (booking.CustomerId != UserId)
+                // Verify the booking belongs to the customer (resolve Customer entity ID)
+                var replaceCustomer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (replaceCustomer == null || booking.CustomerId != replaceCustomer.Id)
                 {
                     return Error<BookingDto>("You can only modify your own bookings", 403);
                 }
@@ -433,8 +448,9 @@ namespace HallApp.Web.Controllers.Booking
                     return Error<BookingDto>("Booking not found", 404);
                 }
 
-                // Verify the booking belongs to the customer
-                if (booking.CustomerId != UserId)
+                // Verify the booking belongs to the customer (resolve Customer entity ID)
+                var vendorReplaceCustomer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (vendorReplaceCustomer == null || booking.CustomerId != vendorReplaceCustomer.Id)
                 {
                     return Error<BookingDto>("You can only modify your own bookings", 403);
                 }
@@ -498,8 +514,13 @@ namespace HallApp.Web.Controllers.Booking
                     return Error<BookingDto>($"Invalid booking data: {errors}", 400);
                 }
 
-                // Set the customer ID from the authenticated user
-                bookingDto.CustomerId = UserId;
+                // Resolve Customer entity ID from AppUser ID
+                var createCustomer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (createCustomer == null)
+                {
+                    return Error<BookingDto>("Customer profile not found", 404);
+                }
+                bookingDto.CustomerId = createCustomer.Id;
 
                 var bookingEntity = _mapper.Map<HallApp.Core.Entities.BookingEntities.Booking>(bookingDto);
                 var booking = await _bookingService.CreateBookingAsync(bookingEntity);
@@ -578,7 +599,13 @@ namespace HallApp.Web.Controllers.Booking
         {
             try
             {
-                var bookings = await _bookingService.GetBookingsByCustomerIdAsync(UserId.ToString());
+                // Resolve Customer entity ID from AppUser ID
+                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (customer == null)
+                {
+                    return Success(Enumerable.Empty<BookingDto>(), "No bookings found");
+                }
+                var bookings = await _bookingService.GetBookingsByCustomerIdAsync(customer.Id.ToString());
                 var bookingDtos = _mapper.Map<IEnumerable<BookingDto>>(bookings);
                 return Success(bookingDtos, "Your bookings retrieved successfully");
             }
@@ -667,8 +694,9 @@ namespace HallApp.Web.Controllers.Booking
                     return Error<IEnumerable<BookingDto>>("Invalid customer ID format", 400);
                 }
 
-                // Customers can only access their own bookings
-                if (!IsAdmin && customerIdInt != UserId)
+                // Customers can only access their own bookings (resolve Customer entity ID)
+                var custBookingsCustomer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (!IsAdmin && (custBookingsCustomer == null || customerIdInt != custBookingsCustomer.Id))
                 {
                     return Error<IEnumerable<BookingDto>>("Access denied", 403);
                 }
@@ -712,6 +740,9 @@ namespace HallApp.Web.Controllers.Booking
 
                 BookingDto updatedBooking;
 
+                // Resolve Customer entity ID for ownership check
+                var updateCustomer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+
                 if (IsAdmin)
                 {
                     // Admin can update all fields
@@ -719,7 +750,7 @@ namespace HallApp.Web.Controllers.Booking
                     var updatedEntity = await _bookingService.UpdateBookingAsync(entityToUpdate);
                     updatedBooking = _mapper.Map<BookingDto>(updatedEntity);
                 }
-                else if (existingBooking.CustomerId == UserId)
+                else if (updateCustomer != null && existingBooking.CustomerId == updateCustomer.Id)
                 {
                     // Customer can only update limited fields
                     var entityToUpdate = _mapper.Map<HallApp.Core.Entities.BookingEntities.Booking>(updateDto);
@@ -785,8 +816,9 @@ namespace HallApp.Web.Controllers.Booking
                     return Error<string>($"Booking with ID {id} not found", 404);
                 }
 
-                // Check permissions
-                if (!IsAdmin && existingBooking.CustomerId != UserId)
+                // Check permissions (resolve Customer entity ID)
+                var cancelCustomer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (!IsAdmin && (cancelCustomer == null || existingBooking.CustomerId != cancelCustomer.Id))
                 {
                     return Error<string>("You can only cancel your own bookings", 403);
                 }
