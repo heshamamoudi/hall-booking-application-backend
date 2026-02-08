@@ -19,6 +19,7 @@ RUN dotnet publish src/HallApp.Web -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/publish .
+COPY --from=build /src/Data ./Data
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 ENTRYPOINT ["dotnet", "HallApp.Web.dll"]
