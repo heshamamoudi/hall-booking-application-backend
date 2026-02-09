@@ -232,7 +232,201 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<BookingDto>($"Failed to create booking: {ex.Message}", 500);
+                var innerMsg = ex.InnerException?.Message ?? "No inner exception";
+                Console.WriteLine($"❌ CreateBookingWithServices error: {ex.Message}");
+                Console.WriteLine($"❌ Inner exception: {innerMsg}");
+                return Error<BookingDto>($"Failed to create booking: {ex.Message} | Inner: {innerMsg}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Add vendor services to an existing booking (Customer only)
+        /// </summary>
+        /// <param name="bookingId">Booking ID</param>
+        /// <param name="services">List of vendor services to add</param>
+        /// <returns>Updated booking details</returns>
+        [Authorize(Roles = "Admin,Customer")]
+        [HttpPost("{bookingId:int}/add-vendor-services")]
+        public async Task<ActionResult<ApiResponse<BookingDto>>> AddVendorServicesToBooking(
+            int bookingId,
+            [FromBody] List<VendorServiceSelectionDto> services)
+        {
+            try
+            {
+                if (bookingId <= 0)
+                {
+                    return Error<BookingDto>("Invalid booking ID", 400);
+                }
+
+                if (services == null || !services.Any())
+                {
+                    return Error<BookingDto>("At least one service must be selected", 400);
+                }
+
+                // Get existing booking
+                var booking = await _bookingService.GetBookingByIdAsync(bookingId);
+                if (booking == null)
+                {
+                    return Error<BookingDto>("Booking not found", 404);
+                }
+
+                // Verify ownership (resolve Customer entity ID from AppUser ID)
+                var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                if (customer == null || (!IsAdmin && booking.CustomerId != customer.Id))
+                {
+                    return Error<BookingDto>("You can only modify your own bookings", 403);
+                }
+
+                // Only allow adding services when booking is in eligible status
+                var eligibleStatuses = new[] { "Pending", "HallApproved" };
+                if (!eligibleStatuses.Contains(booking.Status))
+                {
+                    return Error<BookingDto>(
+                        $"Cannot add services when booking status is '{booking.Status}'. Services can only be added when status is Pending or HallApproved.",
+                        400);
+                }
+
+                // Calculate financials for ALL services (existing + new)
+                var allServiceRequests = new List<BookingServiceRequest>();
+
+                // Include existing vendor booking services
+                foreach (var existingVb in booking.VendorBookings)
+                {
+                    foreach (var existingSvc in existingVb.Services)
+                    {
+                        allServiceRequests.Add(new BookingServiceRequest
+                        {
+                            ServiceItemId = existingSvc.ServiceItemId,
+                            VendorId = existingVb.VendorId,
+                            Quantity = existingSvc.Quantity,
+                            SpecialInstructions = existingSvc.SpecialInstructions ?? string.Empty
+                        });
+                    }
+                }
+
+                // Add new services
+                foreach (var svc in services)
+                {
+                    allServiceRequests.Add(new BookingServiceRequest
+                    {
+                        ServiceItemId = svc.ServiceItemId,
+                        VendorId = svc.VendorId,
+                        Quantity = svc.Quantity,
+                        SpecialInstructions = svc.SpecialInstructions ?? string.Empty
+                    });
+                }
+
+                // Recalculate full financial breakdown
+                var eventStart = DateTime.SpecifyKind(booking.EventDate.Add(booking.StartTime), DateTimeKind.Utc);
+                var eventEnd = DateTime.SpecifyKind(booking.EventDate.Add(booking.EndTime), DateTimeKind.Utc);
+
+                var financialBreakdown = await _financialService.CalculateBookingFinancialsAsync(
+                    booking.HallId,
+                    eventStart,
+                    eventEnd,
+                    allServiceRequests,
+                    booking.Coupon ?? string.Empty,
+                    "Riyadh"
+                );
+
+                // Create VendorBooking records for NEW services only
+                var newServicesByVendor = services.GroupBy(s => s.VendorId);
+
+                foreach (var vendorGroup in newServicesByVendor)
+                {
+                    var vendorId = vendorGroup.Key;
+                    var vendorServices = vendorGroup.ToList();
+
+                    var vendorBreakdown = financialBreakdown.VendorBreakdown
+                        .FirstOrDefault(vb => vb.VendorId == vendorId);
+
+                    var vendorTotalAmount = vendorBreakdown?.TotalAmount ?? 0;
+                    var vendorBookingServices = new List<VendorBookingService>();
+
+                    foreach (var svc in vendorServices)
+                    {
+                        var serviceDetail = vendorBreakdown?.Services
+                            .FirstOrDefault(s => s.ServiceItemId == svc.ServiceItemId);
+
+                        vendorBookingServices.Add(new VendorBookingService
+                        {
+                            ServiceItemId = svc.ServiceItemId,
+                            Quantity = svc.Quantity,
+                            SpecialInstructions = svc.SpecialInstructions,
+                            UnitPrice = serviceDetail?.UnitPrice ?? 0,
+                            TotalPrice = serviceDetail?.TotalPrice ?? 0,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        });
+                    }
+
+                    // Check if vendor already has a VendorBooking for this booking
+                    var existingVendorBooking = booking.VendorBookings
+                        .FirstOrDefault(vb => vb.VendorId == vendorId);
+
+                    if (existingVendorBooking != null)
+                    {
+                        // Add services to existing VendorBooking
+                        foreach (var vbs in vendorBookingServices)
+                        {
+                            existingVendorBooking.Services.Add(vbs);
+                        }
+                        existingVendorBooking.TotalAmount += vendorTotalAmount;
+                        existingVendorBooking.UpdatedAt = DateTime.UtcNow;
+                    }
+                    else
+                    {
+                        // Create new VendorBooking
+                        var vendorBooking = new VendorBooking
+                        {
+                            VendorId = vendorId,
+                            StartTime = eventStart,
+                            EndTime = eventEnd,
+                            Status = "Pending",
+                            TotalAmount = vendorTotalAmount,
+                            ServiceDate = DateTime.SpecifyKind(booking.EventDate, DateTimeKind.Utc),
+                            Services = vendorBookingServices,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        booking.VendorBookings.Add(vendorBooking);
+                    }
+                }
+
+                // Update financial totals on booking
+                booking.VendorServicesCost = financialBreakdown.VendorServicesCost;
+                booking.Subtotal = financialBreakdown.Subtotal;
+                booking.DiscountAmount = financialBreakdown.DiscountAmount;
+                booking.TaxAmount = financialBreakdown.TaxAmount;
+                booking.TaxRate = financialBreakdown.TaxRate;
+                booking.TotalAmount = financialBreakdown.TotalAmount;
+
+                var updatedBooking = await _bookingService.UpdateBookingAsync(booking);
+
+                // Notify customer
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _notificationService.CreateNotificationAsync(
+                            booking.CustomerId,
+                            "Vendor Services Added",
+                            $"Vendor services have been added to your booking. Updated total: {financialBreakdown.TotalAmount} {financialBreakdown.Currency}. Booking ID: {booking.Id}",
+                            "Booking"
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Notification error: {ex.Message}");
+                    }
+                });
+
+                var bookingResponseDto = _mapper.Map<BookingDto>(updatedBooking);
+                return Success(bookingResponseDto, "Vendor services added successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error<BookingDto>($"Failed to add vendor services: {ex.Message}", 500);
             }
         }
 
