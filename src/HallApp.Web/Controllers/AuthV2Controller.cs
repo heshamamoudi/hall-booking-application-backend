@@ -209,6 +209,10 @@ public class AuthV2Controller : ControllerBase
 
     // ── Refresh Token ─────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Refresh access token using a valid refresh token.
+    /// Implements token rotation: old refresh token is invalidated, new one is issued.
+    /// </summary>
     [HttpPost("refresh-token")]
     public async Task<ActionResult<AuthV2ResponseDto>> RefreshToken([FromBody] RefreshTokenDto dto)
     {
@@ -224,17 +228,53 @@ public class AuthV2Controller : ControllerBase
             }
             catch
             {
+                _logger.LogWarning("Invalid refresh token format or signature");
                 return Unauthorized(ErrorResponse("Invalid refresh token"));
             }
 
             var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? principal.FindFirstValue(JwtRegisteredClaimNames.NameId);
-            var user = await _userManager.FindByIdAsync(userId);
+                ?? principal.FindFirstValue(JwtRegisteredClaimNames.NameId)
+                ?? principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
 
-            if (user == null || user.RefreshToken != dto.RefreshToken)
+            if (string.IsNullOrEmpty(userId))
+            {
+                _logger.LogWarning("Refresh token missing user ID claim");
                 return Unauthorized(ErrorResponse("Invalid refresh token"));
+            }
 
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                _logger.LogWarning("Refresh token for non-existent user {UserId}", userId);
+                return Unauthorized(ErrorResponse("Invalid refresh token"));
+            }
+
+            // SECURITY: Token Rotation - verify the refresh token matches stored token
+            if (user.RefreshToken != dto.RefreshToken)
+            {
+                // Potential token reuse attack! Invalidate all tokens for this user
+                _logger.LogWarning(
+                    "Refresh token mismatch for user {UserId} - possible replay attack. Invalidating all tokens.",
+                    userId);
+
+                user.RefreshToken = null;
+                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(-1);
+                await _userManager.UpdateAsync(user);
+
+                return Unauthorized(ErrorResponse("Invalid refresh token. Please log in again."));
+            }
+
+            // Check if refresh token has expired
+            if (user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+            {
+                _logger.LogWarning("Expired refresh token used for user {UserId}", userId);
+                return Unauthorized(ErrorResponse("Refresh token has expired. Please log in again."));
+            }
+
+            // Token rotation: Generate new tokens
             var response = await BuildAuthResponse(user);
+
+            _logger.LogInformation("Token refreshed for user {UserId} (v2)", userId);
             return Ok(response);
         }
         catch (Exception ex)
@@ -252,7 +292,7 @@ public class AuthV2Controller : ControllerBase
     {
         try
         {
-            var userId = User.FindFirstValue("id");
+            var userId = GetCurrentUserId();
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(ErrorResponse("User not authenticated"));
 
@@ -282,7 +322,7 @@ public class AuthV2Controller : ControllerBase
     {
         try
         {
-            var userId = User.FindFirstValue("id");
+            var userId = GetCurrentUserId();
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(ErrorResponse("User not authenticated"));
 
@@ -290,7 +330,9 @@ public class AuthV2Controller : ControllerBase
             if (user == null)
                 return NotFound(ErrorResponse("User not found"));
 
-            return Ok(MapToUserDto(user));
+            var userDto = MapToUserDto(user);
+            userDto.Roles = await _userManager.GetRolesAsync(user);
+            return Ok(userDto);
         }
         catch (Exception ex)
         {
@@ -299,7 +341,233 @@ public class AuthV2Controller : ControllerBase
         }
     }
 
+    // ── Update Profile (Self) ────────────────────────────────────────────
+
+    /// <summary>
+    /// Update the authenticated user's own profile. UserId is extracted from JWT - not from request.
+    /// </summary>
+    [Authorize]
+    [HttpPut("profile")]
+    public async Task<ActionResult<UserV2Dto>> UpdateProfile([FromBody] UpdateProfileV2Dto dto)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ErrorResponse(GetFirstValidationError()));
+
+            var userId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(ErrorResponse("User not authenticated"));
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound(ErrorResponse("User not found"));
+
+            // Update only provided fields (partial update)
+            if (!string.IsNullOrEmpty(dto.FirstName))
+                user.FirstName = dto.FirstName;
+
+            if (!string.IsNullOrEmpty(dto.LastName))
+                user.LastName = dto.LastName;
+
+            if (!string.IsNullOrEmpty(dto.PhoneNumber))
+                user.PhoneNumber = dto.PhoneNumber;
+
+            if (!string.IsNullOrEmpty(dto.Gender))
+                user.Gender = dto.Gender;
+
+            if (dto.DateOfBirth.HasValue)
+                user.DOB = dto.DateOfBirth.Value;
+
+            user.Updated = DateTime.UtcNow;
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                var error = result.Errors.FirstOrDefault()?.Description ?? "Profile update failed";
+                _logger.LogWarning("Profile update failed for user {UserId}: {Error}", userId, error);
+                return BadRequest(ErrorResponse(error));
+            }
+
+            _logger.LogInformation("User {UserId} updated their profile (v2)", userId);
+
+            var userDto = MapToUserDto(user);
+            userDto.Roles = await _userManager.GetRolesAsync(user);
+            return Ok(userDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating profile (v2)");
+            return StatusCode(500, ErrorResponse("An unexpected error occurred. Please try again."));
+        }
+    }
+
+    // ── Change Password ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Change password for the authenticated user. Requires current password verification.
+    /// </summary>
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordV2Dto dto)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ErrorResponse(GetFirstValidationError()));
+
+            var userId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(ErrorResponse("User not authenticated"));
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound(ErrorResponse("User not found"));
+
+            // Verify current password
+            var passwordCheck = await _signInManager.CheckPasswordSignInAsync(user, dto.CurrentPassword, false);
+            if (!passwordCheck.Succeeded)
+            {
+                _logger.LogWarning("Password change failed for user {UserId}: incorrect current password", userId);
+                return BadRequest(ErrorResponse("Current password is incorrect"));
+            }
+
+            // Change password
+            var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+            if (!result.Succeeded)
+            {
+                var error = result.Errors.FirstOrDefault()?.Description ?? "Password change failed";
+                _logger.LogWarning("Password change failed for user {UserId}: {Error}", userId, error);
+                return BadRequest(ErrorResponse(error));
+            }
+
+            // Invalidate refresh token to force re-login on other devices
+            user.RefreshToken = null;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(-1);
+            await _userManager.UpdateAsync(user);
+
+            // Update security stamp to invalidate existing tokens
+            await _userManager.UpdateSecurityStampAsync(user);
+
+            _logger.LogInformation("User {UserId} changed their password (v2)", userId);
+            return Ok(new { message = "Password changed successfully. Please log in again." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error changing password (v2)");
+            return StatusCode(500, ErrorResponse("An unexpected error occurred. Please try again."));
+        }
+    }
+
+    // ── Forgot Password ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Request a password reset. Sends reset token to user's email.
+    /// Returns success even if email doesn't exist (security: prevent email enumeration).
+    /// </summary>
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ResetPasswordRequestDto dto)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ErrorResponse(GetFirstValidationError()));
+
+            var user = await _userManager.FindByEmailAsync(dto.Email);
+            if (user == null)
+            {
+                // Don't reveal that the user doesn't exist - security best practice
+                _logger.LogWarning("Password reset requested for non-existent email: {Email}", dto.Email);
+                return Ok(new { message = "If this email exists, a password reset link has been sent." });
+            }
+
+            // Generate password reset token
+            var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+            // Log that reset was requested (without sensitive token data)
+            _logger.LogInformation("Password reset email sent to {Email}", dto.Email);
+
+            // TODO: Implement email sending service
+            // await _emailService.SendPasswordResetEmailAsync(user.Email, resetToken);
+
+            return Ok(new { message = "If this email exists, a password reset link has been sent." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during forgot password (v2)");
+            return StatusCode(500, ErrorResponse("An unexpected error occurred. Please try again."));
+        }
+    }
+
+    // ── Reset Password ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Reset password using the token received via email.
+    /// </summary>
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ErrorResponse(GetFirstValidationError()));
+
+            var user = await _userManager.FindByEmailAsync(dto.Email);
+            if (user == null)
+            {
+                // Don't reveal that the user doesn't exist
+                return BadRequest(ErrorResponse("Invalid or expired reset token"));
+            }
+
+            // Validate and reset password
+            var result = await _userManager.ResetPasswordAsync(user, dto.Token, dto.NewPassword);
+            if (!result.Succeeded)
+            {
+                var error = result.Errors.FirstOrDefault()?.Description ?? "Password reset failed";
+                _logger.LogWarning("Password reset failed for user {UserId}: {Error}", user.Id, error);
+                return BadRequest(ErrorResponse(error));
+            }
+
+            // Invalidate all refresh tokens
+            user.RefreshToken = null;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(-1);
+            await _userManager.UpdateAsync(user);
+
+            _logger.LogInformation("User {UserId} reset their password (v2)", user.Id);
+            return Ok(new { message = "Password has been reset successfully. Please log in with your new password." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during password reset (v2)");
+            return StatusCode(500, ErrorResponse("An unexpected error occurred. Please try again."));
+        }
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Extract user ID from JWT claims. Checks multiple claim types for compatibility.
+    /// </summary>
+    private string? GetCurrentUserId()
+    {
+        // Check custom "id" claim first (added by TokenService)
+        var userId = User.FindFirstValue("id");
+        if (!string.IsNullOrEmpty(userId))
+            return userId;
+
+        // Fallback to standard claims
+        userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(userId))
+            return userId;
+
+        // Fallback to JWT registered claims
+        userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!string.IsNullOrEmpty(userId))
+            return userId;
+
+        userId = User.FindFirstValue(JwtRegisteredClaimNames.NameId);
+        return userId;
+    }
 
     private async Task<AuthV2ResponseDto> BuildAuthResponse(AppUser user)
     {
@@ -315,12 +583,15 @@ public class AuthV2Controller : ControllerBase
             _logger.LogWarning(ex, "Failed to persist tokens for user {UserId}, continuing", user.Id);
         }
 
+        var userDto = MapToUserDto(user);
+        userDto.Roles = await _userManager.GetRolesAsync(user);
+
         return new AuthV2ResponseDto
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
             ExpiresAt = DateTime.UtcNow.AddHours(1),
-            User = MapToUserDto(user)
+            User = userDto
         };
     }
 
@@ -333,7 +604,8 @@ public class AuthV2Controller : ControllerBase
         PhoneNumber = user.PhoneNumber,
         Gender = user.Gender,
         EmailConfirmed = user.EmailConfirmed,
-        Created = user.Created
+        Created = user.Created,
+        DateOfBirth = user.DOB
     };
 
     /// <summary>

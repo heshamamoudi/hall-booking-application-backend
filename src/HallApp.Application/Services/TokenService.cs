@@ -32,9 +32,12 @@ public class TokenService : ITokenService
     {
         var claims = new List<Claim>{
             new Claim(JwtRegisteredClaimNames.NameId, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
+            new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName ?? string.Empty),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),  // Add for SignalR
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString())  // Standard subject claim
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),  // Standard subject claim
+            new Claim("id", user.Id.ToString()),  // Custom claim for controller compatibility
+            new Claim("email", user.Email ?? string.Empty),
+            new Claim("name", $"{user.FirstName} {user.LastName}".Trim())
         };
 
         // Add roles to claims

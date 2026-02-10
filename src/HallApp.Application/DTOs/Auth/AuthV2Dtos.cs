@@ -79,4 +79,57 @@ public class UserV2Dto
     public string? Gender { get; set; }
     public bool EmailConfirmed { get; set; }
     public DateTime Created { get; set; }
+    public DateTime? DateOfBirth { get; set; }
+    public string? PhotoUrl { get; set; }
+    public IList<string> Roles { get; set; } = [];
+}
+
+// ── Update Profile ───────────────────────────────────────────────────────
+
+public class UpdateProfileV2Dto
+{
+    [StringLength(50, MinimumLength = 2, ErrorMessage = "First name must be between 2 and 50 characters")]
+    public string? FirstName { get; set; }
+
+    [StringLength(50, MinimumLength = 2, ErrorMessage = "Last name must be between 2 and 50 characters")]
+    public string? LastName { get; set; }
+
+    [Phone(ErrorMessage = "Invalid phone number format")]
+    public string? PhoneNumber { get; set; }
+
+    public string? Gender { get; set; }
+
+    public DateTime? DateOfBirth { get; set; }
+}
+
+// ── Change Password ───────────────────────────────────────────────────────
+
+public class ChangePasswordV2Dto
+{
+    [Required(ErrorMessage = "Current password is required")]
+    public string CurrentPassword { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "New password is required")]
+    [StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters")]
+    public string NewPassword { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Confirm password is required")]
+    [Compare("NewPassword", ErrorMessage = "Passwords do not match")]
+    public string ConfirmPassword { get; set; } = string.Empty;
+}
+
+// ── Standard Error Response ───────────────────────────────────────────────
+
+public class ErrorResponseV2Dto
+{
+    public string Message { get; set; } = string.Empty;
+    public string? Code { get; set; }
+    public Dictionary<string, string[]>? Errors { get; set; }
+}
+
+// ── Success Response with Message ─────────────────────────────────────────
+
+public class SuccessResponseV2Dto
+{
+    public string Message { get; set; } = string.Empty;
 }

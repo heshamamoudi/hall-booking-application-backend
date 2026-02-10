@@ -60,7 +60,7 @@ namespace HallApp.Web.Extensions
                     
                     // OWASP recommends validating issuer and audience
                     ValidateIssuer = true,
-                    ValidIssuer = config["JWT:Issuer"] ?? "HallBookingApp",
+                    ValidIssuer = config["JWT:Issuer"] ?? "hallbookingapi",
                     ValidateAudience = true,
                     ValidAudience = config["JWT:Audience"] ?? "hallbookingapp",
                     
