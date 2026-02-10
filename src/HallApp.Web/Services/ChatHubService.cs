@@ -22,7 +22,14 @@ public class ChatHubService : IChatHubService
     }
 
     /// <summary>
-    /// Sends a new message to all participants in a conversation
+    /// Sends a new message to all participants in a conversation.
+    ///
+    /// FIX CHAT-BUG-001: The isRead field is now set to false for all recipients.
+    /// The frontend should determine if the message is "read" by the current user based on:
+    /// 1. If senderId matches the current user's ID, it's their own message (always considered "read")
+    /// 2. Otherwise, it's unread until they explicitly mark it as read
+    ///
+    /// This is the correct behavior for per-user read tracking.
     /// </summary>
     public async Task SendMessageToConversationAsync(int conversationId, ChatMessage message)
     {
@@ -42,6 +49,9 @@ public class ChatHubService : IChatHubService
         // Sanitize message content to prevent XSS
         var sanitizedMessage = System.Net.WebUtility.HtmlEncode(message.Message ?? "");
 
+        // FIX CHAT-BUG-001: Always broadcast isRead=false for new messages
+        // The frontend determines read status based on whether the current user is the sender
+        // Sender's own messages are always "read" for them, but unread for recipients
         await _hubContext.Clients
             .Group(groupName)
             .SendAsync("ReceiveMessage", new
@@ -54,8 +64,8 @@ public class ChatHubService : IChatHubService
                 message = sanitizedMessage,
                 messageType = message.MessageType,
                 sentAt = message.SentAt,
-                isRead = message.IsRead,
-                readAt = message.ReadAt,
+                isRead = false, // FIX: Always false for broadcast - frontend checks if senderId == currentUserId
+                readAt = (DateTime?)null, // No read timestamp for new messages
                 isSystemMessage = message.IsSystemMessage,
                 attachmentUrl = message.AttachmentUrl,
                 attachmentName = message.AttachmentName,

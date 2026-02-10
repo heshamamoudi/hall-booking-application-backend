@@ -29,6 +29,34 @@ namespace HallApp.Core.Interfaces.IRepositories
         Task<bool> MarkAllMessagesAsReadAsync(int conversationId, int userId);
         Task<int> GetUnreadMessageCountAsync(int conversationId, int userId);
 
+        // Per-User Read Status Operations (NEW - Fixes CHAT-BUG-001)
+        /// <summary>
+        /// Marks all messages in a conversation as read for a specific user using per-user read tracking.
+        /// </summary>
+        Task<bool> MarkMessagesAsReadForUserAsync(int conversationId, int userId);
+
+        /// <summary>
+        /// Gets the unread message count for a specific user using per-user read tracking.
+        /// </summary>
+        Task<int> GetUnreadMessageCountForUserAsync(int conversationId, int userId);
+
+        /// <summary>
+        /// Checks if a specific message is read by a specific user.
+        /// </summary>
+        Task<bool> IsMessageReadByUserAsync(int messageId, int userId);
+
+        /// <summary>
+        /// Creates initial read status entries for the sender when a message is sent.
+        /// Sender's messages are automatically marked as read for the sender.
+        /// </summary>
+        Task CreateSenderReadStatusAsync(int messageId, int senderId);
+
+        /// <summary>
+        /// Marks all messages in a conversation as unread for a specific user.
+        /// This deletes the ChatMessageReadStatus entries for the user in the conversation.
+        /// </summary>
+        Task<bool> MarkMessagesAsUnreadForUserAsync(int conversationId, int userId);
+
         // Statistics
         Task<int> GetActiveConversationsCountAsync();
         Task<int> GetPendingConversationsCountAsync();

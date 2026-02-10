@@ -241,6 +241,162 @@ namespace HallApp.Infrastructure.Data.Repositories
 
         #endregion
 
+        #region Per-User Read Status Operations (Fixes CHAT-BUG-001)
+
+        /// <summary>
+        /// Marks all messages in a conversation as read for a specific user using per-user read tracking.
+        /// This creates or updates ChatMessageReadStatus entries for each message not sent by the user.
+        /// </summary>
+        public async Task<bool> MarkMessagesAsReadForUserAsync(int conversationId, int userId)
+        {
+            // Get all messages in the conversation not sent by this user
+            var messages = await _context.ChatMessages
+                .Where(m => m.ConversationId == conversationId && m.SenderId != userId && !m.IsDeleted)
+                .Select(m => m.Id)
+                .ToListAsync();
+
+            if (!messages.Any())
+                return true;
+
+            // Get existing read statuses for this user
+            var existingStatuses = await _context.ChatMessageReadStatuses
+                .Where(rs => messages.Contains(rs.MessageId) && rs.UserId == userId)
+                .ToDictionaryAsync(rs => rs.MessageId);
+
+            var now = DateTime.UtcNow;
+
+            foreach (var messageId in messages)
+            {
+                if (existingStatuses.TryGetValue(messageId, out var status))
+                {
+                    // Update existing status
+                    if (!status.IsRead)
+                    {
+                        status.IsRead = true;
+                        status.ReadAt = now;
+                    }
+                }
+                else
+                {
+                    // Create new read status
+                    _context.ChatMessageReadStatuses.Add(new ChatMessageReadStatus
+                    {
+                        MessageId = messageId,
+                        UserId = userId,
+                        IsRead = true,
+                        ReadAt = now
+                    });
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        /// <summary>
+        /// Gets the unread message count for a specific user using per-user read tracking.
+        /// A message is unread if:
+        /// 1. It was not sent by the user, AND
+        /// 2. Either no ChatMessageReadStatus exists for this user/message, OR IsRead is false
+        /// </summary>
+        public async Task<int> GetUnreadMessageCountForUserAsync(int conversationId, int userId)
+        {
+            // Get all message IDs in the conversation not sent by this user
+            var messageIds = await _context.ChatMessages
+                .Where(m => m.ConversationId == conversationId && m.SenderId != userId && !m.IsDeleted)
+                .Select(m => m.Id)
+                .ToListAsync();
+
+            if (!messageIds.Any())
+                return 0;
+
+            // Get message IDs that have been read by this user
+            var readMessageIds = await _context.ChatMessageReadStatuses
+                .Where(rs => messageIds.Contains(rs.MessageId) && rs.UserId == userId && rs.IsRead)
+                .Select(rs => rs.MessageId)
+                .ToListAsync();
+
+            // Unread = total messages not sent by user - messages marked as read
+            return messageIds.Count - readMessageIds.Count;
+        }
+
+        /// <summary>
+        /// Checks if a specific message is read by a specific user.
+        /// </summary>
+        public async Task<bool> IsMessageReadByUserAsync(int messageId, int userId)
+        {
+            // Check if the user sent the message (sender always "reads" their own message)
+            var message = await _context.ChatMessages.FindAsync(messageId);
+            if (message == null)
+                return false;
+
+            if (message.SenderId == userId)
+                return true; // Sender's own message is always "read"
+
+            // Check per-user read status
+            var status = await _context.ChatMessageReadStatuses
+                .FirstOrDefaultAsync(rs => rs.MessageId == messageId && rs.UserId == userId);
+
+            return status?.IsRead ?? false;
+        }
+
+        /// <summary>
+        /// Creates initial read status for the sender when a message is sent.
+        /// The sender's own message is marked as read immediately.
+        /// </summary>
+        public async Task CreateSenderReadStatusAsync(int messageId, int senderId)
+        {
+            var existingStatus = await _context.ChatMessageReadStatuses
+                .FirstOrDefaultAsync(rs => rs.MessageId == messageId && rs.UserId == senderId);
+
+            if (existingStatus == null)
+            {
+                _context.ChatMessageReadStatuses.Add(new ChatMessageReadStatus
+                {
+                    MessageId = messageId,
+                    UserId = senderId,
+                    IsRead = true,
+                    ReadAt = DateTime.UtcNow
+                });
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        /// <summary>
+        /// Marks all messages in a conversation as unread for a specific user.
+        /// This sets IsRead = false for all ChatMessageReadStatus entries for the user in the conversation,
+        /// or deletes them entirely so they show as unread.
+        /// </summary>
+        public async Task<bool> MarkMessagesAsUnreadForUserAsync(int conversationId, int userId)
+        {
+            // Get all message IDs in the conversation not sent by this user
+            var messageIds = await _context.ChatMessages
+                .Where(m => m.ConversationId == conversationId && m.SenderId != userId && !m.IsDeleted)
+                .Select(m => m.Id)
+                .ToListAsync();
+
+            if (!messageIds.Any())
+                return true;
+
+            // Get existing read statuses for this user in this conversation
+            var readStatuses = await _context.ChatMessageReadStatuses
+                .Where(rs => messageIds.Contains(rs.MessageId) && rs.UserId == userId)
+                .ToListAsync();
+
+            // Option 1: Set IsRead = false (keeps history of when first read)
+            // Option 2: Delete the entries entirely (cleaner, message appears as never read)
+            // We use Option 2 for cleaner semantics - "mark as unread" means treat as never read
+            if (readStatuses.Any())
+            {
+                _context.ChatMessageReadStatuses.RemoveRange(readStatuses);
+                await _context.SaveChangesAsync();
+            }
+
+            return true;
+        }
+
+        #endregion
+
         #region Statistics
 
         public async Task<int> GetActiveConversationsCountAsync()

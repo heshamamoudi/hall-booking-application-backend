@@ -48,6 +48,18 @@ namespace HallApp.Web.Controllers.Chat
             return userIdClaim != null ? int.Parse(userIdClaim.Value) : 0;
         }
 
+        /// <summary>
+        /// Populates UnreadCount for each conversation DTO using per-user read tracking.
+        /// AutoMapper sets UnreadCount to 0; this method calculates the actual per-user count.
+        /// </summary>
+        private async Task PopulateUnreadCountsAsync(IEnumerable<ChatConversationDto> conversationDtos, int userId)
+        {
+            foreach (var dto in conversationDtos)
+            {
+                dto.UnreadCount = await _chatService.GetUnreadCountAsync(dto.Id, userId);
+            }
+        }
+
         #region Manager Assignments
 
         /// <summary>
@@ -197,8 +209,12 @@ namespace HallApp.Web.Controllers.Chat
                     conversations = new List<ChatConversation>();
                 }
 
-                var conversationDtos = _mapper.Map<IEnumerable<ChatConversationDto>>(conversations);
-                return Success(conversationDtos, "Active conversations retrieved successfully");
+                var conversationDtos = _mapper.Map<List<ChatConversationDto>>(conversations);
+
+                // FIX CHAT-BUG-001: Populate per-user unread counts (AutoMapper sets 0, we calculate actual)
+                await PopulateUnreadCountsAsync(conversationDtos, userId);
+
+                return Success<IEnumerable<ChatConversationDto>>(conversationDtos, "Active conversations retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -268,8 +284,12 @@ namespace HallApp.Web.Controllers.Chat
                     conversations = new List<ChatConversation>();
                 }
 
-                var conversationDtos = _mapper.Map<IEnumerable<ChatConversationDto>>(conversations);
-                return Success(conversationDtos, "Historical conversations retrieved successfully");
+                var conversationDtos = _mapper.Map<List<ChatConversationDto>>(conversations);
+
+                // FIX CHAT-BUG-001: Populate per-user unread counts (AutoMapper sets 0, we calculate actual)
+                await PopulateUnreadCountsAsync(conversationDtos, userId);
+
+                return Success<IEnumerable<ChatConversationDto>>(conversationDtos, "Historical conversations retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -353,9 +373,14 @@ namespace HallApp.Web.Controllers.Chat
         {
             try
             {
+                var userId = GetCurrentUserId();
                 var conversations = await _chatService.GetAllConversationsAsync();
-                var conversationDtos = _mapper.Map<IEnumerable<ChatConversationDto>>(conversations);
-                return Success(conversationDtos, "Conversations retrieved successfully");
+                var conversationDtos = _mapper.Map<List<ChatConversationDto>>(conversations);
+
+                // FIX CHAT-BUG-001: Populate per-user unread counts (AutoMapper sets 0, we calculate actual)
+                await PopulateUnreadCountsAsync(conversationDtos, userId);
+
+                return Success<IEnumerable<ChatConversationDto>>(conversationDtos, "Conversations retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -405,8 +430,12 @@ namespace HallApp.Web.Controllers.Chat
             {
                 var userId = GetCurrentUserId();
                 var conversations = await _chatService.GetCustomerConversationsAsync(userId);
-                var conversationDtos = _mapper.Map<IEnumerable<ChatConversationDto>>(conversations);
-                return Success(conversationDtos, "Your conversations retrieved successfully");
+                var conversationDtos = _mapper.Map<List<ChatConversationDto>>(conversations);
+
+                // FIX CHAT-BUG-001: Populate per-user unread counts (AutoMapper sets 0, we calculate actual)
+                await PopulateUnreadCountsAsync(conversationDtos, userId);
+
+                return Success<IEnumerable<ChatConversationDto>>(conversationDtos, "Your conversations retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -425,8 +454,12 @@ namespace HallApp.Web.Controllers.Chat
             {
                 var userId = GetCurrentUserId();
                 var conversations = await _chatService.GetAgentConversationsAsync(userId);
-                var conversationDtos = _mapper.Map<IEnumerable<ChatConversationDto>>(conversations);
-                return Success(conversationDtos, "Assigned conversations retrieved successfully");
+                var conversationDtos = _mapper.Map<List<ChatConversationDto>>(conversations);
+
+                // FIX CHAT-BUG-001: Populate per-user unread counts (AutoMapper sets 0, we calculate actual)
+                await PopulateUnreadCountsAsync(conversationDtos, userId);
+
+                return Success<IEnumerable<ChatConversationDto>>(conversationDtos, "Assigned conversations retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -443,9 +476,14 @@ namespace HallApp.Web.Controllers.Chat
         {
             try
             {
+                var userId = GetCurrentUserId();
                 var conversations = await _chatService.GetUnassignedConversationsAsync();
-                var conversationDtos = _mapper.Map<IEnumerable<ChatConversationDto>>(conversations);
-                return Success(conversationDtos, "Unassigned conversations retrieved successfully");
+                var conversationDtos = _mapper.Map<List<ChatConversationDto>>(conversations);
+
+                // FIX CHAT-BUG-001: Populate per-user unread counts (AutoMapper sets 0, we calculate actual)
+                await PopulateUnreadCountsAsync(conversationDtos, userId);
+
+                return Success<IEnumerable<ChatConversationDto>>(conversationDtos, "Unassigned conversations retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -903,6 +941,42 @@ namespace HallApp.Web.Controllers.Chat
             catch (Exception ex)
             {
                 return Error<string>($"Failed to mark messages as read: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Mark messages as unread for the current user
+        /// </summary>
+        /// <remarks>
+        /// This allows users to mark a conversation as unread so they can return to it later.
+        /// Only affects the current user's read status, not other participants.
+        /// </remarks>
+        [HttpPost("conversations/{id:int}/mark-unread")]
+        public async Task<ActionResult<ApiResponse<string>>> MarkMessagesAsUnread(int id)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+
+                // Authorization check: User must have access to this conversation
+                var conversation = await _chatService.GetConversationByIdAsync(id);
+                if (conversation == null)
+                {
+                    return Error<string>("Conversation not found", 404);
+                }
+
+                if (!await CanAccessConversationAsync(userId, conversation))
+                {
+                    return Error<string>("Access denied", 403);
+                }
+
+                await _chatService.MarkMessagesAsUnreadAsync(id, userId);
+                return Success<string>("Messages marked as unread successfully", "Messages marked as unread");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to mark messages as unread for conversation {ConversationId}", id);
+                return Error<string>($"Failed to mark messages as unread: {ex.Message}", 500);
             }
         }
 

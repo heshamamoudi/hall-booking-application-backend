@@ -117,6 +117,8 @@ public class ChatMessage
 
     public long? AttachmentSize { get; set; }
 
+    // DEPRECATED: Use ChatMessageReadStatus for per-user read tracking
+    // Kept for backward compatibility - represents if ANY user has read
     public bool IsRead { get; set; } = false;
     public DateTime? ReadAt { get; set; }
 
@@ -128,6 +130,29 @@ public class ChatMessage
 
     // System message flag (auto-generated)
     public bool IsSystemMessage { get; set; } = false;
+
+    // Per-user read status tracking
+    public List<ChatMessageReadStatus> ReadStatuses { get; set; } = [];
+}
+
+/// <summary>
+/// Tracks per-user read status for chat messages.
+/// This enables proper unread message tracking where each user sees their own read/unread status.
+/// </summary>
+public class ChatMessageReadStatus
+{
+    public int Id { get; set; }
+
+    [Required]
+    public int MessageId { get; set; }
+    public ChatMessage? Message { get; set; }
+
+    [Required]
+    public int UserId { get; set; }
+    public AppUser? User { get; set; }
+
+    public bool IsRead { get; set; } = false;
+    public DateTime? ReadAt { get; set; }
 }
 
 /// <summary>

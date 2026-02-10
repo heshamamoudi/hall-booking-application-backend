@@ -26,6 +26,7 @@ namespace HallApp.Core.Interfaces.IServices
         Task<ChatMessage> SendMessageAsync(int conversationId, int senderId, string message, string senderType);
         Task<IEnumerable<ChatMessage>> GetConversationMessagesAsync(int conversationId);
         Task<bool> MarkMessagesAsReadAsync(int conversationId, int userId);
+        Task<bool> MarkMessagesAsUnreadAsync(int conversationId, int userId);
         Task<int> GetUnreadCountAsync(int conversationId, int userId);
 
         // Authorization

@@ -252,6 +252,9 @@ namespace HallApp.Application.Services
 
             var createdMessage = await _unitOfWork.ChatRepository.AddMessageAsync(chatMessage);
 
+            // FIX CHAT-BUG-001: Create per-user read status for sender (sender's own message is always "read" for them)
+            await _unitOfWork.ChatRepository.CreateSenderReadStatusAsync(createdMessage.Id, senderId);
+
             // FIXED: Load Sender navigation property for SignalR
             var messageWithSender = await _unitOfWork.ChatRepository.GetMessageByIdAsync(createdMessage.Id);
 
@@ -269,11 +272,11 @@ namespace HallApp.Application.Services
             {
                 // FIXED: Send message WITH Sender loaded for SenderName
                 await _chatHubService.SendMessageToConversationAsync(conversationId, messageWithSender);
-                _logger.LogInformation("📨 Real-time message sent to conversation {ConversationId}", conversationId);
+                _logger.LogInformation("Real-time message sent to conversation {ConversationId}", conversationId);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "⚠️ Failed to send real-time message for conversation {ConversationId}", conversationId);
+                _logger.LogWarning(ex, "Failed to send real-time message for conversation {ConversationId}", conversationId);
             }
 
             return createdMessage; // Return original for API response
@@ -286,7 +289,8 @@ namespace HallApp.Application.Services
 
         public async Task<bool> MarkMessagesAsReadAsync(int conversationId, int userId)
         {
-            var result = await _unitOfWork.ChatRepository.MarkAllMessagesAsReadAsync(conversationId, userId);
+            // FIX CHAT-BUG-001: Use per-user read status tracking instead of global IsRead flag
+            var result = await _unitOfWork.ChatRepository.MarkMessagesAsReadForUserAsync(conversationId, userId);
 
             // Send real-time read notification via SignalR
             if (result)
@@ -294,11 +298,11 @@ namespace HallApp.Application.Services
                 try
                 {
                     await _chatHubService.SendMessageReadNotificationAsync(conversationId, userId);
-                    _logger.LogInformation("📖 Messages marked as read in conversation {ConversationId} by user {UserId}", conversationId, userId);
+                    _logger.LogInformation("Messages marked as read in conversation {ConversationId} by user {UserId}", conversationId, userId);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "⚠️ Failed to send read notification for conversation {ConversationId}", conversationId);
+                    _logger.LogWarning(ex, "Failed to send read notification for conversation {ConversationId}", conversationId);
                 }
             }
 
@@ -307,7 +311,21 @@ namespace HallApp.Application.Services
 
         public async Task<int> GetUnreadCountAsync(int conversationId, int userId)
         {
-            return await _unitOfWork.ChatRepository.GetUnreadMessageCountAsync(conversationId, userId);
+            // FIX CHAT-BUG-001: Use per-user read status tracking instead of global IsRead flag
+            return await _unitOfWork.ChatRepository.GetUnreadMessageCountForUserAsync(conversationId, userId);
+        }
+
+        public async Task<bool> MarkMessagesAsUnreadAsync(int conversationId, int userId)
+        {
+            // Use per-user read status tracking to mark messages as unread
+            var result = await _unitOfWork.ChatRepository.MarkMessagesAsUnreadForUserAsync(conversationId, userId);
+
+            if (result)
+            {
+                _logger.LogInformation("Messages marked as unread in conversation {ConversationId} by user {UserId}", conversationId, userId);
+            }
+
+            return result;
         }
 
         #endregion

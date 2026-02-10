@@ -64,6 +64,7 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
     // Chat Entities
     public DbSet<ChatConversation> ChatConversations { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
+    public DbSet<ChatMessageReadStatus> ChatMessageReadStatuses { get; set; }
     public DbSet<ChatStatistics> ChatStatistics { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -477,10 +478,31 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
                 .HasForeignKey(m => m.SenderId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            entity.HasMany(m => m.ReadStatuses)
+                .WithOne(rs => rs.Message)
+                .HasForeignKey(rs => rs.MessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             // Indexes for performance
             entity.HasIndex(m => m.ConversationId);
             entity.HasIndex(m => m.SentAt);
             entity.HasIndex(m => m.IsRead);
+        });
+
+        // ChatMessageReadStatus configuration - Per-user read tracking
+        builder.Entity<ChatMessageReadStatus>(entity =>
+        {
+            entity.HasOne(rs => rs.User)
+                .WithMany()
+                .HasForeignKey(rs => rs.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Unique constraint: one read status per user per message
+            entity.HasIndex(rs => new { rs.MessageId, rs.UserId })
+                .IsUnique();
+
+            // Index for querying unread messages for a user
+            entity.HasIndex(rs => new { rs.UserId, rs.IsRead });
         });
 
         // ChatStatistics configuration
