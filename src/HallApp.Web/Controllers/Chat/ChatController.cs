@@ -651,7 +651,9 @@ namespace HallApp.Web.Controllers.Chat
         }
 
         /// <summary>
-        /// Close conversation (Admin only)
+        /// Close conversation (Admin only).
+        /// Sends ChatClosed SignalR event to all participants.
+        /// After closing, no new messages can be sent and participants can rate the conversation.
         /// </summary>
         [Authorize(Roles = "Admin")]
         [HttpPost("conversations/{id:int}/close")]
@@ -659,19 +661,22 @@ namespace HallApp.Web.Controllers.Chat
         {
             try
             {
-                var conversation = await _chatService.CloseConversationAsync(id, dto.ResolutionNotes);
+                var userId = GetCurrentUserId();
+                var conversation = await _chatService.CloseConversationAsync(id, userId, dto.ResolutionNotes);
                 var conversationDto = _mapper.Map<ChatConversationDto>(conversation);
                 return Success(conversationDto, "Conversation closed successfully");
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to close conversation {ConversationId}", id);
                 return Error<ChatConversationDto>($"Failed to close conversation: {ex.Message}", 500);
             }
         }
 
         /// <summary>
-        /// Reopen conversation (Customer or Admin)
+        /// Reopen conversation (Admin only)
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpPost("conversations/{id:int}/reopen")]
         public async Task<ActionResult<ApiResponse<ChatConversationDto>>> ReopenConversation(int id)
         {
@@ -985,30 +990,171 @@ namespace HallApp.Web.Controllers.Chat
         #region Rating
 
         /// <summary>
-        /// Rate conversation and employee (Customer only)
+        /// Rate a closed conversation (Participants only - not Admins).
+        /// Each user can only rate a conversation once.
+        /// Conversation must be closed before rating.
         /// </summary>
-        [Authorize(Roles = "Customer")]
+        /// <remarks>
+        /// Authorization: Only participants (Customer, HallManager, VendorManager) can rate.
+        /// Admins cannot rate conversations.
+        /// Returns 400 if conversation is not closed or user already rated.
+        /// </remarks>
+        [Authorize(Roles = "Customer,HallManager,VendorManager")]
         [HttpPost("conversations/{id:int}/rate")]
-        public async Task<ActionResult<ApiResponse<string>>> RateConversation(int id, [FromBody] RateConversationDto dto)
+        public async Task<ActionResult<ApiResponse<ChatRatingResponseDto>>> RateConversation(int id, [FromBody] RateConversationDto dto)
         {
             try
             {
+                var userId = GetCurrentUserId();
+                var userRoles = User.Claims
+                    .Where(c => c.Type.Contains("role", StringComparison.OrdinalIgnoreCase))
+                    .Select(c => c.Value)
+                    .ToList();
+
+                // SECURITY FIX: Explicit IDOR protection - verify user is a participant FIRST
+                var canAccess = await _chatService.CanAccessConversationAsync(userId, id, userRoles);
+                if (!canAccess)
+                {
+                    return Error<ChatRatingResponseDto>("You are not a participant in this conversation", 403);
+                }
+
+                // Validate rating range
                 if (dto.Rating < 1 || dto.Rating > 5)
                 {
-                    return Error<string>("Rating must be between 1 and 5", 400);
+                    return Error<ChatRatingResponseDto>("Rating must be between 1 and 5", 400);
                 }
 
-                var result = await _chatService.RateConversationAsync(id, dto.Rating, dto.Feedback);
-                if (!result)
+                // Check if user can rate this conversation (closed status, not already rated, etc.)
+                if (!await _chatService.CanUserRateConversationAsync(id, userId, userRoles))
                 {
-                    return Error<string>("Failed to rate conversation", 500);
+                    // Determine specific reason
+                    var conversation = await _chatService.GetConversationByIdAsync(id);
+                    if (conversation == null)
+                        return Error<ChatRatingResponseDto>("Conversation not found", 404);
+
+                    if (conversation.Status != "Closed" && conversation.Status != "Resolved")
+                        return Error<ChatRatingResponseDto>("Conversation must be closed before rating", 400);
+
+                    var existingRating = await _chatService.GetUserRatingAsync(id, userId);
+                    if (existingRating != null)
+                        return Error<ChatRatingResponseDto>("You have already rated this conversation", 400);
+
+                    return Error<ChatRatingResponseDto>("You are not authorized to rate this conversation", 403);
                 }
 
-                return Success<string>($"Thank you for your feedback! You rated this conversation {dto.Rating}/5 stars.", "Rating submitted successfully");
+                var rating = await _chatService.SubmitRatingAsync(id, userId, dto.Rating, dto.Feedback);
+
+                var ratingDto = new ChatRatingResponseDto
+                {
+                    Id = rating.Id,
+                    ConversationId = rating.ConversationId,
+                    UserId = rating.UserId,
+                    UserName = rating.User != null
+                        ? $"{rating.User.FirstName} {rating.User.LastName}".Trim()
+                        : "User",
+                    Rating = rating.Rating,
+                    Comment = rating.Comment,
+                    RatedAt = rating.RatedAt
+                };
+
+                return Success(ratingDto, $"Thank you for your feedback! You rated this conversation {dto.Rating}/5 stars.");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Error<ChatRatingResponseDto>(ex.Message, 400);
             }
             catch (Exception ex)
             {
-                return Error<string>($"Failed to rate conversation: {ex.Message}", 500);
+                _logger.LogError(ex, "Failed to rate conversation {ConversationId}", id);
+                return Error<ChatRatingResponseDto>($"Failed to rate conversation: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get the current user's rating for a conversation
+        /// </summary>
+        [HttpGet("conversations/{id:int}/rating")]
+        public async Task<ActionResult<ApiResponse<ChatRatingResponseDto>>> GetMyRating(int id)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+
+                // Authorization check: User must have access to this conversation
+                var conversation = await _chatService.GetConversationByIdAsync(id);
+                if (conversation == null)
+                {
+                    return Error<ChatRatingResponseDto>("Conversation not found", 404);
+                }
+
+                if (!await CanAccessConversationAsync(userId, conversation))
+                {
+                    return Error<ChatRatingResponseDto>("Access denied", 403);
+                }
+
+                var rating = await _chatService.GetUserRatingAsync(id, userId);
+                if (rating == null)
+                {
+                    return Success<ChatRatingResponseDto>(null!, "You have not rated this conversation yet");
+                }
+
+                var ratingDto = new ChatRatingResponseDto
+                {
+                    Id = rating.Id,
+                    ConversationId = rating.ConversationId,
+                    UserId = rating.UserId,
+                    UserName = rating.User != null
+                        ? $"{rating.User.FirstName} {rating.User.LastName}".Trim()
+                        : "User",
+                    Rating = rating.Rating,
+                    Comment = rating.Comment,
+                    RatedAt = rating.RatedAt
+                };
+
+                return Success(ratingDto, "Rating retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get rating for conversation {ConversationId}", id);
+                return Error<ChatRatingResponseDto>($"Failed to get rating: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get all ratings for a conversation (Admin only)
+        /// </summary>
+        [Authorize(Roles = "Admin")]
+        [HttpGet("conversations/{id:int}/ratings")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<ChatRatingResponseDto>>>> GetConversationRatings(int id)
+        {
+            try
+            {
+                var conversation = await _chatService.GetConversationByIdAsync(id);
+                if (conversation == null)
+                {
+                    return Error<IEnumerable<ChatRatingResponseDto>>("Conversation not found", 404);
+                }
+
+                var ratings = await _chatService.GetConversationRatingsAsync(id);
+                var ratingDtos = ratings.Select(r => new ChatRatingResponseDto
+                {
+                    Id = r.Id,
+                    ConversationId = r.ConversationId,
+                    UserId = r.UserId,
+                    UserName = r.User != null
+                        ? $"{r.User.FirstName} {r.User.LastName}".Trim()
+                        : "User",
+                    Rating = r.Rating,
+                    Comment = r.Comment,
+                    RatedAt = r.RatedAt
+                }).ToList();
+
+                return Success<IEnumerable<ChatRatingResponseDto>>(ratingDtos, "Ratings retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get ratings for conversation {ConversationId}", id);
+                return Error<IEnumerable<ChatRatingResponseDto>>($"Failed to get ratings: {ex.Message}", 500);
             }
         }
 
@@ -1050,6 +1196,259 @@ namespace HallApp.Web.Controllers.Chat
             {
                 return Error<object>($"Failed to retrieve agent performance: {ex.Message}", 500);
             }
+        }
+
+        #endregion
+
+        #region Support Cases
+
+        /// <summary>
+        /// Create a new support case (Any authenticated user).
+        /// This automatically creates a linked chat conversation.
+        /// </summary>
+        /// <remarks>
+        /// The support case will be linked to a new conversation.
+        /// The initial message (from description) will be sent in the conversation.
+        /// </remarks>
+        [HttpPost("cases")]
+        public async Task<ActionResult<ApiResponse<SupportCaseWithConversationDto>>> CreateSupportCase([FromBody] CreateSupportCaseDto dto)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+
+                // Map DTO to entity
+                var supportCase = new SupportCase
+                {
+                    Subject = dto.Subject,
+                    Description = dto.Description,
+                    Category = dto.Category,
+                    Priority = dto.Priority,
+                    BookingId = dto.BookingId,
+                    HallId = dto.HallId,
+                    VendorId = dto.VendorId,
+                    CreatedByUserId = userId
+                };
+
+                // Use description as initial message
+                var createdCase = await _chatService.CreateSupportCaseAsync(supportCase, dto.Description);
+
+                // Load the full case with conversation
+                var fullCase = await _chatService.GetSupportCaseByIdAsync(createdCase.Id);
+                if (fullCase == null)
+                {
+                    return Error<SupportCaseWithConversationDto>("Failed to load created case", 500);
+                }
+
+                var caseDto = MapToSupportCaseWithConversationDto(fullCase);
+                return StatusCode(201, new ApiResponse<SupportCaseWithConversationDto>
+                {
+                    StatusCode = 201,
+                    Message = "Support case created successfully",
+                    Data = caseDto,
+                    IsSuccess = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create support case");
+                return Error<SupportCaseWithConversationDto>($"Failed to create support case: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get support case by ID
+        /// </summary>
+        [HttpGet("cases/{id:int}")]
+        public async Task<ActionResult<ApiResponse<SupportCaseWithConversationDto>>> GetSupportCase(int id)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var supportCase = await _chatService.GetSupportCaseByIdAsync(id);
+
+                if (supportCase == null)
+                {
+                    return Error<SupportCaseWithConversationDto>("Support case not found", 404);
+                }
+
+                // Authorization: User must be the creator, admin, or have access to the linked conversation
+                var isAdmin = User.IsInRole("Admin");
+                var isCreator = supportCase.CreatedByUserId == userId;
+
+                if (!isAdmin && !isCreator)
+                {
+                    // Check if user has access to the linked conversation
+                    if (supportCase.Conversation != null)
+                    {
+                        if (!await CanAccessConversationAsync(userId, supportCase.Conversation))
+                        {
+                            return Error<SupportCaseWithConversationDto>("Access denied", 403);
+                        }
+                    }
+                    else
+                    {
+                        return Error<SupportCaseWithConversationDto>("Access denied", 403);
+                    }
+                }
+
+                var caseDto = MapToSupportCaseWithConversationDto(supportCase);
+                return Success(caseDto, "Support case retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get support case {CaseId}", id);
+                return Error<SupportCaseWithConversationDto>($"Failed to get support case: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get support case by case number
+        /// </summary>
+        [HttpGet("cases/by-number/{caseNumber}")]
+        public async Task<ActionResult<ApiResponse<SupportCaseWithConversationDto>>> GetSupportCaseByCaseNumber(string caseNumber)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var supportCase = await _chatService.GetSupportCaseByCaseNumberAsync(caseNumber);
+
+                if (supportCase == null)
+                {
+                    return Error<SupportCaseWithConversationDto>("Support case not found", 404);
+                }
+
+                // Authorization: Same as above
+                var isAdmin = User.IsInRole("Admin");
+                var isCreator = supportCase.CreatedByUserId == userId;
+
+                if (!isAdmin && !isCreator)
+                {
+                    if (supportCase.Conversation != null)
+                    {
+                        if (!await CanAccessConversationAsync(userId, supportCase.Conversation))
+                        {
+                            return Error<SupportCaseWithConversationDto>("Access denied", 403);
+                        }
+                    }
+                    else
+                    {
+                        return Error<SupportCaseWithConversationDto>("Access denied", 403);
+                    }
+                }
+
+                var caseDto = MapToSupportCaseWithConversationDto(supportCase);
+                return Success(caseDto, "Support case retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get support case by number {CaseNumber}", caseNumber);
+                return Error<SupportCaseWithConversationDto>($"Failed to get support case: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get user's support cases
+        /// </summary>
+        [HttpGet("cases/my")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<SupportCaseDto>>>> GetMySupportCases()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var cases = await _chatService.GetUserSupportCasesAsync(userId);
+
+                var caseDtos = cases.Select(MapToSupportCaseDto).ToList();
+                return Success<IEnumerable<SupportCaseDto>>(caseDtos, "Support cases retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get user support cases");
+                return Error<IEnumerable<SupportCaseDto>>($"Failed to get support cases: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Get all support cases (Admin only)
+        /// </summary>
+        [Authorize(Roles = "Admin")]
+        [HttpGet("cases")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<SupportCaseDto>>>> GetAllSupportCases()
+        {
+            try
+            {
+                var cases = await _chatService.GetAllSupportCasesAsync();
+                var caseDtos = cases.Select(MapToSupportCaseDto).ToList();
+                return Success<IEnumerable<SupportCaseDto>>(caseDtos, "Support cases retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get all support cases");
+                return Error<IEnumerable<SupportCaseDto>>($"Failed to get support cases: {ex.Message}", 500);
+            }
+        }
+
+        private SupportCaseDto MapToSupportCaseDto(SupportCase supportCase)
+        {
+            return new SupportCaseDto
+            {
+                Id = supportCase.Id,
+                CaseNumber = supportCase.CaseNumber,
+                Subject = supportCase.Subject,
+                Description = supportCase.Description,
+                Category = supportCase.Category,
+                Priority = supportCase.Priority,
+                Status = supportCase.Status,
+                CreatedByUserId = supportCase.CreatedByUserId,
+                CreatedByName = supportCase.CreatedBy != null
+                    ? $"{supportCase.CreatedBy.FirstName} {supportCase.CreatedBy.LastName}".Trim()
+                    : "User",
+                BookingId = supportCase.BookingId ?? 0,
+                HallId = supportCase.HallId ?? 0,
+                VendorId = supportCase.VendorId ?? 0,
+                HallName = supportCase.Hall?.Name ?? string.Empty,
+                VendorName = supportCase.Vendor?.Name ?? string.Empty,
+                ConversationId = supportCase.ConversationId ?? 0,
+                CreatedAt = supportCase.CreatedAt,
+                UpdatedAt = supportCase.UpdatedAt,
+                ResolvedAt = supportCase.ResolvedAt,
+                ClosedAt = supportCase.ClosedAt
+            };
+        }
+
+        private SupportCaseWithConversationDto MapToSupportCaseWithConversationDto(SupportCase supportCase)
+        {
+            var dto = new SupportCaseWithConversationDto
+            {
+                Id = supportCase.Id,
+                CaseNumber = supportCase.CaseNumber,
+                Subject = supportCase.Subject,
+                Description = supportCase.Description,
+                Category = supportCase.Category,
+                Priority = supportCase.Priority,
+                Status = supportCase.Status,
+                CreatedByUserId = supportCase.CreatedByUserId,
+                CreatedByName = supportCase.CreatedBy != null
+                    ? $"{supportCase.CreatedBy.FirstName} {supportCase.CreatedBy.LastName}".Trim()
+                    : "User",
+                BookingId = supportCase.BookingId ?? 0,
+                HallId = supportCase.HallId ?? 0,
+                VendorId = supportCase.VendorId ?? 0,
+                HallName = supportCase.Hall?.Name ?? string.Empty,
+                VendorName = supportCase.Vendor?.Name ?? string.Empty,
+                ConversationId = supportCase.ConversationId ?? 0,
+                CreatedAt = supportCase.CreatedAt,
+                UpdatedAt = supportCase.UpdatedAt,
+                ResolvedAt = supportCase.ResolvedAt,
+                ClosedAt = supportCase.ClosedAt
+            };
+
+            if (supportCase.Conversation != null)
+            {
+                dto.Conversation = _mapper.Map<ChatConversationDto>(supportCase.Conversation);
+            }
+
+            return dto;
         }
 
         #endregion

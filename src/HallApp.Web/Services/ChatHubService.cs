@@ -111,4 +111,53 @@ public class ChatHubService : IChatHubService
                 Timestamp = DateTime.UtcNow
             });
     }
+
+    /// <summary>
+    /// Sends chat closed notification to all participants.
+    /// Participants should disable message input and show closed status.
+    /// </summary>
+    public async Task SendChatClosedNotificationAsync(int conversationId, int closedByUserId, string closedByName, DateTime closedAt, string? resolutionNotes)
+    {
+        var groupName = $"conversation_{conversationId}";
+
+        // Sanitize resolution notes to prevent XSS
+        var sanitizedNotes = resolutionNotes != null
+            ? System.Net.WebUtility.HtmlEncode(resolutionNotes)
+            : null;
+
+        await _hubContext.Clients
+            .Group(groupName)
+            .SendAsync("ChatClosed", new
+            {
+                ConversationId = conversationId,
+                ClosedByUserId = closedByUserId,
+                ClosedByName = System.Net.WebUtility.HtmlEncode(closedByName ?? "Agent"),
+                ClosedAt = closedAt,
+                ResolutionNotes = sanitizedNotes,
+                Timestamp = DateTime.UtcNow
+            });
+
+        _logger.LogInformation("SignalR: ChatClosed notification sent for conversation {ConversationId} by user {UserId}", conversationId, closedByUserId);
+    }
+
+    /// <summary>
+    /// Sends rating submitted notification to conversation participants.
+    /// </summary>
+    public async Task SendRatingSubmittedNotificationAsync(int conversationId, int userId, string userName, int rating)
+    {
+        var groupName = $"conversation_{conversationId}";
+
+        await _hubContext.Clients
+            .Group(groupName)
+            .SendAsync("RatingSubmitted", new
+            {
+                ConversationId = conversationId,
+                UserId = userId,
+                UserName = System.Net.WebUtility.HtmlEncode(userName ?? "User"),
+                Rating = rating,
+                Timestamp = DateTime.UtcNow
+            });
+
+        _logger.LogDebug("SignalR: RatingSubmitted notification sent for conversation {ConversationId} by user {UserId}", conversationId, userId);
+    }
 }

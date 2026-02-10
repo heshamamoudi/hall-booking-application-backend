@@ -539,7 +539,7 @@ namespace HallApp.Infrastructure.Data.Repositories
 
         #endregion
 
-        #region Rating
+        #region Rating (Legacy)
 
         public async Task<bool> RateConversationAsync(int conversationId, int rating, string feedback)
         {
@@ -551,6 +551,98 @@ namespace HallApp.Infrastructure.Data.Repositories
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        #endregion
+
+        #region Per-User Rating System
+
+        public async Task<ChatRating> CreateRatingAsync(ChatRating rating)
+        {
+            _context.ChatRatings.Add(rating);
+            await _context.SaveChangesAsync();
+            return rating;
+        }
+
+        public async Task<ChatRating?> GetUserRatingAsync(int conversationId, int userId)
+        {
+            return await _context.ChatRatings
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.ConversationId == conversationId && r.UserId == userId);
+        }
+
+        public async Task<IEnumerable<ChatRating>> GetConversationRatingsAsync(int conversationId)
+        {
+            return await _context.ChatRatings
+                .Include(r => r.User)
+                .Where(r => r.ConversationId == conversationId)
+                .OrderByDescending(r => r.RatedAt)
+                .ToListAsync();
+        }
+
+        #endregion
+
+        #region Support Cases
+
+        public async Task<SupportCase> CreateSupportCaseAsync(SupportCase supportCase)
+        {
+            _context.SupportCases.Add(supportCase);
+            await _context.SaveChangesAsync();
+            return supportCase;
+        }
+
+        public async Task<SupportCase?> GetSupportCaseByIdAsync(int caseId)
+        {
+            return await _context.SupportCases
+                .Include(s => s.CreatedBy)
+                .Include(s => s.Booking)
+                .Include(s => s.Hall)
+                .Include(s => s.Vendor)
+                .Include(s => s.Conversation)
+                .FirstOrDefaultAsync(s => s.Id == caseId);
+        }
+
+        public async Task<SupportCase?> GetSupportCaseByCaseNumberAsync(string caseNumber)
+        {
+            return await _context.SupportCases
+                .Include(s => s.CreatedBy)
+                .Include(s => s.Booking)
+                .Include(s => s.Hall)
+                .Include(s => s.Vendor)
+                .Include(s => s.Conversation)
+                .FirstOrDefaultAsync(s => s.CaseNumber == caseNumber);
+        }
+
+        public async Task<IEnumerable<SupportCase>> GetUserSupportCasesAsync(int userId)
+        {
+            return await _context.SupportCases
+                .Include(s => s.CreatedBy)
+                .Include(s => s.Booking)
+                .Include(s => s.Hall)
+                .Include(s => s.Vendor)
+                .Include(s => s.Conversation)
+                .Where(s => s.CreatedByUserId == userId)
+                .OrderByDescending(s => s.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<SupportCase>> GetAllSupportCasesAsync()
+        {
+            return await _context.SupportCases
+                .Include(s => s.CreatedBy)
+                .Include(s => s.Booking)
+                .Include(s => s.Hall)
+                .Include(s => s.Vendor)
+                .Include(s => s.Conversation)
+                .OrderByDescending(s => s.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetSupportCaseCountForYearAsync(int year)
+        {
+            return await _context.SupportCases
+                .Where(s => s.CreatedAt.Year == year)
+                .CountAsync();
         }
 
         #endregion

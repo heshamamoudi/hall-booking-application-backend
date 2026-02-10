@@ -66,6 +66,8 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
     public DbSet<ChatMessage> ChatMessages { get; set; }
     public DbSet<ChatMessageReadStatus> ChatMessageReadStatuses { get; set; }
     public DbSet<ChatStatistics> ChatStatistics { get; set; }
+    public DbSet<ChatRating> ChatRatings { get; set; }
+    public DbSet<SupportCase> SupportCases { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -510,6 +512,78 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
         {
             entity.HasIndex(s => s.Date)
                 .IsUnique();
+        });
+
+        // ChatRating configuration - Per-user conversation ratings
+        builder.Entity<ChatRating>(entity =>
+        {
+            entity.HasOne(r => r.Conversation)
+                .WithMany(c => c.Ratings)
+                .HasForeignKey(r => r.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Unique constraint: one rating per user per conversation
+            entity.HasIndex(r => new { r.ConversationId, r.UserId })
+                .IsUnique();
+
+            // Index for querying ratings by conversation
+            entity.HasIndex(r => r.ConversationId);
+        });
+
+        // SupportCase configuration
+        builder.Entity<SupportCase>(entity =>
+        {
+            entity.HasOne(s => s.CreatedBy)
+                .WithMany()
+                .HasForeignKey(s => s.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(s => s.Booking)
+                .WithMany()
+                .HasForeignKey(s => s.BookingId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(s => s.Hall)
+                .WithMany()
+                .HasForeignKey(s => s.HallId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(s => s.Vendor)
+                .WithMany()
+                .HasForeignKey(s => s.VendorId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // One-to-one relationship with ChatConversation
+            entity.HasOne(s => s.Conversation)
+                .WithOne(c => c.Case)
+                .HasForeignKey<SupportCase>(s => s.ConversationId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Unique case number
+            entity.HasIndex(s => s.CaseNumber)
+                .IsUnique();
+
+            // Indexes for querying
+            entity.HasIndex(s => s.Status);
+            entity.HasIndex(s => s.CreatedByUserId);
+            entity.HasIndex(s => s.CreatedAt);
+        });
+
+        // ChatConversation - ClosedBy relationship
+        builder.Entity<ChatConversation>(entity =>
+        {
+            entity.HasOne(c => c.ClosedBy)
+                .WithMany()
+                .HasForeignKey(c => c.ClosedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Index for closed conversations queries
+            entity.HasIndex(c => c.ClosedByUserId);
         });
     }
 }

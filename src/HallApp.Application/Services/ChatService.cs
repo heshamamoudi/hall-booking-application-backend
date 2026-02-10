@@ -142,32 +142,70 @@ namespace HallApp.Application.Services
             return await _unitOfWork.ChatRepository.UpdateConversationAsync(conversation);
         }
 
-        public async Task<ChatConversation> CloseConversationAsync(int conversationId, string resolutionNotes)
+        public async Task<ChatConversation> CloseConversationAsync(int conversationId, int closedByUserId, string resolutionNotes)
         {
             var conversation = await _unitOfWork.ChatRepository.GetConversationByIdAsync(conversationId);
             if (conversation == null)
                 throw new Exception("Conversation not found");
 
-            conversation.Status = "Resolved";
+            // Check if already closed
+            if (conversation.Status == "Closed" || conversation.Status == "Resolved")
+            {
+                _logger.LogWarning("Attempt to close already closed conversation {ConversationId}", conversationId);
+                return conversation;
+            }
+
+            conversation.Status = "Closed";
             conversation.ResolvedAt = DateTime.UtcNow;
             conversation.ClosedAt = DateTime.UtcNow;
+            conversation.ClosedByUserId = closedByUserId;
             conversation.ResolutionTime = DateTime.UtcNow - conversation.CreatedAt;
+
+            // Sanitize resolution notes if provided
+            var sanitizedNotes = !string.IsNullOrWhiteSpace(resolutionNotes)
+                ? _htmlSanitizerService.Sanitize(resolutionNotes)
+                : null;
 
             // Add system message
             var systemMessage = new ChatMessage
             {
                 ConversationId = conversationId,
-                SenderId = conversation.SupportAgentId ?? 0,
+                SenderId = closedByUserId,
                 SenderType = "System",
-                Message = "Conversation has been resolved and closed",
+                Message = !string.IsNullOrWhiteSpace(sanitizedNotes)
+                    ? $"Conversation has been closed. Resolution: {sanitizedNotes}"
+                    : "Conversation has been closed",
                 MessageType = "System",
                 IsSystemMessage = true,
                 SentAt = DateTime.UtcNow
             };
 
             await _unitOfWork.ChatRepository.AddMessageAsync(systemMessage);
+            var updatedConversation = await _unitOfWork.ChatRepository.UpdateConversationAsync(conversation);
 
-            return await _unitOfWork.ChatRepository.UpdateConversationAsync(conversation);
+            // Send SignalR notification to all participants
+            try
+            {
+                var closedByUser = await _unitOfWork.UserRepository.FindByIdAsync(closedByUserId.ToString());
+                var closedByName = closedByUser != null
+                    ? $"{closedByUser.FirstName} {closedByUser.LastName}".Trim()
+                    : "Agent";
+
+                await _chatHubService.SendChatClosedNotificationAsync(
+                    conversationId,
+                    closedByUserId,
+                    closedByName,
+                    conversation.ClosedAt!.Value,
+                    sanitizedNotes);
+
+                _logger.LogInformation("Conversation {ConversationId} closed by user {UserId}", conversationId, closedByUserId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send ChatClosed SignalR notification for conversation {ConversationId}", conversationId);
+            }
+
+            return updatedConversation;
         }
 
         public async Task<ChatConversation> ReopenConversationAsync(int conversationId)
@@ -179,6 +217,7 @@ namespace HallApp.Application.Services
             conversation.Status = "Open";
             conversation.ResolvedAt = null;
             conversation.ClosedAt = null;
+            conversation.ClosedByUserId = null;
 
             // Add system message
             var systemMessage = new ChatMessage
@@ -230,6 +269,12 @@ namespace HallApp.Application.Services
 
         public async Task<ChatMessage> SendMessageAsync(int conversationId, int senderId, string message, string senderType)
         {
+            // SECURITY: Check if conversation is closed - block new messages
+            if (await IsConversationClosedAsync(conversationId))
+            {
+                throw new InvalidOperationException("Cannot send messages to a closed conversation");
+            }
+
             // SECURITY: Sanitize message content to prevent XSS attacks (CHAT-RISK-001)
             var sanitizedMessage = _htmlSanitizerService.Sanitize(message);
 
@@ -328,6 +373,18 @@ namespace HallApp.Application.Services
             return result;
         }
 
+        /// <summary>
+        /// Check if a conversation is closed (Closed or Resolved status)
+        /// </summary>
+        public async Task<bool> IsConversationClosedAsync(int conversationId)
+        {
+            var conversation = await _unitOfWork.ChatRepository.GetConversationByIdAsync(conversationId);
+            if (conversation == null)
+                return true; // Treat non-existent conversations as closed
+
+            return conversation.Status == "Closed" || conversation.Status == "Resolved";
+        }
+
         #endregion
 
         #region Authorization
@@ -388,12 +445,258 @@ namespace HallApp.Application.Services
 
         #region Rating
 
+        /// <summary>
+        /// Legacy rating method for backward compatibility - updates conversation's CustomerRating/CustomerFeedback fields
+        /// </summary>
         public async Task<bool> RateConversationAsync(int conversationId, int rating, string feedback)
         {
             if (rating < 1 || rating > 5)
                 throw new ArgumentException("Rating must be between 1 and 5");
 
             return await _unitOfWork.ChatRepository.RateConversationAsync(conversationId, rating, feedback);
+        }
+
+        /// <summary>
+        /// Submit a rating for a conversation (per-user rating system).
+        /// Only participants (non-admin) can rate. One rating per user per conversation.
+        /// </summary>
+        public async Task<ChatRating> SubmitRatingAsync(int conversationId, int userId, int rating, string? comment)
+        {
+            if (rating < 1 || rating > 5)
+                throw new ArgumentException("Rating must be between 1 and 5");
+
+            // Check if conversation exists
+            var conversation = await _unitOfWork.ChatRepository.GetConversationByIdAsync(conversationId);
+            if (conversation == null)
+                throw new Exception("Conversation not found");
+
+            // Check if conversation is closed (only closed conversations can be rated)
+            if (conversation.Status != "Closed" && conversation.Status != "Resolved")
+                throw new InvalidOperationException("Only closed conversations can be rated");
+
+            // Check if user has already rated this conversation
+            var existingRating = await _unitOfWork.ChatRepository.GetUserRatingAsync(conversationId, userId);
+            if (existingRating != null)
+                throw new InvalidOperationException("You have already rated this conversation");
+
+            // Sanitize comment to prevent XSS
+            var sanitizedComment = !string.IsNullOrWhiteSpace(comment)
+                ? _htmlSanitizerService.Sanitize(comment)
+                : null;
+
+            var chatRating = new ChatRating
+            {
+                ConversationId = conversationId,
+                UserId = userId,
+                Rating = rating,
+                Comment = sanitizedComment,
+                RatedAt = DateTime.UtcNow
+            };
+
+            var createdRating = await _unitOfWork.ChatRepository.CreateRatingAsync(chatRating);
+
+            // Send SignalR notification
+            try
+            {
+                var user = await _unitOfWork.UserRepository.FindByIdAsync(userId.ToString());
+                var userName = user != null
+                    ? $"{user.FirstName} {user.LastName}".Trim()
+                    : "User";
+
+                await _chatHubService.SendRatingSubmittedNotificationAsync(conversationId, userId, userName, rating);
+                _logger.LogInformation("Rating {Rating}/5 submitted for conversation {ConversationId} by user {UserId}", rating, conversationId, userId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send RatingSubmitted SignalR notification for conversation {ConversationId}", conversationId);
+            }
+
+            return createdRating;
+        }
+
+        /// <summary>
+        /// Get a user's rating for a conversation
+        /// </summary>
+        public async Task<ChatRating?> GetUserRatingAsync(int conversationId, int userId)
+        {
+            return await _unitOfWork.ChatRepository.GetUserRatingAsync(conversationId, userId);
+        }
+
+        /// <summary>
+        /// Get all ratings for a conversation (admin view)
+        /// </summary>
+        public async Task<IEnumerable<ChatRating>> GetConversationRatingsAsync(int conversationId)
+        {
+            return await _unitOfWork.ChatRepository.GetConversationRatingsAsync(conversationId);
+        }
+
+        /// <summary>
+        /// Check if user can rate a conversation:
+        /// - Must be a participant (not just any user)
+        /// - Must NOT be an Admin (admins don't rate)
+        /// - Conversation must be closed
+        /// - User hasn't already rated
+        /// </summary>
+        public async Task<bool> CanUserRateConversationAsync(int conversationId, int userId, IEnumerable<string> userRoles)
+        {
+            var roles = userRoles?.ToList() ?? [];
+
+            // Admins cannot rate conversations
+            if (roles.Contains("Admin", StringComparer.OrdinalIgnoreCase))
+                return false;
+
+            var conversation = await _unitOfWork.ChatRepository.GetConversationByIdAsync(conversationId);
+            if (conversation == null)
+                return false;
+
+            // Conversation must be closed
+            if (conversation.Status != "Closed" && conversation.Status != "Resolved")
+                return false;
+
+            // User must be a participant (creator, customer, hall manager, or vendor manager)
+            var isParticipant = conversation.CreatedByUserId == userId ||
+                                conversation.CustomerId == userId;
+
+            if (!isParticipant)
+            {
+                // Check HallManager access
+                if (roles.Contains("HallManager", StringComparer.OrdinalIgnoreCase) && conversation.HallId.HasValue)
+                {
+                    var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(userId);
+                    if (hallManager?.Halls?.Any(h => h.ID == conversation.HallId.Value) == true)
+                        isParticipant = true;
+                }
+
+                // Check VendorManager access
+                if (!isParticipant && roles.Contains("VendorManager", StringComparer.OrdinalIgnoreCase) && conversation.VendorId.HasValue)
+                {
+                    var vendorManager = await _vendorManagerService.GetVendorManagerByAppUserIdAsync(userId);
+                    if (vendorManager?.Vendors?.Any(v => v.Id == conversation.VendorId.Value) == true)
+                        isParticipant = true;
+                }
+            }
+
+            if (!isParticipant)
+                return false;
+
+            // Check if user has already rated
+            var existingRating = await _unitOfWork.ChatRepository.GetUserRatingAsync(conversationId, userId);
+            return existingRating == null;
+        }
+
+        #endregion
+
+        #region Support Cases
+
+        /// <summary>
+        /// Create a support case which automatically creates a linked chat conversation
+        /// </summary>
+        public async Task<SupportCase> CreateSupportCaseAsync(SupportCase supportCase, string initialMessage)
+        {
+            // Generate unique case number
+            supportCase.CaseNumber = await GenerateCaseNumberAsync();
+            supportCase.CreatedAt = DateTime.UtcNow;
+            supportCase.Status = "Open";
+
+            // Sanitize description
+            supportCase.Description = _htmlSanitizerService.Sanitize(supportCase.Description);
+            supportCase.Subject = _htmlSanitizerService.Sanitize(supportCase.Subject);
+
+            // Create linked conversation
+            var conversation = new ChatConversation
+            {
+                Subject = supportCase.Subject,
+                Category = supportCase.Category,
+                Priority = supportCase.Priority,
+                Status = "Open",
+                CreatedByUserId = supportCase.CreatedByUserId,
+                CreatedAt = DateTime.UtcNow,
+                BookingId = supportCase.BookingId,
+                HallId = supportCase.HallId,
+                VendorId = supportCase.VendorId,
+                TotalMessages = 0
+            };
+
+            // Determine conversation type based on context
+            if (supportCase.HallId.HasValue)
+                conversation.ConversationType = "HallManager";
+            else if (supportCase.VendorId.HasValue)
+                conversation.ConversationType = "VendorManager";
+            else
+                conversation.ConversationType = "Customer";
+
+            // Create conversation first
+            var createdConversation = await CreateConversationAsync(conversation);
+
+            // Link case to conversation
+            supportCase.ConversationId = createdConversation.Id;
+
+            // Create the support case
+            var createdCase = await _unitOfWork.ChatRepository.CreateSupportCaseAsync(supportCase);
+
+            // Update conversation with case ID
+            createdConversation.CaseId = createdCase.Id;
+            await _unitOfWork.ChatRepository.UpdateConversationAsync(createdConversation);
+
+            // Send initial message if provided
+            if (!string.IsNullOrWhiteSpace(initialMessage))
+            {
+                var senderType = conversation.ConversationType switch
+                {
+                    "HallManager" => "HallManager",
+                    "VendorManager" => "VendorManager",
+                    _ => "Customer"
+                };
+
+                await SendMessageAsync(createdConversation.Id, supportCase.CreatedByUserId, initialMessage, senderType);
+            }
+
+            _logger.LogInformation("Support case {CaseNumber} created with conversation {ConversationId} by user {UserId}",
+                createdCase.CaseNumber, createdConversation.Id, supportCase.CreatedByUserId);
+
+            return createdCase;
+        }
+
+        /// <summary>
+        /// Get support case by ID
+        /// </summary>
+        public async Task<SupportCase?> GetSupportCaseByIdAsync(int caseId)
+        {
+            return await _unitOfWork.ChatRepository.GetSupportCaseByIdAsync(caseId);
+        }
+
+        /// <summary>
+        /// Get support case by case number
+        /// </summary>
+        public async Task<SupportCase?> GetSupportCaseByCaseNumberAsync(string caseNumber)
+        {
+            return await _unitOfWork.ChatRepository.GetSupportCaseByCaseNumberAsync(caseNumber);
+        }
+
+        /// <summary>
+        /// Get support cases for a user
+        /// </summary>
+        public async Task<IEnumerable<SupportCase>> GetUserSupportCasesAsync(int userId)
+        {
+            return await _unitOfWork.ChatRepository.GetUserSupportCasesAsync(userId);
+        }
+
+        /// <summary>
+        /// Get all support cases (admin view)
+        /// </summary>
+        public async Task<IEnumerable<SupportCase>> GetAllSupportCasesAsync()
+        {
+            return await _unitOfWork.ChatRepository.GetAllSupportCasesAsync();
+        }
+
+        /// <summary>
+        /// Generate a unique case number in format: CASE-YYYY-NNNNN
+        /// </summary>
+        public async Task<string> GenerateCaseNumberAsync()
+        {
+            var year = DateTime.UtcNow.Year;
+            var count = await _unitOfWork.ChatRepository.GetSupportCaseCountForYearAsync(year);
+            return $"CASE-{year}-{(count + 1):D5}";
         }
 
         #endregion

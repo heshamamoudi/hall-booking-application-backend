@@ -141,7 +141,7 @@ namespace HallApp.Application.DTOs.Chat
     }
 
     /// <summary>
-    /// Rate conversation DTO
+    /// Rate conversation DTO (input)
     /// </summary>
     public class RateConversationDto
     {
@@ -151,5 +151,139 @@ namespace HallApp.Application.DTOs.Chat
 
         [StringLength(1000)]
         public string Feedback { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Chat rating response DTO (output)
+    /// </summary>
+    public class ChatRatingResponseDto
+    {
+        public int Id { get; set; }
+        public int ConversationId { get; set; }
+        public int UserId { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public int Rating { get; set; }
+        public string? Comment { get; set; }
+        public DateTime RatedAt { get; set; }
+    }
+
+    #region Support Case DTOs
+
+    /// <summary>
+    /// Create support case DTO (input)
+    /// Creates a new support case which automatically generates a chat conversation.
+    /// </summary>
+    public class CreateSupportCaseDto
+    {
+        /// <summary>
+        /// Brief subject/title of the case
+        /// </summary>
+        [Required]
+        [StringLength(200)]
+        public string Subject { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Detailed description of the issue
+        /// </summary>
+        [Required]
+        [StringLength(4000)]
+        public string Description { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Category: General, Booking, Payment, Technical, Complaint, Account, Other
+        /// </summary>
+        [Required]
+        [StringLength(50)]
+        public string Category { get; set; } = "General";
+
+        /// <summary>
+        /// Priority: Low, Normal, High, Urgent
+        /// </summary>
+        [Required]
+        [StringLength(20)]
+        public string Priority { get; set; } = "Normal";
+
+        /// <summary>
+        /// Optional: Related booking ID for context
+        /// </summary>
+        public int? BookingId { get; set; }
+
+        /// <summary>
+        /// Optional: Related hall ID for HallManager cases
+        /// </summary>
+        public int? HallId { get; set; }
+
+        /// <summary>
+        /// Optional: Related vendor ID for VendorManager cases
+        /// </summary>
+        public int? VendorId { get; set; }
+    }
+
+    /// <summary>
+    /// Support case response DTO (output)
+    /// </summary>
+    public class SupportCaseDto
+    {
+        public int Id { get; set; }
+        public string CaseNumber { get; set; } = string.Empty;
+        public string Subject { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string Priority { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+
+        // Creator info
+        public int CreatedByUserId { get; set; }
+        public string CreatedByName { get; set; } = string.Empty;
+
+        // Context (0 if not applicable)
+        public int BookingId { get; set; }
+        public int HallId { get; set; }
+        public int VendorId { get; set; }
+        public string HallName { get; set; } = string.Empty;
+        public string VendorName { get; set; } = string.Empty;
+
+        // Associated conversation
+        public int ConversationId { get; set; }
+
+        // Timestamps
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public DateTime? ResolvedAt { get; set; }
+        public DateTime? ClosedAt { get; set; }
+    }
+
+    /// <summary>
+    /// Support case with conversation details (output)
+    /// </summary>
+    public class SupportCaseWithConversationDto : SupportCaseDto
+    {
+        public ChatConversationDto? Conversation { get; set; }
+    }
+
+    #endregion
+
+    /// <summary>
+    /// Updated ChatConversationDto with new fields
+    /// </summary>
+    public class ChatConversationExtendedDto : ChatConversationDto
+    {
+        // Closed by info
+        public int ClosedByUserId { get; set; }
+        public string ClosedByName { get; set; } = string.Empty;
+
+        // Support Case link
+        public int CaseId { get; set; }
+        public string CaseNumber { get; set; } = string.Empty;
+
+        // Ratings summary
+        public double AverageRating { get; set; }
+        public int RatingCount { get; set; }
+
+        // User's own rating (if they have rated)
+        public ChatRatingResponseDto? UserRating { get; set; }
+
+        // Flag to indicate if conversation can be rated by current user
+        public bool CanRate { get; set; }
     }
 }

@@ -64,7 +64,15 @@ public class ChatConversation
     public DateTime? ResolvedAt { get; set; }
     public DateTime? ClosedAt { get; set; }
 
-    // Feedback
+    // Closed by user tracking
+    public int? ClosedByUserId { get; set; }
+    public AppUser? ClosedBy { get; set; }
+
+    // Support Case link (optional - for case-initiated conversations)
+    public int? CaseId { get; set; }
+    public SupportCase? Case { get; set; }
+
+    // Feedback (legacy - kept for backward compatibility)
     public int? CustomerRating { get; set; }  // 1-5 stars
 
     [StringLength(1000)]
@@ -75,6 +83,9 @@ public class ChatConversation
 
     // Navigation
     public List<ChatMessage> Messages { get; set; } = new();
+
+    // Ratings from participants (new per-user rating system)
+    public List<ChatRating> Ratings { get; set; } = new();
 
     // Statistics
     public int TotalMessages { get; set; } = 0;
@@ -175,4 +186,125 @@ public class ChatStatistics
     public int TotalMessages { get; set; }
     public int MessagesFromCustomers { get; set; }
     public int MessagesFromAgents { get; set; }
+}
+
+/// <summary>
+/// Per-user rating for a chat conversation.
+/// Allows any participant (Customer, HallManager, VendorManager) to rate the conversation.
+/// One rating per user per conversation (enforced by unique constraint).
+/// </summary>
+public class ChatRating
+{
+    public int Id { get; set; }
+
+    [Required]
+    public int ConversationId { get; set; }
+    public ChatConversation? Conversation { get; set; }
+
+    [Required]
+    public int UserId { get; set; }
+    public AppUser? User { get; set; }
+
+    /// <summary>
+    /// Rating value from 1 to 5 stars
+    /// </summary>
+    [Required]
+    [Range(1, 5)]
+    public int Rating { get; set; }
+
+    /// <summary>
+    /// Optional comment about the experience (sanitized for XSS)
+    /// </summary>
+    [StringLength(1000)]
+    public string? Comment { get; set; }
+
+    public DateTime RatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Support case/ticket that initiates a chat conversation.
+/// Cases provide structured context for support interactions.
+/// </summary>
+public class SupportCase
+{
+    public int Id { get; set; }
+
+    /// <summary>
+    /// Human-readable case number (e.g., "CASE-2026-00001")
+    /// </summary>
+    [Required]
+    [StringLength(50)]
+    public string CaseNumber { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Brief description of the issue
+    /// </summary>
+    [Required]
+    [StringLength(200)]
+    public string Subject { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Detailed description of the issue
+    /// </summary>
+    [Required]
+    [StringLength(4000)]
+    public string Description { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Category: General, Booking, Payment, Technical, Complaint, Account, Other
+    /// </summary>
+    [Required]
+    [StringLength(50)]
+    public string Category { get; set; } = "General";
+
+    /// <summary>
+    /// Priority: Low, Normal, High, Urgent
+    /// </summary>
+    [Required]
+    [StringLength(20)]
+    public string Priority { get; set; } = "Normal";
+
+    /// <summary>
+    /// Status: Open, InProgress, Resolved, Closed
+    /// </summary>
+    [Required]
+    [StringLength(20)]
+    public string Status { get; set; } = "Open";
+
+    /// <summary>
+    /// User who created the case
+    /// </summary>
+    [Required]
+    public int CreatedByUserId { get; set; }
+    public AppUser? CreatedBy { get; set; }
+
+    /// <summary>
+    /// Optional: Related booking for context
+    /// </summary>
+    public int? BookingId { get; set; }
+    public Booking? Booking { get; set; }
+
+    /// <summary>
+    /// Optional: Related hall for context
+    /// </summary>
+    public int? HallId { get; set; }
+    public Hall? Hall { get; set; }
+
+    /// <summary>
+    /// Optional: Related vendor for context
+    /// </summary>
+    public int? VendorId { get; set; }
+    public Vendor? Vendor { get; set; }
+
+    /// <summary>
+    /// The chat conversation associated with this case (1:1 relationship)
+    /// </summary>
+    public int? ConversationId { get; set; }
+    public ChatConversation? Conversation { get; set; }
+
+    // Timestamps
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
+    public DateTime? ResolvedAt { get; set; }
+    public DateTime? ClosedAt { get; set; }
 }

@@ -71,7 +71,60 @@ namespace HallApp.Core.Interfaces.IRepositories
         Task<int> GetAgentResolvedCountAsync(int agentId, DateTime? from = null, DateTime? to = null);
         Task<double> GetAgentAverageRatingAsync(int agentId, DateTime? from = null, DateTime? to = null);
 
-        // Rating
+        // Rating (Legacy - updates CustomerRating/CustomerFeedback on conversation)
         Task<bool> RateConversationAsync(int conversationId, int rating, string feedback);
+
+        #region Per-User Rating System
+
+        /// <summary>
+        /// Create a new chat rating for a conversation
+        /// </summary>
+        Task<ChatRating> CreateRatingAsync(ChatRating rating);
+
+        /// <summary>
+        /// Get a user's rating for a conversation
+        /// </summary>
+        Task<ChatRating?> GetUserRatingAsync(int conversationId, int userId);
+
+        /// <summary>
+        /// Get all ratings for a conversation
+        /// </summary>
+        Task<IEnumerable<ChatRating>> GetConversationRatingsAsync(int conversationId);
+
+        #endregion
+
+        #region Support Cases
+
+        /// <summary>
+        /// Create a new support case
+        /// </summary>
+        Task<SupportCase> CreateSupportCaseAsync(SupportCase supportCase);
+
+        /// <summary>
+        /// Get support case by ID
+        /// </summary>
+        Task<SupportCase?> GetSupportCaseByIdAsync(int caseId);
+
+        /// <summary>
+        /// Get support case by case number
+        /// </summary>
+        Task<SupportCase?> GetSupportCaseByCaseNumberAsync(string caseNumber);
+
+        /// <summary>
+        /// Get support cases for a user
+        /// </summary>
+        Task<IEnumerable<SupportCase>> GetUserSupportCasesAsync(int userId);
+
+        /// <summary>
+        /// Get all support cases
+        /// </summary>
+        Task<IEnumerable<SupportCase>> GetAllSupportCasesAsync();
+
+        /// <summary>
+        /// Get count of support cases created in a specific year (for case number generation)
+        /// </summary>
+        Task<int> GetSupportCaseCountForYearAsync(int year);
+
+        #endregion
     }
 }
