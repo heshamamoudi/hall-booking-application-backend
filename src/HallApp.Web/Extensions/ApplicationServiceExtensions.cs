@@ -35,6 +35,9 @@ public static class ApplicationServiceExtensions
         services.AddScoped<INotificationHubService, NotificationHubService>();
         services.AddScoped<IChatHubService, ChatHubService>();
 
+        // Register security services - HtmlSanitizerService for XSS prevention (CHAT-RISK-001)
+        services.AddSingleton<HtmlSanitizerService>();
+
         // Register file upload service
         services.AddSingleton<IFileUploadService>(provider =>
         {

@@ -10,15 +10,24 @@ namespace HallApp.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IChatHubService _chatHubService;
         private readonly ILogger<ChatService> _logger;
+        private readonly HtmlSanitizerService _htmlSanitizerService;
+        private readonly IHallManagerService _hallManagerService;
+        private readonly IVendorManagerService _vendorManagerService;
 
         public ChatService(
             IUnitOfWork unitOfWork,
             IChatHubService chatHubService,
-            ILogger<ChatService> logger)
+            ILogger<ChatService> logger,
+            HtmlSanitizerService htmlSanitizerService,
+            IHallManagerService hallManagerService,
+            IVendorManagerService vendorManagerService)
         {
             _unitOfWork = unitOfWork;
             _chatHubService = chatHubService;
             _logger = logger;
+            _htmlSanitizerService = htmlSanitizerService;
+            _hallManagerService = hallManagerService;
+            _vendorManagerService = vendorManagerService;
         }
 
         #region Conversation Management
@@ -221,12 +230,20 @@ namespace HallApp.Application.Services
 
         public async Task<ChatMessage> SendMessageAsync(int conversationId, int senderId, string message, string senderType)
         {
+            // SECURITY: Sanitize message content to prevent XSS attacks (CHAT-RISK-001)
+            var sanitizedMessage = _htmlSanitizerService.Sanitize(message);
+
+            if (_htmlSanitizerService.IsPotentialXss(message))
+            {
+                _logger.LogWarning("Potential XSS attack detected in message from user {SenderId} in conversation {ConversationId}", senderId, conversationId);
+            }
+
             var chatMessage = new ChatMessage
             {
                 ConversationId = conversationId,
                 SenderId = senderId,
                 SenderType = senderType,
-                Message = message,
+                Message = sanitizedMessage,
                 MessageType = "Text",
                 SentAt = DateTime.UtcNow,
                 IsRead = false,
@@ -291,6 +308,62 @@ namespace HallApp.Application.Services
         public async Task<int> GetUnreadCountAsync(int conversationId, int userId)
         {
             return await _unitOfWork.ChatRepository.GetUnreadMessageCountAsync(conversationId, userId);
+        }
+
+        #endregion
+
+        #region Authorization
+
+        /// <summary>
+        /// Check if a user has access to a specific conversation.
+        /// Used by ChatHub for SignalR group authorization (CHAT-RISK-002).
+        /// Mirrors the authorization logic from ChatController.CanAccessConversationAsync.
+        /// </summary>
+        public async Task<bool> CanAccessConversationAsync(int userId, int conversationId, IEnumerable<string> userRoles)
+        {
+            var conversation = await _unitOfWork.ChatRepository.GetConversationByIdAsync(conversationId);
+            if (conversation == null)
+            {
+                _logger.LogWarning("CanAccessConversationAsync: Conversation {ConversationId} not found", conversationId);
+                return false;
+            }
+
+            var roles = userRoles?.ToList() ?? [];
+
+            // Admin has access to all conversations
+            if (roles.Contains("Admin", StringComparer.OrdinalIgnoreCase))
+                return true;
+
+            // Customer who created the conversation
+            if (conversation.CreatedByUserId == userId)
+                return true;
+
+            // Customer (by CustomerId)
+            if (conversation.CustomerId == userId)
+                return true;
+
+            // Support agent assigned to the conversation
+            if (conversation.SupportAgentId == userId)
+                return true;
+
+            // HallManager - check if they manage the hall associated with the conversation
+            if (roles.Contains("HallManager", StringComparer.OrdinalIgnoreCase) && conversation.HallId.HasValue)
+            {
+                var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(userId);
+                if (hallManager?.Halls?.Any(h => h.ID == conversation.HallId.Value) == true)
+                    return true;
+            }
+
+            // VendorManager - check if they manage the vendor associated with the conversation
+            if (roles.Contains("VendorManager", StringComparer.OrdinalIgnoreCase) && conversation.VendorId.HasValue)
+            {
+                var vendorManager = await _vendorManagerService.GetVendorManagerByAppUserIdAsync(userId);
+                if (vendorManager?.Vendors?.Any(v => v.Id == conversation.VendorId.Value) == true)
+                    return true;
+            }
+
+            _logger.LogWarning("CanAccessConversationAsync: User {UserId} denied access to conversation {ConversationId}", userId, conversationId);
+            return false;
         }
 
         #endregion

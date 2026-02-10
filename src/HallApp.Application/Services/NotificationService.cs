@@ -10,15 +10,18 @@ namespace HallApp.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<NotificationService> _logger;
         private readonly INotificationHubService _notificationHubService;
+        private readonly HtmlSanitizerService _htmlSanitizerService;
 
         public NotificationService(
             IUnitOfWork unitOfWork,
             ILogger<NotificationService> logger,
-            INotificationHubService notificationHubService)
+            INotificationHubService notificationHubService,
+            HtmlSanitizerService htmlSanitizerService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
             _notificationHubService = notificationHubService;
+            _htmlSanitizerService = htmlSanitizerService;
         }
 
         public async Task CreateNotificationAsync(int appUserId, string title, string message, string type = "General")
@@ -33,11 +36,20 @@ namespace HallApp.Application.Services
                     return;
                 }
 
+                // SECURITY: Sanitize notification content to prevent XSS attacks (CHAT-RISK-001)
+                var sanitizedTitle = _htmlSanitizerService.Sanitize(title);
+                var sanitizedMessage = _htmlSanitizerService.Sanitize(message);
+
+                if (_htmlSanitizerService.IsPotentialXss(title) || _htmlSanitizerService.IsPotentialXss(message))
+                {
+                    _logger.LogWarning("Potential XSS attack detected in notification for user {UserId}", appUserId);
+                }
+
                 var notification = new Notification
                 {
                     AppUserId = appUserId,
-                    Title = title,
-                    Message = message,
+                    Title = sanitizedTitle,
+                    Message = sanitizedMessage,
                     Type = type,
                     Created = DateTime.UtcNow,
                     IsRead = false

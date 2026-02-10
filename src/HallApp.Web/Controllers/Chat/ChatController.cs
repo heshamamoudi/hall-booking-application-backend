@@ -673,26 +673,162 @@ namespace HallApp.Web.Controllers.Chat
         #region Messages
 
         /// <summary>
-        /// Get conversation messages
+        /// Get conversation messages (all messages - use paginated endpoint for large conversations)
         /// </summary>
+        /// <remarks>
+        /// Authorization: User must be a participant in the conversation or an Admin.
+        /// For performance reasons, consider using the paginated endpoint for conversations with many messages.
+        /// </remarks>
         [HttpGet("conversations/{id:int}/messages")]
         public async Task<ActionResult<ApiResponse<IEnumerable<ChatMessageDto>>>> GetConversationMessages(int id)
         {
             try
             {
+                var userId = GetCurrentUserId();
+
+                // Authorization check: User must have access to this conversation
+                var conversation = await _chatService.GetConversationByIdAsync(id);
+                if (conversation == null)
+                {
+                    return Error<IEnumerable<ChatMessageDto>>("Conversation not found", 404);
+                }
+
+                if (!await CanAccessConversationAsync(userId, conversation))
+                {
+                    return Error<IEnumerable<ChatMessageDto>>("Access denied", 403);
+                }
+
                 var messages = await _chatService.GetConversationMessagesAsync(id);
                 var messageDtos = _mapper.Map<IEnumerable<ChatMessageDto>>(messages);
                 return Success(messageDtos, "Messages retrieved successfully");
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<ChatMessageDto>>($"Failed to retrieve messages: {ex.Message}", 500);
+                _logger.LogError(ex, "Failed to retrieve messages for conversation {ConversationId}", id);
+                return Error<IEnumerable<ChatMessageDto>>("Failed to retrieve messages", 500);
             }
+        }
+
+        /// <summary>
+        /// Get conversation messages with pagination (recommended for large conversations)
+        /// </summary>
+        /// <param name="id">Conversation ID</param>
+        /// <param name="pageNumber">Page number (1-based, default: 1)</param>
+        /// <param name="pageSize">Page size (default: 50, max: 100)</param>
+        /// <param name="beforeId">Get messages before this message ID (for infinite scroll)</param>
+        /// <returns>Paginated list of messages</returns>
+        [HttpGet("conversations/{id:int}/messages/paged")]
+        public async Task<ActionResult<ApiResponse<HallApp.Application.DTOs.Common.PagedResultDto<ChatMessageDto>>>> GetConversationMessagesPaged(
+            int id,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 50,
+            [FromQuery] int? beforeId = null)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+
+                // Validate pagination parameters
+                if (pageNumber < 1) pageNumber = 1;
+                if (pageSize < 1) pageSize = 50;
+                if (pageSize > 100) pageSize = 100; // Cap at 100 for performance
+
+                // Authorization check
+                var conversation = await _chatService.GetConversationByIdAsync(id);
+                if (conversation == null)
+                {
+                    return Error<HallApp.Application.DTOs.Common.PagedResultDto<ChatMessageDto>>("Conversation not found", 404);
+                }
+
+                if (!await CanAccessConversationAsync(userId, conversation))
+                {
+                    return Error<HallApp.Application.DTOs.Common.PagedResultDto<ChatMessageDto>>("Access denied", 403);
+                }
+
+                // Get all messages and apply pagination (could be optimized at repository level)
+                var allMessages = await _chatService.GetConversationMessagesAsync(id);
+                var messagesList = allMessages.ToList();
+
+                // If beforeId is specified, filter messages
+                if (beforeId.HasValue)
+                {
+                    messagesList = messagesList.Where(m => m.Id < beforeId.Value).ToList();
+                }
+
+                var totalCount = messagesList.Count;
+                var pagedMessages = messagesList
+                    .OrderByDescending(m => m.SentAt) // Newest first for pagination
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .OrderBy(m => m.SentAt) // Restore chronological order
+                    .ToList();
+
+                var messageDtos = _mapper.Map<IEnumerable<ChatMessageDto>>(pagedMessages);
+
+                var result = new HallApp.Application.DTOs.Common.PagedResultDto<ChatMessageDto>
+                {
+                    Items = messageDtos,
+                    TotalCount = totalCount,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize
+                };
+
+                return Success(result, "Messages retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve paginated messages for conversation {ConversationId}", id);
+                return Error<HallApp.Application.DTOs.Common.PagedResultDto<ChatMessageDto>>("Failed to retrieve messages", 500);
+            }
+        }
+
+        /// <summary>
+        /// Check if user has access to a conversation
+        /// </summary>
+        private async Task<bool> CanAccessConversationAsync(int userId, ChatConversation conversation)
+        {
+            // Admin has access to all
+            if (User.IsInRole("Admin"))
+                return true;
+
+            // Customer who created the conversation
+            if (conversation.CreatedByUserId == userId)
+                return true;
+
+            // Customer (by CustomerId)
+            if (conversation.CustomerId == userId)
+                return true;
+
+            // Support agent assigned to the conversation
+            if (conversation.SupportAgentId == userId)
+                return true;
+
+            // HallManager - check if they manage the hall associated with the conversation
+            if (User.IsInRole("HallManager") && conversation.HallId.HasValue)
+            {
+                var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(userId);
+                if (hallManager != null && hallManager.Halls.Any(h => h.ID == conversation.HallId.Value))
+                    return true;
+            }
+
+            // VendorManager - check if they manage the vendor associated with the conversation
+            if (User.IsInRole("VendorManager") && conversation.VendorId.HasValue)
+            {
+                var vendorManager = await _vendorManagerService.GetVendorManagerByAppUserIdAsync(userId);
+                if (vendorManager != null && vendorManager.Vendors.Any(v => v.Id == conversation.VendorId.Value))
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>
         /// Send message
         /// </summary>
+        /// <remarks>
+        /// Authorization: User must be a participant in the conversation or an Admin.
+        /// Message content is sanitized to prevent XSS attacks.
+        /// </remarks>
         [HttpPost("conversations/{id:int}/messages")]
         public async Task<ActionResult<ApiResponse<ChatMessageDto>>> SendMessage(int id, [FromBody] SendMessageDto dto)
         {
@@ -700,7 +836,25 @@ namespace HallApp.Web.Controllers.Chat
             {
                 var userId = GetCurrentUserId();
 
-                // FIXED: Properly determine sender type based on role
+                // Authorization check
+                var conversation = await _chatService.GetConversationByIdAsync(id);
+                if (conversation == null)
+                {
+                    return Error<ChatMessageDto>("Conversation not found", 404);
+                }
+
+                if (!await CanAccessConversationAsync(userId, conversation))
+                {
+                    return Error<ChatMessageDto>("Access denied", 403);
+                }
+
+                // Validate message content
+                if (string.IsNullOrWhiteSpace(dto.Message))
+                {
+                    return Error<ChatMessageDto>("Message content is required", 400);
+                }
+
+                // Determine sender type based on role
                 string senderType;
                 if (User.IsInRole("Customer"))
                 {
@@ -729,7 +883,8 @@ namespace HallApp.Web.Controllers.Chat
             }
             catch (Exception ex)
             {
-                return Error<ChatMessageDto>($"Failed to send message: {ex.Message}", 500);
+                _logger.LogError(ex, "Failed to send message to conversation {ConversationId}", id);
+                return Error<ChatMessageDto>("Failed to send message", 500);
             }
         }
 
