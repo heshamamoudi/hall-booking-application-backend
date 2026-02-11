@@ -43,9 +43,14 @@ namespace HallApp.Application.DTOs.Chat
         public DateTime ClosedAt { get; set; }
         
         // Feedback
-        public int CustomerRating { get; set; }  // 0 if not rated, 1-5 if rated
+        public int CustomerRating { get; set; }  // 0 if not rated, 1-5 if rated (average of all ratings)
         public string CustomerFeedback { get; set; } = string.Empty;
-        
+
+        // ✅ RATING-FIX: Per-user rating information (populated by controller)
+        public bool CurrentUserHasRated { get; set; }  // Has the current user rated this conversation?
+        public int? CurrentUserRating { get; set; }  // Current user's rating (null if not rated, 1-5 if rated)
+        public string CurrentUserFeedback { get; set; } = string.Empty;  // Current user's feedback
+
         // Statistics
         public int TotalMessages { get; set; }
         public int UnreadCount { get; set; }

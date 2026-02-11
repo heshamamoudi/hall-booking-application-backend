@@ -49,14 +49,22 @@ namespace HallApp.Web.Controllers.Chat
         }
 
         /// <summary>
-        /// Populates UnreadCount for each conversation DTO using per-user read tracking.
-        /// AutoMapper sets UnreadCount to 0; this method calculates the actual per-user count.
+        /// Populates per-user data (unread counts and rating status) for each conversation DTO.
+        /// AutoMapper sets defaults to 0/false; this method calculates the actual per-user values.
+        /// ✅ RATING-FIX: Also populates CurrentUserHasRated, CurrentUserRating, CurrentUserFeedback
         /// </summary>
         private async Task PopulateUnreadCountsAsync(IEnumerable<ChatConversationDto> conversationDtos, int userId)
         {
             foreach (var dto in conversationDtos)
             {
+                // Populate unread count
                 dto.UnreadCount = await _chatService.GetUnreadCountAsync(dto.Id, userId);
+
+                // ✅ RATING-FIX: Populate per-user rating status
+                var userRating = await _chatService.GetUserRatingAsync(dto.Id, userId);
+                dto.CurrentUserHasRated = userRating != null;
+                dto.CurrentUserRating = userRating?.Rating;
+                dto.CurrentUserFeedback = userRating?.Comment ?? string.Empty;
             }
         }
 

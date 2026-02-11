@@ -495,6 +495,18 @@ namespace HallApp.Application.Services
 
             var createdRating = await _unitOfWork.ChatRepository.CreateRatingAsync(chatRating);
 
+            // ✅ RATING-FIX: Sync legacy CustomerRating field for frontend compatibility
+            // Calculate average rating for the conversation if multiple users have rated
+            var allRatings = await _unitOfWork.ChatRepository.GetConversationRatingsAsync(conversationId);
+            var averageRating = allRatings.Any()
+                ? (int)Math.Round(allRatings.Average(r => r.Rating))
+                : rating;
+
+            // Update conversation's legacy CustomerRating field
+            conversation.CustomerRating = averageRating;
+            await _unitOfWork.ChatRepository.UpdateConversationAsync(conversation);
+            _logger.LogInformation("Updated legacy CustomerRating to {AverageRating} for conversation {ConversationId}", averageRating, conversationId);
+
             // Send SignalR notification
             try
             {
