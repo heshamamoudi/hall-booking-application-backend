@@ -82,7 +82,7 @@ namespace HallApp.Web.Controllers.Notification
                     CreatedAt = n.Created,
                     ReadAt = n.ReadAt
                 });
-                
+
                 return Success(notificationDtos, "Notifications retrieved successfully");
             }
             catch (Exception ex)

@@ -8,6 +8,8 @@ using HallApp.Core.Entities;
 using HallApp.Core.Entities.CustomerEntities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using HallApp.Infrastructure.Data;
 
 namespace HallApp.Web.Controllers.Customer
 {
@@ -22,13 +24,15 @@ namespace HallApp.Web.Controllers.Customer
         private readonly IAddressService _addressService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly DataContext _context;
 
-        public CustomerController(ICustomerService customerService, IAddressService addressService, IUnitOfWork unitOfWork, IMapper mapper)
+        public CustomerController(ICustomerService customerService, IAddressService addressService, IUnitOfWork unitOfWork, IMapper mapper, DataContext context)
         {
             _customerService = customerService;
             _addressService = addressService;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _context = context;
         }
 
         /// <summary>
@@ -131,40 +135,91 @@ namespace HallApp.Web.Controllers.Customer
         {
             try
             {
-                if (!ModelState.IsValid)
-                {
-                    return Error<CustomerDto>($"Profile update failed: {ModelState.Values.FirstOrDefault().Errors.FirstOrDefault().ErrorMessage}", 400);
-                }
+                // Read current AppUser values (no tracking) to merge with updates
+                var currentUser = await _context.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Id == UserId);
 
-                // Map DTO to entity for service call
-                var customerEntity = _mapper.Map<HallApp.Core.Entities.CustomerEntities.Customer>(updateDto);
-                
-                // Get existing customer first
-                var existingCustomer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
-                if (existingCustomer == null)
-                {
+                if (currentUser == null)
+                    return Error<CustomerDto>("User not found", 404);
+
+                var customerId = await _context.Customers
+                    .AsNoTracking()
+                    .Where(c => c.AppUserId == UserId)
+                    .Select(c => c.Id)
+                    .FirstOrDefaultAsync();
+
+                if (customerId == 0)
                     return Error<CustomerDto>("Customer not found", 404);
-                }
-                
-                // Update the existing customer with new data
-                existingCustomer.CreditMoney = customerEntity.CreditMoney;
-                existingCustomer.SelectedAddressId = customerEntity.SelectedAddressId;
-                existingCustomer.Active = customerEntity.Active;
-                existingCustomer.Confirmed = customerEntity.Confirmed;
-                
-                var updatedCustomer = await _customerService.UpdateCustomerAsync(existingCustomer);
-                
-                if (updatedCustomer == null)
+
+                // Update Customer timestamp
+                await _context.Customers
+                    .Where(c => c.Id == customerId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(c => c.Updated, DateTime.UtcNow));
+
+                // Update AppUser fields via ExecuteUpdate (bypasses entity tracking entirely)
+                if (updateDto.AppUser != null)
                 {
-                    return Error<CustomerDto>("Failed to update profile", 500);
+                    var firstName = !string.IsNullOrEmpty(updateDto.AppUser.FirstName) ? updateDto.AppUser.FirstName : currentUser.FirstName;
+                    var lastName = !string.IsNullOrEmpty(updateDto.AppUser.LastName) ? updateDto.AppUser.LastName : currentUser.LastName;
+                    var phone = !string.IsNullOrEmpty(updateDto.AppUser.PhoneNumber) ? updateDto.AppUser.PhoneNumber : currentUser.PhoneNumber;
+                    var gender = !string.IsNullOrEmpty(updateDto.AppUser.Gender) ? updateDto.AppUser.Gender : currentUser.Gender;
+                    var dob = updateDto.AppUser.DOB != default(DateTime) ? updateDto.AppUser.DOB : currentUser.DOB;
+
+                    await _context.Users
+                        .Where(u => u.Id == UserId)
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(u => u.FirstName, firstName)
+                            .SetProperty(u => u.LastName, lastName)
+                            .SetProperty(u => u.PhoneNumber, phone)
+                            .SetProperty(u => u.Gender, gender)
+                            .SetProperty(u => u.DOB, dob)
+                            .SetProperty(u => u.Updated, DateTime.UtcNow)
+                        );
                 }
 
+                // Re-fetch full profile for the response
+                var updatedCustomer = await _customerService.GetCustomerByIdAsync(customerId);
                 var customerDto = _mapper.Map<CustomerDto>(updatedCustomer);
                 return Success(customerDto, "Profile updated successfully");
             }
             catch (Exception ex)
             {
                 return Error<CustomerDto>($"Failed to update customer: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Delete current user's account (self-service)
+        /// </summary>
+        /// <returns>Success response</returns>
+        [Authorize]
+        [HttpDelete("my-account")]
+        public async Task<ActionResult<ApiResponse>> DeleteMyAccount()
+        {
+            try
+            {
+                var customer = await _context.Customers
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.AppUserId == UserId);
+
+                if (customer == null)
+                    return Error("Customer not found", 404);
+
+                // Deactivate the user account (soft delete)
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == UserId);
+                if (user != null)
+                {
+                    user.Active = false;
+                    user.Updated = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+
+                return Success("Account deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                return Error($"Failed to delete account: {ex.Message}", 500);
             }
         }
 
