@@ -74,7 +74,10 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Name",
                 table: "VendorTypes",
                 type: "nvarchar(50)",
@@ -83,6 +86,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(50)",
                 oldMaxLength: 50);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "MaxSimultaneousBookings",
@@ -105,7 +110,10 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Description",
                 table: "VendorTypes",
                 type: "nvarchar(500)",
@@ -115,6 +123,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(500)",
                 oldMaxLength: 500,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "DefaultDuration",
@@ -147,7 +157,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "WhatsApp",
                 table: "Vendors",
                 type: "nvarchar(max)",
@@ -155,8 +168,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Website",
                 table: "Vendors",
                 type: "nvarchar(max)",
@@ -164,6 +182,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "VendorTypeId",
@@ -173,7 +193,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "VatNumber",
                 table: "Vendors",
                 type: "nvarchar(50)",
@@ -183,6 +206,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(50)",
                 oldMaxLength: 50,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "UpdatedAt",
@@ -209,15 +234,23 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(double),
                 oldType: "double precision");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Phone",
                 table: "Vendors",
                 type: "nvarchar(max)",
                 nullable: false,
                 oldClrType: typeof(string),
                 oldType: "text");
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Name",
                 table: "Vendors",
                 type: "nvarchar(100)",
@@ -226,8 +259,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(100)",
                 oldMaxLength: 100);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "LogoUrl",
                 table: "Vendors",
                 type: "nvarchar(max)",
@@ -235,6 +273,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -301,15 +341,23 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Email",
                 table: "Vendors",
                 type: "nvarchar(max)",
                 nullable: false,
                 oldClrType: typeof(string),
                 oldType: "text");
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Description",
                 table: "Vendors",
                 type: "nvarchar(500)",
@@ -319,6 +367,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(500)",
                 oldMaxLength: 500,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
@@ -328,7 +378,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "CoverImageUrl",
                 table: "Vendors",
                 type: "nvarchar(max)",
@@ -336,8 +389,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "CommercialRegistrationNumber",
                 table: "Vendors",
                 type: "nvarchar(50)",
@@ -347,6 +405,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(50)",
                 oldMaxLength: 50,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ApprovedAt",
@@ -399,7 +459,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "State",
                 table: "VendorLocations",
                 type: "nvarchar(50)",
@@ -409,8 +472,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(50)",
                 oldMaxLength: 50,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "PostalCode",
                 table: "VendorLocations",
                 type: "nvarchar(20)",
@@ -420,6 +488,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(20)",
                 oldMaxLength: 20,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -447,7 +517,10 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Country",
                 table: "VendorLocations",
                 type: "nvarchar(50)",
@@ -457,8 +530,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(50)",
                 oldMaxLength: 50,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "City",
                 table: "VendorLocations",
                 type: "nvarchar(100)",
@@ -468,8 +546,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Address",
                 table: "VendorLocations",
                 type: "nvarchar(200)",
@@ -478,6 +561,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(200)",
                 oldMaxLength: 200);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -496,7 +581,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "SpecialNote",
                 table: "VendorBusinessHours",
                 type: "nvarchar(200)",
@@ -506,6 +594,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(200)",
                 oldMaxLength: 200,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<TimeSpan>(
                 name: "OpenTime",
@@ -578,7 +668,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "SpecialInstructions",
                 table: "VendorBookingServices",
                 type: "nvarchar(max)",
@@ -586,6 +679,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "ServiceItemId",
@@ -666,7 +761,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Status",
                 table: "VendorBookings",
                 type: "nvarchar(max)",
@@ -674,6 +772,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "StartTime",
@@ -683,7 +783,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ServiceType",
                 table: "VendorBookings",
                 type: "nvarchar(max)",
@@ -691,6 +794,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ServiceDate",
@@ -709,7 +814,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "PaymentStatus",
                 table: "VendorBookings",
                 type: "nvarchar(max)",
@@ -717,8 +825,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "PaymentMethod",
                 table: "VendorBookings",
                 type: "nvarchar(max)",
@@ -726,6 +839,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "PaidAt",
@@ -736,7 +851,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Notes",
                 table: "VendorBookings",
                 type: "nvarchar(max)",
@@ -744,6 +862,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -804,7 +924,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "CancellationReason",
                 table: "VendorBookings",
                 type: "nvarchar(max)",
@@ -812,6 +935,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "BookingId",
@@ -855,7 +980,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Reason",
                 table: "VendorBlockedDates",
                 type: "nvarchar(200)",
@@ -865,6 +993,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(200)",
                 oldMaxLength: 200,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -904,7 +1034,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Value",
                 table: "UserTokens",
                 type: "nvarchar(max)",
@@ -912,22 +1045,34 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Name",
                 table: "UserTokens",
                 type: "nvarchar(450)",
                 nullable: false,
                 oldClrType: typeof(string),
                 oldType: "text");
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "LoginProvider",
                 table: "UserTokens",
                 type: "nvarchar(450)",
                 nullable: false,
                 oldClrType: typeof(string),
                 oldType: "text");
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "UserId",
@@ -937,7 +1082,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "UserName",
                 table: "Users",
                 type: "nvarchar(256)",
@@ -947,6 +1095,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(256)",
                 oldMaxLength: 256,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
@@ -969,7 +1119,10 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "SecurityStamp",
                 table: "Users",
                 type: "nvarchar(max)",
@@ -977,6 +1130,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "RefreshTokenExpiryTime",
@@ -986,7 +1141,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "RefreshToken",
                 table: "Users",
                 type: "nvarchar(max)",
@@ -994,6 +1152,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -1008,7 +1168,10 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "PhoneNumber",
                 table: "Users",
                 type: "nvarchar(max)",
@@ -1016,8 +1179,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "PasswordHash",
                 table: "Users",
                 type: "nvarchar(max)",
@@ -1025,8 +1193,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "NormalizedUserName",
                 table: "Users",
                 type: "nvarchar(256)",
@@ -1036,8 +1209,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(256)",
                 oldMaxLength: 256,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "NormalizedEmail",
                 table: "Users",
                 type: "nvarchar(256)",
@@ -1047,6 +1225,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(256)",
                 oldMaxLength: 256,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTimeOffset>(
                 name: "LockoutEnd",
@@ -1070,7 +1250,10 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "LastName",
                 table: "Users",
                 type: "nvarchar(max)",
@@ -1078,8 +1261,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Gender",
                 table: "Users",
                 type: "nvarchar(max)",
@@ -1087,8 +1275,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "FirstName",
                 table: "Users",
                 type: "nvarchar(max)",
@@ -1096,6 +1289,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -1110,7 +1305,10 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Email",
                 table: "Users",
                 type: "nvarchar(256)",
@@ -1120,6 +1318,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(256)",
                 oldMaxLength: 256,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "DOB",
@@ -1137,7 +1337,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ConcurrencyStamp",
                 table: "Users",
                 type: "nvarchar(max)",
@@ -1145,6 +1348,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -1200,7 +1405,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ProviderDisplayName",
                 table: "UserLogins",
                 type: "nvarchar(max)",
@@ -1208,22 +1416,34 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ProviderKey",
                 table: "UserLogins",
                 type: "nvarchar(450)",
                 nullable: false,
                 oldClrType: typeof(string),
                 oldType: "text");
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "LoginProvider",
                 table: "UserLogins",
                 type: "nvarchar(450)",
                 nullable: false,
                 oldClrType: typeof(string),
                 oldType: "text");
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "UserId",
@@ -1233,7 +1453,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ClaimValue",
                 table: "UserClaims",
                 type: "nvarchar(max)",
@@ -1241,8 +1464,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ClaimType",
                 table: "UserClaims",
                 type: "nvarchar(max)",
@@ -1250,6 +1478,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -1293,7 +1523,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ServiceType",
                 table: "ServiceItems",
                 type: "nvarchar(50)",
@@ -1303,8 +1536,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(50)",
                 oldMaxLength: 50,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Name",
                 table: "ServiceItems",
                 type: "nvarchar(100)",
@@ -1313,6 +1551,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(100)",
                 oldMaxLength: 100);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -1340,7 +1580,10 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ImageUrl",
                 table: "ServiceItems",
                 type: "nvarchar(max)",
@@ -1348,8 +1591,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Description",
                 table: "ServiceItems",
                 type: "nvarchar(500)",
@@ -1359,6 +1607,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(500)",
                 oldMaxLength: 500,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
@@ -1393,7 +1643,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ImageUrl",
                 table: "ServiceItemImages",
                 type: "nvarchar(max)",
@@ -1401,6 +1654,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
@@ -1410,7 +1665,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Alt",
                 table: "ServiceItemImages",
                 type: "nvarchar(max)",
@@ -1418,6 +1676,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -1436,7 +1696,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Name",
                 table: "Service",
                 type: "nvarchar(max)",
@@ -1444,6 +1707,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -1482,7 +1747,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ArabicName",
                 table: "Service",
                 type: "nvarchar(max)",
@@ -1490,6 +1758,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "ID",
@@ -1500,7 +1770,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "NormalizedName",
                 table: "Roles",
                 type: "nvarchar(256)",
@@ -1510,8 +1783,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(256)",
                 oldMaxLength: 256,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Name",
                 table: "Roles",
                 type: "nvarchar(256)",
@@ -1521,8 +1799,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(256)",
                 oldMaxLength: 256,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ConcurrencyStamp",
                 table: "Roles",
                 type: "nvarchar(max)",
@@ -1530,6 +1813,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -1548,7 +1833,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ClaimValue",
                 table: "RoleClaims",
                 type: "nvarchar(max)",
@@ -1556,8 +1844,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ClaimType",
                 table: "RoleClaims",
                 type: "nvarchar(max)",
@@ -1565,6 +1858,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -1592,7 +1887,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "RejectionReason",
                 table: "Reviews",
                 type: "nvarchar(max)",
@@ -1600,6 +1898,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "Rating",
@@ -1660,7 +1960,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Content",
                 table: "Reviews",
                 type: "nvarchar(max)",
@@ -1668,6 +1971,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -1678,7 +1983,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "TransactionId",
                 table: "Payments",
                 type: "nvarchar(100)",
@@ -1688,8 +1996,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "StatusDescription",
                 table: "Payments",
                 type: "nvarchar(200)",
@@ -1699,8 +2012,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(200)",
                 oldMaxLength: 200,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Status",
                 table: "Payments",
                 type: "nvarchar(50)",
@@ -1709,8 +2027,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(50)",
                 oldMaxLength: 50);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "RiskScore",
                 table: "Payments",
                 type: "nvarchar(50)",
@@ -1720,8 +2043,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(50)",
                 oldMaxLength: 50,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ResultCode",
                 table: "Payments",
                 type: "nvarchar(10)",
@@ -1731,6 +2059,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(10)",
                 oldMaxLength: 10,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "RefundedBy",
@@ -1750,7 +2080,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "RefundReason",
                 table: "Payments",
                 type: "nvarchar(500)",
@@ -1760,8 +2093,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(500)",
                 oldMaxLength: 500,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "PaymentGateway",
                 table: "Payments",
                 type: "nvarchar(50)",
@@ -1770,8 +2108,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(50)",
                 oldMaxLength: 50);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "PaymentBrand",
                 table: "Payments",
                 type: "nvarchar(20)",
@@ -1780,8 +2123,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(20)",
                 oldMaxLength: 20);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Last4Digits",
                 table: "Payments",
                 type: "nvarchar(4)",
@@ -1791,6 +2139,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(4)",
                 oldMaxLength: 4,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -1805,7 +2155,10 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "IpAddress",
                 table: "Payments",
                 type: "nvarchar(200)",
@@ -1815,8 +2168,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(200)",
                 oldMaxLength: 200,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "FailureReason",
                 table: "Payments",
                 type: "nvarchar(500)",
@@ -1826,6 +2184,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(500)",
                 oldMaxLength: 500,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "FailedAt",
@@ -1836,7 +2196,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "CustomerPhone",
                 table: "Payments",
                 type: "nvarchar(50)",
@@ -1846,6 +2209,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(50)",
                 oldMaxLength: 50,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "CustomerId",
@@ -1855,7 +2220,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "CustomerEmail",
                 table: "Payments",
                 type: "nvarchar(100)",
@@ -1865,8 +2233,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Currency",
                 table: "Payments",
                 type: "nvarchar(3)",
@@ -1875,6 +2248,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(3)",
                 oldMaxLength: 3);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
@@ -1893,7 +2268,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "CheckoutId",
                 table: "Payments",
                 type: "nvarchar(100)",
@@ -1902,8 +2280,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(100)",
                 oldMaxLength: 100);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "CardHolder",
                 table: "Payments",
                 type: "nvarchar(100)",
@@ -1913,8 +2296,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "CardExpiryDate",
                 table: "Payments",
                 type: "nvarchar(7)",
@@ -1924,8 +2312,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(7)",
                 oldMaxLength: 7,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "CardBrand",
                 table: "Payments",
                 type: "nvarchar(20)",
@@ -1935,6 +2328,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(20)",
                 oldMaxLength: 20,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "BookingId",
@@ -1953,7 +2348,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Status",
                 table: "PaymentRefunds",
                 type: "nvarchar(50)",
@@ -1962,6 +2360,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(50)",
                 oldMaxLength: 50);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "RequestedBy",
@@ -1971,7 +2371,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "RefundTransactionId",
                 table: "PaymentRefunds",
                 type: "nvarchar(100)",
@@ -1981,8 +2384,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Reason",
                 table: "PaymentRefunds",
                 type: "nvarchar(500)",
@@ -1991,6 +2399,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(500)",
                 oldMaxLength: 500);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ProcessedAt",
@@ -2050,7 +2460,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(double),
                 oldType: "double precision");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Name",
                 table: "Package",
                 type: "nvarchar(max)",
@@ -2058,6 +2471,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -2088,7 +2503,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Description",
                 table: "Package",
                 type: "nvarchar(max)",
@@ -2096,6 +2514,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
@@ -2123,7 +2543,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Type",
                 table: "Notifications",
                 type: "nvarchar(50)",
@@ -2133,8 +2556,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(50)",
                 oldMaxLength: 50,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Title",
                 table: "Notifications",
                 type: "nvarchar(200)",
@@ -2143,6 +2571,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(200)",
                 oldMaxLength: 200);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ReadAt",
@@ -2153,7 +2583,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Message",
                 table: "Notifications",
                 type: "nvarchar(1000)",
@@ -2162,6 +2595,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(1000)",
                 oldMaxLength: 1000);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -2222,7 +2657,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "State",
                 table: "Location",
                 type: "nvarchar(max)",
@@ -2230,6 +2668,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<double>(
                 name: "Longitude",
@@ -2263,7 +2703,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "City",
                 table: "Location",
                 type: "nvarchar(max)",
@@ -2271,6 +2714,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<double>(
                 name: "Altitude",
@@ -2280,7 +2725,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(double),
                 oldType: "double precision");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Address",
                 table: "Location",
                 type: "nvarchar(max)",
@@ -2288,6 +2736,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "ID",
@@ -2298,7 +2748,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ZATCA_UUID",
                 table: "Invoices",
                 type: "nvarchar(100)",
@@ -2308,6 +2761,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ZATCA_SubmittedAt",
@@ -2318,7 +2773,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ZATCA_Status",
                 table: "Invoices",
                 type: "nvarchar(20)",
@@ -2328,8 +2786,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(20)",
                 oldMaxLength: 20,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ZATCA_Response",
                 table: "Invoices",
                 type: "nvarchar(500)",
@@ -2339,6 +2802,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(500)",
                 oldMaxLength: 500,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "UpdatedAt",
@@ -2348,7 +2813,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Terms",
                 table: "Invoices",
                 type: "nvarchar(1000)",
@@ -2358,6 +2826,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(1000)",
                 oldMaxLength: 1000,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "SupplyDate",
@@ -2367,7 +2837,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "SellerVatNumber",
                 table: "Invoices",
                 type: "nvarchar(100)",
@@ -2376,8 +2849,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(100)",
                 oldMaxLength: 100);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "SellerStreetName",
                 table: "Invoices",
                 type: "nvarchar(100)",
@@ -2387,8 +2865,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "SellerPostalCode",
                 table: "Invoices",
                 type: "nvarchar(10)",
@@ -2398,8 +2881,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(10)",
                 oldMaxLength: 10,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "SellerName",
                 table: "Invoices",
                 type: "nvarchar(200)",
@@ -2408,8 +2896,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(200)",
                 oldMaxLength: 200);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "SellerDistrict",
                 table: "Invoices",
                 type: "nvarchar(100)",
@@ -2419,8 +2912,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "SellerCountryCode",
                 table: "Invoices",
                 type: "nvarchar(2)",
@@ -2430,8 +2928,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(2)",
                 oldMaxLength: 2,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "SellerCommercialRegistrationNumber",
                 table: "Invoices",
                 type: "nvarchar(100)",
@@ -2440,8 +2943,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(100)",
                 oldMaxLength: 100);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "SellerCity",
                 table: "Invoices",
                 type: "nvarchar(100)",
@@ -2451,8 +2959,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "SellerBuildingNumber",
                 table: "Invoices",
                 type: "nvarchar(10)",
@@ -2462,8 +2975,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(10)",
                 oldMaxLength: 10,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "SellerAddress",
                 table: "Invoices",
                 type: "nvarchar(500)",
@@ -2472,8 +2990,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(500)",
                 oldMaxLength: 500);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "QRCode",
                 table: "Invoices",
                 type: "nvarchar(1000)",
@@ -2483,8 +3006,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(1000)",
                 oldMaxLength: 1000,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "PdfPath",
                 table: "Invoices",
                 type: "nvarchar(500)",
@@ -2494,8 +3022,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(500)",
                 oldMaxLength: 500,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "PaymentStatus",
                 table: "Invoices",
                 type: "nvarchar(20)",
@@ -2505,8 +3038,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(20)",
                 oldMaxLength: 20,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "PaymentReference",
                 table: "Invoices",
                 type: "nvarchar(100)",
@@ -2516,8 +3054,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "PaymentMethod",
                 table: "Invoices",
                 type: "nvarchar(50)",
@@ -2526,6 +3069,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(50)",
                 oldMaxLength: 50);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "PaymentDate",
@@ -2536,7 +3081,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Notes",
                 table: "Invoices",
                 type: "nvarchar(1000)",
@@ -2546,6 +3094,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(1000)",
                 oldMaxLength: 1000,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -2573,7 +3123,10 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "InvoiceType",
                 table: "Invoices",
                 type: "nvarchar(20)",
@@ -2582,8 +3135,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(20)",
                 oldMaxLength: 20);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "InvoiceNumber",
                 table: "Invoices",
                 type: "nvarchar(50)",
@@ -2592,8 +3150,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(50)",
                 oldMaxLength: 50);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "InvoiceHash",
                 table: "Invoices",
                 type: "nvarchar(500)",
@@ -2603,6 +3166,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(500)",
                 oldMaxLength: 500,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "InvoiceDate",
@@ -2629,7 +3194,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Currency",
                 table: "Invoices",
                 type: "nvarchar(3)",
@@ -2638,8 +3206,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(3)",
                 oldMaxLength: 3);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "CreatedBy",
                 table: "Invoices",
                 type: "nvarchar(100)",
@@ -2649,6 +3222,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
@@ -2667,7 +3242,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "CancellationReason",
                 table: "Invoices",
                 type: "nvarchar(500)",
@@ -2677,8 +3255,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(500)",
                 oldMaxLength: 500,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "BuyerVatNumber",
                 table: "Invoices",
                 type: "nvarchar(100)",
@@ -2688,8 +3271,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "BuyerPostalCode",
                 table: "Invoices",
                 type: "nvarchar(10)",
@@ -2699,8 +3287,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(10)",
                 oldMaxLength: 10,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "BuyerName",
                 table: "Invoices",
                 type: "nvarchar(200)",
@@ -2709,8 +3302,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(200)",
                 oldMaxLength: 200);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "BuyerCountryCode",
                 table: "Invoices",
                 type: "nvarchar(2)",
@@ -2720,8 +3318,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(2)",
                 oldMaxLength: 2,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "BuyerCity",
                 table: "Invoices",
                 type: "nvarchar(100)",
@@ -2731,8 +3334,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "BuyerAddress",
                 table: "Invoices",
                 type: "nvarchar(500)",
@@ -2742,6 +3350,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(500)",
                 oldMaxLength: 500,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "BookingId",
@@ -2760,7 +3370,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Unit",
                 table: "InvoiceLineItems",
                 type: "nvarchar(20)",
@@ -2770,8 +3383,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(20)",
                 oldMaxLength: 20,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "TaxCategory",
                 table: "InvoiceLineItems",
                 type: "nvarchar(50)",
@@ -2781,6 +3399,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(50)",
                 oldMaxLength: 50,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "LineNumber",
@@ -2790,7 +3410,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ItemCode",
                 table: "InvoiceLineItems",
                 type: "nvarchar(100)",
@@ -2800,6 +3423,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "InvoiceId",
@@ -2809,7 +3434,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Description",
                 table: "InvoiceLineItems",
                 type: "nvarchar(200)",
@@ -2818,6 +3446,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(200)",
                 oldMaxLength: 200);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -2828,7 +3458,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "WhatsApp",
                 table: "Halls",
                 type: "nvarchar(max)",
@@ -2836,6 +3469,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
@@ -2845,7 +3480,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Phone",
                 table: "Halls",
                 type: "nvarchar(max)",
@@ -2853,8 +3491,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Name",
                 table: "Halls",
                 type: "nvarchar(max)",
@@ -2862,6 +3505,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "MaleMin",
@@ -2892,7 +3537,10 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Logo",
                 table: "Halls",
                 type: "nvarchar(max)",
@@ -2900,6 +3548,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -3003,7 +3653,10 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Email",
                 table: "Halls",
                 type: "nvarchar(max)",
@@ -3011,8 +3664,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Description",
                 table: "Halls",
                 type: "nvarchar(max)",
@@ -3020,6 +3678,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
@@ -3071,7 +3731,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "URL",
                 table: "HallMedia",
                 type: "nvarchar(max)",
@@ -3079,8 +3742,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "MediaType",
                 table: "HallMedia",
                 type: "nvarchar(max)",
@@ -3088,6 +3756,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "HallID",
@@ -3295,7 +3965,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Phone",
                 table: "Contact",
                 type: "nvarchar(max)",
@@ -3303,8 +3976,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Name",
                 table: "Contact",
                 type: "nvarchar(max)",
@@ -3312,6 +3990,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "HallID",
@@ -3321,7 +4001,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Email",
                 table: "Contact",
                 type: "nvarchar(max)",
@@ -3329,6 +4012,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
@@ -3452,7 +4137,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "SenderType",
                 table: "ChatMessages",
                 type: "nvarchar(20)",
@@ -3461,6 +4149,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(20)",
                 oldMaxLength: 20);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "SenderId",
@@ -3479,7 +4169,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "MessageType",
                 table: "ChatMessages",
                 type: "nvarchar(20)",
@@ -3488,8 +4181,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(20)",
                 oldMaxLength: 20);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Message",
                 table: "ChatMessages",
                 type: "nvarchar(2000)",
@@ -3498,6 +4196,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(2000)",
                 oldMaxLength: 2000);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -3555,7 +4255,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "AttachmentUrl",
                 table: "ChatMessages",
                 type: "nvarchar(500)",
@@ -3565,8 +4268,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(500)",
                 oldMaxLength: 500,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "AttachmentName",
                 table: "ChatMessages",
                 type: "nvarchar(100)",
@@ -3576,6 +4284,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -3612,7 +4322,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Subject",
                 table: "ChatConversations",
                 type: "nvarchar(200)",
@@ -3621,8 +4334,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(200)",
                 oldMaxLength: 200);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Status",
                 table: "ChatConversations",
                 type: "nvarchar(50)",
@@ -3631,6 +4349,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(50)",
                 oldMaxLength: 50);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<TimeSpan>(
                 name: "ResponseTime",
@@ -3659,7 +4379,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "interval",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Priority",
                 table: "ChatConversations",
                 type: "nvarchar(20)",
@@ -3668,6 +4391,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(20)",
                 oldMaxLength: 20);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "LastMessageAt",
@@ -3718,7 +4443,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "CustomerFeedback",
                 table: "ChatConversations",
                 type: "nvarchar(1000)",
@@ -3728,6 +4456,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(1000)",
                 oldMaxLength: 1000,
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "CreatedByUserId",
@@ -3745,7 +4475,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ConversationType",
                 table: "ChatConversations",
                 type: "nvarchar(50)",
@@ -3754,6 +4487,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(50)",
                 oldMaxLength: 50);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ClosedAt",
@@ -3773,7 +4508,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Category",
                 table: "ChatConversations",
                 type: "nvarchar(100)",
@@ -3782,6 +4520,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(100)",
                 oldMaxLength: 100);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "BookingId",
@@ -3825,7 +4565,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Status",
                 table: "Bookings",
                 type: "nvarchar(max)",
@@ -3833,6 +4576,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<TimeSpan>(
                 name: "StartTime",
@@ -3842,7 +4587,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(TimeSpan),
                 oldType: "interval");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "PaymentStatus",
                 table: "Bookings",
                 type: "nvarchar(max)",
@@ -3850,8 +4598,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "PaymentMethod",
                 table: "Bookings",
                 type: "nvarchar(max)",
@@ -3859,6 +4612,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "PaidAt",
@@ -3919,7 +4674,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "EventType",
                 table: "Bookings",
                 type: "nvarchar(max)",
@@ -3927,6 +4685,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "EventDate",
@@ -3952,7 +4712,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Currency",
                 table: "Bookings",
                 type: "nvarchar(max)",
@@ -3960,6 +4723,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
@@ -3977,7 +4742,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Coupon",
                 table: "Bookings",
                 type: "nvarchar(max)",
@@ -3985,8 +4753,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Comments",
                 table: "Bookings",
                 type: "nvarchar(max)",
@@ -3994,6 +4767,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "BookingDate",
@@ -4028,7 +4803,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(double),
                 oldType: "double precision");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Name",
                 table: "BookingPackages",
                 type: "nvarchar(max)",
@@ -4036,6 +4814,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "MaxGuests",
@@ -4058,7 +4838,10 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Features",
                 table: "BookingPackages",
                 type: "nvarchar(max)",
@@ -4066,8 +4849,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Description",
                 table: "BookingPackages",
                 type: "nvarchar(max)",
@@ -4075,6 +4863,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "text",
                 oldNullable: true);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
@@ -4101,7 +4891,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "ZipCode",
                 table: "Addresses",
                 type: "nvarchar(20)",
@@ -4110,8 +4903,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(20)",
                 oldMaxLength: 20);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "Street",
                 table: "Addresses",
                 type: "nvarchar(200)",
@@ -4120,8 +4918,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(200)",
                 oldMaxLength: 200);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "State",
                 table: "Addresses",
                 type: "nvarchar(50)",
@@ -4130,6 +4933,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(50)",
                 oldMaxLength: 50);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             
             if (isSqlServer)
@@ -4152,7 +4957,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            migrationBuilder.AlterColumn<string>(
+            
+            if (isSqlServer)
+            {
+                migrationBuilder.AlterColumn<string>(
                 name: "City",
                 table: "Addresses",
                 type: "nvarchar(100)",
@@ -4161,6 +4969,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(100)",
                 oldMaxLength: 100);
+            }
+            // else: Skip for PostgreSQL - keep character varying/text type
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",

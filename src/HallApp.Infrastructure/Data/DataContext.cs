@@ -9,13 +9,14 @@ using HallApp.Core.Entities.PaymentEntities;
 using HallApp.Core.Entities.ChatEntities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace HallApp.Infrastructure.Data;
 
 public class DataContext : IdentityDbContext<AppUser, AppRole, int,
     IdentityUserClaim<int>, AppUserRole, IdentityUserLogin<int>,
-    IdentityRoleClaim<int>, IdentityUserToken<int>>
+    IdentityRoleClaim<int>, IdentityUserToken<int>>, IDataProtectionKeyContext
 {
     public DataContext(DbContextOptions<DataContext> options) : base(options)
     {
@@ -68,6 +69,9 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
     public DbSet<ChatStatistics> ChatStatistics { get; set; }
     public DbSet<ChatRating> ChatRatings { get; set; }
     public DbSet<SupportCase> SupportCases { get; set; }
+
+    // Data Protection Entities
+    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

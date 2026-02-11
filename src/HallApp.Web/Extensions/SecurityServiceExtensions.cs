@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.DataProtection;
+using HallApp.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography.X509Certificates;
 
 namespace HallApp.Web.Extensions
 {
@@ -22,11 +25,55 @@ namespace HallApp.Web.Extensions
                 options.Secure = CookieSecurePolicy.Always;
             });
 
-            // Configure data protection - simplified for container/cloud deployment
-            // Note: In Railway/container environments, keys are ephemeral unless using external storage
-            services.AddDataProtection()
+            // BUGFIX: Configure data protection to persist keys in database
+            // Prevents key loss on container restart and ensures consistency across multiple instances
+            var dataProtectionBuilder = services.AddDataProtection()
                 .SetApplicationName("HallBookingApi")
                 .SetDefaultKeyLifetime(TimeSpan.FromDays(90));
+
+            // In production, persist keys to database and configure encryption
+            if (!environment.IsDevelopment())
+            {
+                // Keys will be stored in AspNetCore.DataProtection.EntityFrameworkCore table
+                dataProtectionBuilder.PersistKeysToDbContext<DataContext>();
+
+                // SECURITY: Configure at-rest encryption for data protection keys
+                // Option 1: Certificate-based encryption (recommended for production)
+                var certThumbprint = configuration["DataProtection:CertificateThumbprint"];
+                var certPassword = configuration["DataProtection:CertificatePassword"];
+                var certPath = configuration["DataProtection:CertificatePath"];
+
+                if (!string.IsNullOrEmpty(certPath) && File.Exists(certPath))
+                {
+                    // Load certificate from file (e.g., mounted secret in Railway)
+                    var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(
+                        certPath,
+                        certPassword
+                    );
+                    dataProtectionBuilder.ProtectKeysWithCertificate(cert);
+                    Console.WriteLine("🔐 Data Protection: Using certificate-based encryption");
+                }
+                else if (!string.IsNullOrEmpty(certThumbprint))
+                {
+                    // Load certificate from store (Windows environments)
+                    dataProtectionBuilder.ProtectKeysWithCertificate(certThumbprint);
+                    Console.WriteLine("🔐 Data Protection: Using certificate from store");
+                }
+                else
+                {
+                    // Option 2: Rely on database encryption at rest
+                    // PostgreSQL/Railway encrypts data at rest by default
+                    Console.WriteLine("⚠️ Data Protection: No certificate configured - relying on database encryption at rest");
+                    Console.WriteLine("   To add encryption, set DataProtection:CertificatePath in Railway environment variables");
+                    Console.WriteLine("   Keys are protected by PostgreSQL's built-in encryption and TLS in transit");
+                }
+
+                Console.WriteLine("🔐 Data Protection: Keys will be persisted to database");
+            }
+            else
+            {
+                Console.WriteLine("🔐 Data Protection: Using default file system (development only)");
+            }
 
             return services;
         }
