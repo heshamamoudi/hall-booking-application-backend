@@ -1300,6 +1300,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTimeOffset>(
                 name: "LockoutEnd",
                 table: "Users",
@@ -1308,6 +1310,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTimeOffset),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
