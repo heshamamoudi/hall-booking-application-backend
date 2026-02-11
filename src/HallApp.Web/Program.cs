@@ -61,9 +61,11 @@ var allowedOrigins = allowedOriginsConfig.Split(',', StringSplitOptions.RemoveEm
 // BUGFIX: Add known production domains if CORS env var is not set
 var knownProductionDomains = new[]
 {
+    "https://keen-lokum-f3d666.netlify.app",  // Current production frontend
     "https://zawaji-app.netlify.app",
     "https://zawaji.netlify.app",
     "https://hall-frontend.netlify.app",
+    "http://localhost:4200",  // Local development
     // Add future production domains here
 };
 
