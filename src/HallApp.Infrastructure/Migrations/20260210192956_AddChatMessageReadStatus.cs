@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -5239,33 +5240,68 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
-            migrationBuilder.CreateTable(
-                name: "ChatMessageReadStatuses",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    MessageId = table.Column<int>(type: "int", nullable: false),
-                    UserId = table.Column<int>(type: "int", nullable: false),
-                    IsRead = table.Column<bool>(type: "bit", nullable: false),
-                    ReadAt = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ChatMessageReadStatuses", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ChatMessageReadStatuses_ChatMessages_MessageId",
-                        column: x => x.MessageId,
-                        principalTable: "ChatMessages",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ChatMessageReadStatuses_Users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+            // BUGFIX: Create table with provider-specific types
+            if (isSqlServer)
+            {
+                migrationBuilder.CreateTable(
+                    name: "ChatMessageReadStatuses",
+                    columns: table => new
+                    {
+                        Id = table.Column<int>(type: "int", nullable: false)
+                            .Annotation("SqlServer:Identity", "1, 1"),
+                        MessageId = table.Column<int>(type: "int", nullable: false),
+                        UserId = table.Column<int>(type: "int", nullable: false),
+                        IsRead = table.Column<bool>(type: "bit", nullable: false),
+                        ReadAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    },
+                    constraints: table =>
+                    {
+                        table.PrimaryKey("PK_ChatMessageReadStatuses", x => x.Id);
+                        table.ForeignKey(
+                            name: "FK_ChatMessageReadStatuses_ChatMessages_MessageId",
+                            column: x => x.MessageId,
+                            principalTable: "ChatMessages",
+                            principalColumn: "Id",
+                            onDelete: ReferentialAction.Cascade);
+                        table.ForeignKey(
+                            name: "FK_ChatMessageReadStatuses_Users_UserId",
+                            column: x => x.UserId,
+                            principalTable: "Users",
+                            principalColumn: "Id",
+                            onDelete: ReferentialAction.Cascade);
+                    });
+            }
+            else
+            {
+                // PostgreSQL: Let EF Core use provider-native types (serial, boolean, timestamp)
+                migrationBuilder.CreateTable(
+                    name: "ChatMessageReadStatuses",
+                    columns: table => new
+                    {
+                        Id = table.Column<int>(nullable: false)
+                            .Annotation("Npgsql:ValueGenerationStrategy", Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                        MessageId = table.Column<int>(nullable: false),
+                        UserId = table.Column<int>(nullable: false),
+                        IsRead = table.Column<bool>(nullable: false),
+                        ReadAt = table.Column<DateTime>(nullable: true)
+                    },
+                    constraints: table =>
+                    {
+                        table.PrimaryKey("PK_ChatMessageReadStatuses", x => x.Id);
+                        table.ForeignKey(
+                            name: "FK_ChatMessageReadStatuses_ChatMessages_MessageId",
+                            column: x => x.MessageId,
+                            principalTable: "ChatMessages",
+                            principalColumn: "Id",
+                            onDelete: ReferentialAction.Cascade);
+                        table.ForeignKey(
+                            name: "FK_ChatMessageReadStatuses_Users_UserId",
+                            column: x => x.UserId,
+                            principalTable: "Users",
+                            principalColumn: "Id",
+                            onDelete: ReferentialAction.Cascade);
+                    });
+            }
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
