@@ -20,12 +20,10 @@ public class HallUpdateWithFilesDtoValidator : AbstractValidator<HallUpdateWithF
             .MaximumLength(100).WithMessage("Hall name cannot exceed 100 characters.")
             .MinimumLength(2).WithMessage("Hall name must be at least 2 characters.");
 
-        // Commercial Registration: 9 or 10 digits, must not start with 0
+        // Commercial Registration: 9 or 10 digits
         RuleFor(x => x.CommercialRegistration)
             .InclusiveBetween(100000000, 9999999999)
-            .WithMessage("Commercial Registration must be 9 or 10 digits.")
-            .Must(cr => cr.ToString().Length >= 9)
-            .WithMessage("Commercial Registration cannot start with 0. If your CR number starts with 0, please contact support.");
+            .WithMessage("Commercial Registration must be 9 or 10 digits.");
 
         // VAT: up to 15 digits
         RuleFor(x => x.Vat)
