@@ -62,6 +62,11 @@ public class InvoiceService : IInvoiceService
         return await _unitOfWork.InvoiceRepository.GetInvoicesByHallIdAsync(hallId);
     }
 
+    public async Task<IEnumerable<Invoice>> GetInvoicesByHallIdsAsync(IEnumerable<int> hallIds)
+    {
+        return await _unitOfWork.InvoiceRepository.GetInvoicesByHallIdsAsync(hallIds);
+    }
+
     public async Task<IEnumerable<Invoice>> GetInvoicesByVendorIdAsync(int vendorId)
     {
         return await _unitOfWork.InvoiceRepository.GetInvoicesByVendorIdAsync(vendorId);

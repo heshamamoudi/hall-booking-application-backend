@@ -454,4 +454,42 @@ public class HallService : IHallService
         }
     }
 
+    // PERF-001: Efficient query methods - delegate to repository-level filtering
+    public async Task<List<Hall>> GetFeaturedHallsAsync(int limit)
+    {
+        var halls = await _unitOfWork.HallRepository.GetActiveHallsByFlagAsync("featured", limit);
+        return halls.ToList();
+    }
+
+    public async Task<List<Hall>> GetPremiumHallsAsync(int limit)
+    {
+        var halls = await _unitOfWork.HallRepository.GetActiveHallsByFlagAsync("premium", limit);
+        return halls.ToList();
+    }
+
+    public async Task<List<Hall>> GetSpecialOfferHallsAsync(int limit)
+    {
+        var halls = await _unitOfWork.HallRepository.GetActiveHallsByFlagAsync("specialoffer", limit);
+        return halls.ToList();
+    }
+
+    public async Task<List<Hall>> GetNewlyAddedHallsAsync(int limit)
+    {
+        var halls = await _unitOfWork.HallRepository.GetNewlyAddedHallsAsync(limit);
+        return halls.ToList();
+    }
+
+    public async Task<List<Hall>> GetPopularHallsFilteredAsync(int minReviewCount, double minRating, int limit)
+    {
+        var halls = await _unitOfWork.HallRepository.GetPopularHallsWithReviewsAsync(minReviewCount, minRating, limit);
+        return halls.ToList();
+    }
+
+    // PERF-002: Batch availability check
+    public async Task<List<Hall>> GetAvailableHallsForDateAsync(
+        DateTime eventDate, DateTime start, DateTime end, int? genderPreference = null)
+    {
+        var halls = await _unitOfWork.HallRepository.GetAvailableHallsForDateAsync(eventDate, start, end, genderPreference);
+        return halls.ToList();
+    }
 }

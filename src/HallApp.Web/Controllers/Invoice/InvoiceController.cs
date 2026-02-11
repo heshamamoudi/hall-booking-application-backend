@@ -17,17 +17,44 @@ namespace HallApp.Web.Controllers.Invoice;
 public class InvoiceController : BaseApiController
 {
     private readonly IInvoiceService _invoiceService;
+    private readonly IHallManagerService _hallManagerService;
     private readonly IMapper _mapper;
     private readonly ILogger<InvoiceController> _logger;
 
     public InvoiceController(
         IInvoiceService invoiceService,
+        IHallManagerService hallManagerService,
         IMapper mapper,
         ILogger<InvoiceController> logger)
     {
         _invoiceService = invoiceService;
+        _hallManagerService = hallManagerService;
         _mapper = mapper;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Helper method to check if the current HallManager user owns the hall associated with an invoice.
+    /// </summary>
+    private async Task<bool> HallManagerOwnsInvoiceHall(Core.Entities.BookingEntities.Invoice invoice)
+    {
+        if (!User.IsInRole("HallManager"))
+        {
+            return false;
+        }
+
+        if (invoice.HallId == null)
+        {
+            return false;
+        }
+
+        var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(UserId);
+        if (hallManager?.Halls == null)
+        {
+            return false;
+        }
+
+        return hallManager.Halls.Any(h => h.ID == invoice.HallId.Value);
     }
 
     /// <summary>
@@ -64,11 +91,17 @@ public class InvoiceController : BaseApiController
                 return Error<InvoiceDto>("Invoice not found", 404);
             }
 
-            // Authorization check: customer can only see their own invoices
+            // VULN-NEW-002 FIX: Proper authorization for Admin, HallManager (ownership check), and Customer
             var userId = UserId;
-            var isAdmin = User.IsInRole("Admin") || User.IsInRole("HallManager");
-            if (!isAdmin && invoice.CustomerId != userId)
+            var isAdmin = User.IsInRole("Admin");
+            var isHallManagerOwner = await HallManagerOwnsInvoiceHall(invoice);
+            var isCustomerOwner = invoice.CustomerId == userId;
+
+            if (!isAdmin && !isHallManagerOwner && !isCustomerOwner)
             {
+                _logger.LogWarning(
+                    "Access denied: User {UserId} attempted to access invoice {InvoiceId}",
+                    userId, id);
                 return Error<InvoiceDto>("Access denied", 403);
             }
 
@@ -96,11 +129,17 @@ public class InvoiceController : BaseApiController
                 return Error<InvoiceDto>("Invoice not found", 404);
             }
 
-            // Authorization check
+            // VULN-NEW-002 FIX: Proper authorization
             var userId = UserId;
-            var isAdmin = User.IsInRole("Admin") || User.IsInRole("HallManager");
-            if (!isAdmin && invoice.CustomerId != userId)
+            var isAdmin = User.IsInRole("Admin");
+            var isHallManagerOwner = await HallManagerOwnsInvoiceHall(invoice);
+            var isCustomerOwner = invoice.CustomerId == userId;
+
+            if (!isAdmin && !isHallManagerOwner && !isCustomerOwner)
             {
+                _logger.LogWarning(
+                    "Access denied: User {UserId} attempted to access invoice {InvoiceNumber}",
+                    userId, invoiceNumber);
                 return Error<InvoiceDto>("Access denied", 403);
             }
 
@@ -110,7 +149,7 @@ public class InvoiceController : BaseApiController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving invoice by number {InvoiceNumber}", invoiceNumber);
-            return Error<InvoiceDto>($"Failed to retrieve invoice: {ex.Message}", 500);
+            return Error<InvoiceDto>("Failed to retrieve invoice", 500);
         }
     }
 
@@ -128,11 +167,17 @@ public class InvoiceController : BaseApiController
                 return Error<InvoiceDto>("Invoice not found for this booking", 404);
             }
 
-            // Authorization check
+            // VULN-NEW-002 FIX: Proper authorization
             var userId = UserId;
-            var isAdmin = User.IsInRole("Admin") || User.IsInRole("HallManager");
-            if (!isAdmin && invoice.CustomerId != userId)
+            var isAdmin = User.IsInRole("Admin");
+            var isHallManagerOwner = await HallManagerOwnsInvoiceHall(invoice);
+            var isCustomerOwner = invoice.CustomerId == userId;
+
+            if (!isAdmin && !isHallManagerOwner && !isCustomerOwner)
             {
+                _logger.LogWarning(
+                    "Access denied: User {UserId} attempted to access invoice for booking {BookingId}",
+                    userId, bookingId);
                 return Error<InvoiceDto>("Access denied", 403);
             }
 
@@ -142,7 +187,7 @@ public class InvoiceController : BaseApiController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving invoice for booking {BookingId}", bookingId);
-            return Error<InvoiceDto>($"Failed to retrieve invoice: {ex.Message}", 500);
+            return Error<InvoiceDto>("Failed to retrieve invoice", 500);
         }
     }
 
@@ -175,13 +220,8 @@ public class InvoiceController : BaseApiController
                 if (hallManager != null && hallManager.Halls.Any())
                 {
                     var hallIds = hallManager.Halls.Select(h => h.ID).ToList();
-                    var allInvoices = new List<Core.Entities.BookingEntities.Invoice>();
-                    foreach (var hallId in hallIds)
-                    {
-                        var hallInvoices = await _invoiceService.GetInvoicesByHallIdAsync(hallId);
-                        allInvoices.AddRange(hallInvoices);
-                    }
-                    invoices = allInvoices.DistinctBy(i => i.Id).ToList();
+                    // FIX: Use batch query instead of N+1 loop
+                    invoices = await _invoiceService.GetInvoicesByHallIdsAsync(hallIds);
                 }
                 else
                 {
@@ -225,7 +265,7 @@ public class InvoiceController : BaseApiController
     }
 
     /// <summary>
-    /// Get invoices by hall ID (Admin/HallManager)
+    /// Get invoices by hall ID (Admin/HallManager with ownership check)
     /// </summary>
     [Authorize(Roles = "Admin,HallManager")]
     [HttpGet("by-hall/{hallId:int}")]
@@ -233,6 +273,19 @@ public class InvoiceController : BaseApiController
     {
         try
         {
+            // VULN-005 FIX: Ownership check for HallManager
+            if (User.IsInRole("HallManager") && !User.IsInRole("Admin"))
+            {
+                var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(UserId);
+                if (hallManager?.Halls == null || !hallManager.Halls.Any(h => h.ID == hallId))
+                {
+                    _logger.LogWarning(
+                        "Access denied: HallManager {UserId} attempted to access invoices for hall {HallId}",
+                        UserId, hallId);
+                    return Error<IEnumerable<InvoiceListDto>>("You do not have access to this hall's invoices", 403);
+                }
+            }
+
             var invoices = await _invoiceService.GetInvoicesByHallIdAsync(hallId);
             var invoiceDtos = _mapper.Map<IEnumerable<InvoiceListDto>>(invoices);
             return Success(invoiceDtos, "Invoices retrieved successfully");
@@ -240,7 +293,7 @@ public class InvoiceController : BaseApiController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving invoices for hall {HallId}", hallId);
-            return Error<IEnumerable<InvoiceListDto>>($"Failed to retrieve invoices: {ex.Message}", 500);
+            return Error<IEnumerable<InvoiceListDto>>("Failed to retrieve invoices", 500);
         }
     }
 
@@ -375,11 +428,17 @@ public class InvoiceController : BaseApiController
                 return NotFound(new { message = "Invoice not found" });
             }
 
-            // Authorization check
+            // VULN-NEW-002 FIX: Proper authorization
             var currentUserId = UserId;
-            var isAdmin = User.IsInRole("Admin") || User.IsInRole("HallManager");
-            if (!isAdmin && invoice.CustomerId != currentUserId)
+            var isAdmin = User.IsInRole("Admin");
+            var isHallManagerOwner = await HallManagerOwnsInvoiceHall(invoice);
+            var isCustomerOwner = invoice.CustomerId == currentUserId;
+
+            if (!isAdmin && !isHallManagerOwner && !isCustomerOwner)
             {
+                _logger.LogWarning(
+                    "Access denied: User {UserId} attempted to access PDF for invoice {InvoiceId}",
+                    currentUserId, id);
                 return Forbid();
             }
 

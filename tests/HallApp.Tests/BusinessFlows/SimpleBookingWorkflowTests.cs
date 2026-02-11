@@ -37,7 +37,7 @@ public class SimpleBookingWorkflowTests
             Name = "Grand Wedding Hall",
             BothWeekDays = 5000, // 5000 SAR per day on weekdays
             BothWeekEnds = 8000, // 8000 SAR per day on weekends
-            Active = true
+            IsActive = true
         };
 
         _testCustomer = new Customer

@@ -11,7 +11,18 @@ public class HallManagerRepository : GenericRepository<HallManager>, IHallManage
     {
     }
 
-    public async Task<HallManager> GetByUserIdAsync(string userId)
+    /// <inheritdoc />
+    public async Task<HallManager?> GetByAppUserIdWithHallsAsync(int appUserId)
+    {
+        return await _context.HallManagers
+            .Include(hm => hm.AppUser)
+            .Include(hm => hm.Halls)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(hm => hm.AppUserId == appUserId);
+    }
+
+    /// <inheritdoc />
+    public async Task<HallManager?> GetByUserIdAsync(string userId)
     {
         if (int.TryParse(userId, out int userIdInt))
         {
@@ -22,21 +33,21 @@ public class HallManagerRepository : GenericRepository<HallManager>, IHallManage
         return null;
     }
 
-    // Override base methods to include AppUser and Halls relationships
-    public new async Task<IEnumerable<HallManager>> GetAllAsync()
+    // Override base methods to include AppUser and Halls relationships (LSP fix: use override)
+    public override async Task<IEnumerable<HallManager>> GetAllAsync()
     {
         return await _context.HallManagers
             .Include(hm => hm.AppUser)
-            .Include(hm => hm.Halls)  // CRITICAL: Load Halls for filtering conversations
+            .Include(hm => hm.Halls)
             .OrderBy(hm => hm.CreatedAt)
             .ToListAsync();
     }
 
-    public new async Task<HallManager> GetByIdAsync(int id)
+    public override async Task<HallManager> GetByIdAsync(int id)
     {
         return await _context.HallManagers
             .Include(hm => hm.AppUser)
-            .Include(hm => hm.Halls)  // CRITICAL: Load Halls for filtering conversations
+            .Include(hm => hm.Halls)
             .FirstOrDefaultAsync(hm => hm.Id == id);
     }
 }

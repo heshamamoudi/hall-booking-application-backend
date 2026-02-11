@@ -30,6 +30,8 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
 
         // Hall Management Services
+        // NOTE: IHallService is also registered in ApplicationServiceExtensions with ISP split interfaces.
+        // This registration is kept for assemblies that only use AddApplication().
         services.AddScoped<IHallService, HallService>();
         services.AddScoped<IHallManagerService, HallManagerService>();
         services.AddScoped<IHallManagerProfileService, HallManagerProfileService>();

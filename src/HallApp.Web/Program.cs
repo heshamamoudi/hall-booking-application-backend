@@ -48,7 +48,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerDocumentation();
 builder.Services.AddSignalR(options =>
 {
-    options.EnableDetailedErrors = true;
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
 });
 
 // Configure CORS for SignalR and API calls
@@ -61,28 +61,48 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        // Check if wildcard is configured (allow any origin)
         if (allowedOrigins.Contains("*"))
         {
-            // When using wildcard, use SetIsOriginAllowed to allow any origin WITH credentials
-            // Note: WithOrigins("*") + AllowCredentials() is not allowed by CORS spec
-            policy.SetIsOriginAllowed(_ => true)
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials();
-        }
-        else
-        {
-            // Specific origins mode
-            var origins = new List<string>
+            if (builder.Environment.IsDevelopment())
             {
-                "http://localhost:4200",
-                "https://localhost:4200",
-                "http://localhost:5235",
-                "http://127.0.0.1:4200",
-                "https://127.0.0.1:4200",
-                "http://127.0.0.1:5235"
-            };
+                // Only allow wildcard origins in development
+                policy.SetIsOriginAllowed(_ => true)
+                      .AllowAnyHeader()
+                      .AllowAnyMethod()
+                      .AllowCredentials();
+            }
+            else
+            {
+                // In production, wildcard with credentials is a security risk
+                // Fall back to localhost origins only and log a warning
+                var fallbackOrigins = new[]
+                {
+                    "http://localhost:4200",
+                    "https://localhost:4200"
+                };
+                policy.WithOrigins(fallbackOrigins)
+                      .AllowAnyHeader()
+                      .AllowAnyMethod()
+                      .AllowCredentials();
+            }
+        }
+        else if (allowedOrigins.Any())
+        {
+            // Specific origins mode - use configured origins plus localhost for dev
+            var origins = new List<string>();
+
+            if (builder.Environment.IsDevelopment())
+            {
+                origins.AddRange(new[]
+                {
+                    "http://localhost:4200",
+                    "https://localhost:4200",
+                    "http://localhost:5235",
+                    "http://127.0.0.1:4200",
+                    "https://127.0.0.1:4200",
+                    "http://127.0.0.1:5235"
+                });
+            }
 
             // Add configured origins (from CORS__AllowedOrigins env var)
             origins.AddRange(allowedOrigins);
@@ -90,8 +110,20 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(origins.ToArray())
                   .AllowAnyHeader()
                   .AllowAnyMethod()
-                  .AllowCredentials()
-                  .SetIsOriginAllowedToAllowWildcardSubdomains();
+                  .AllowCredentials();
+        }
+        else
+        {
+            // No CORS origins configured - restrictive by default
+            var defaultOrigins = new[]
+            {
+                "http://localhost:4200",
+                "https://localhost:4200"
+            };
+            policy.WithOrigins(defaultOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
         }
     });
 });

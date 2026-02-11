@@ -49,6 +49,9 @@ public static class ApplicationServiceExtensions
         try 
         {
             services.AddScoped<IHallService, HallService>();
+            // ISP FIX: Register segregated interfaces pointing to the same singleton scope
+            services.AddScoped<IHallQueryService>(sp => sp.GetRequiredService<IHallService>());
+            services.AddScoped<IHallCommandService>(sp => sp.GetRequiredService<IHallService>());
             services.AddScoped<IVendorService, VendorService>();
             services.AddScoped<ICustomerService, CustomerService>();
             services.AddScoped<IAddressService, AddressService>();
@@ -59,6 +62,10 @@ public static class ApplicationServiceExtensions
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IDashboardService, DashboardService>();
             services.AddScoped<IDashboardExportService, DashboardExportService>();
+
+            // HallManager-specific services
+            services.AddScoped<IHallManagerBookingService, HallManagerBookingService>();
+            services.AddScoped<IHallManagerDashboardService, HallManagerDashboardService>();
             services.AddScoped<IChatService, ChatService>();
             // Register BookingFinancialService in the DI container
             services.AddScoped<IBookingFinancialService>(provider =>

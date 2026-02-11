@@ -518,6 +518,48 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
 
+        // ✅ AUTOMAPPER-FIX: BookingUpdateDto → Booking mapping
+        CreateMap<HallApp.Application.DTOs.Booking.Updaters.BookingUpdateDto, HallApp.Core.Entities.BookingEntities.Booking>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.HallId, opt => opt.MapFrom(src => src.HallId))
+            .ForMember(dest => dest.CustomerId, opt => opt.MapFrom(src => src.CustomerId))
+            .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => src.PaymentMethod))
+            .ForMember(dest => dest.Coupon, opt => opt.MapFrom(src => src.Coupon))
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
+            .ForMember(dest => dest.Comments, opt => opt.MapFrom(src => src.Comments))
+            .ForMember(dest => dest.IsVisitCompleted, opt => opt.MapFrom(src => src.IsVisitCompleted))
+            .ForMember(dest => dest.IsBookingConfirmed, opt => opt.MapFrom(src => src.IsBookingConfirmed))
+            .ForMember(dest => dest.BookingDate, opt => opt.MapFrom(src => src.BookingDate))
+            .ForMember(dest => dest.VisitDate, opt => opt.MapFrom(src => src.VisitDate))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
+            // Ignore navigation properties and complex objects
+            .ForMember(dest => dest.Hall, opt => opt.Ignore())
+            .ForMember(dest => dest.Customer, opt => opt.Ignore())
+            .ForMember(dest => dest.VendorBookings, opt => opt.Ignore())
+            .ForMember(dest => dest.PackageDetails, opt => opt.Ignore())
+            .ForMember(dest => dest.Invoice, opt => opt.Ignore())
+            // Map only basic financial fields
+            .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => (decimal)src.TotalPrice))
+            .ForMember(dest => dest.TaxAmount, opt => opt.MapFrom(src => (decimal)src.Tax))
+            .ForMember(dest => dest.DiscountAmount, opt => opt.MapFrom(src => (decimal)src.Discount))
+            // Set remaining fields to defaults or ignore
+            .ForMember(dest => dest.EventDate, opt => opt.Ignore())
+            .ForMember(dest => dest.StartTime, opt => opt.Ignore())
+            .ForMember(dest => dest.EndTime, opt => opt.Ignore())
+            .ForMember(dest => dest.EventType, opt => opt.Ignore())
+            .ForMember(dest => dest.GuestCount, opt => opt.Ignore())
+            .ForMember(dest => dest.GenderPreference, opt => opt.Ignore())
+            .ForMember(dest => dest.PaymentStatus, opt => opt.Ignore())
+            .ForMember(dest => dest.HallCost, opt => opt.Ignore())
+            .ForMember(dest => dest.VendorServicesCost, opt => opt.Ignore())
+            .ForMember(dest => dest.Subtotal, opt => opt.Ignore())
+            .ForMember(dest => dest.TaxRate, opt => opt.Ignore())
+            .ForMember(dest => dest.Currency, opt => opt.Ignore())
+            .ForMember(dest => dest.PaidAt, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
+
         // Hall to HallBookingDto mapping - enhanced for booking details
         CreateMap<HallApp.Core.Entities.ChamperEntities.Hall, HallApp.Application.DTOs.Halls.Hall.HallBookingDto>()
             .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))

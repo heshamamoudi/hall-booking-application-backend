@@ -34,6 +34,10 @@ namespace HallApp.Web.Controllers.Booking
         private readonly IHallAvailabilityService _availabilityService;
         private readonly IPriceCalculationService _priceCalculationService;
         private readonly ICustomerService _customerService;
+        private readonly IHallService _hallService;
+        private readonly IHallManagerService _hallManagerService;
+        private readonly IVendorManagerService _vendorManagerService;
+        private readonly ILogger<BookingController> _logger;
 
         public BookingController(
             IBookingService bookingService,
@@ -43,7 +47,11 @@ namespace HallApp.Web.Controllers.Booking
             IBookingFinancialService financialService,
             IHallAvailabilityService availabilityService,
             IPriceCalculationService priceCalculationService,
-            ICustomerService customerService)
+            ICustomerService customerService,
+            IHallService hallService,
+            IHallManagerService hallManagerService,
+            IVendorManagerService vendorManagerService,
+            ILogger<BookingController> logger)
         {
             _bookingService = bookingService;
             _mapper = mapper;
@@ -53,6 +61,10 @@ namespace HallApp.Web.Controllers.Booking
             _availabilityService = availabilityService;
             _priceCalculationService = priceCalculationService;
             _customerService = customerService;
+            _hallService = hallService;
+            _hallManagerService = hallManagerService;
+            _vendorManagerService = vendorManagerService;
+            _logger = logger;
         }
 
         /// <summary>
@@ -232,10 +244,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                var innerMsg = ex.InnerException?.Message ?? "No inner exception";
-                Console.WriteLine($"❌ CreateBookingWithServices error: {ex.Message}");
-                Console.WriteLine($"❌ Inner exception: {innerMsg}");
-                return Error<BookingDto>($"Failed to create booking: {ex.Message} | Inner: {innerMsg}", 500);
+                _logger.LogError(ex, "Error creating booking with services");
+                return Error<BookingDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -426,7 +436,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<BookingDto>($"Failed to add vendor services: {ex.Message}", 500);
+                _logger.LogError(ex, "Error adding vendor services to booking");
+                return Error<BookingDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -495,7 +506,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<object>($"Failed to get approval status: {ex.Message}", 500);
+                _logger.LogError(ex, "Error getting approval status for booking {BookingId}", bookingId);
+                return Error<object>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -533,7 +545,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<object>($"Failed to get alternative halls: {ex.Message}", 500);
+                _logger.LogError(ex, "Error getting alternative halls for booking {BookingId}", bookingId);
+                return Error<object>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -613,7 +626,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<BookingDto>($"Failed to replace hall: {ex.Message}", 500);
+                _logger.LogError(ex, "Error replacing hall for booking {BookingId}", bookingId);
+                return Error<BookingDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -687,7 +701,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<BookingDto>($"Failed to replace vendor: {ex.Message}", 500);
+                _logger.LogError(ex, "Error replacing vendor for booking {BookingId}", bookingId);
+                return Error<BookingDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -748,7 +763,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<BookingDto>($"Failed to create booking: {ex.Message}", 500);
+                _logger.LogError(ex, "Error creating booking");
+                return Error<BookingDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -774,12 +790,41 @@ namespace HallApp.Web.Controllers.Booking
                     return Error<BookingDto>($"Booking with ID {id} not found", 404);
                 }
 
+                // Authorization: Only allow the booking customer, hall manager of the hall, vendor manager, or admin
+                var isAuthorized = IsAdmin;
+
+                if (!isAuthorized)
+                {
+                    // Check if current user is the customer who made the booking
+                    var customer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                    isAuthorized = customer != null && booking.CustomerId == customer.Id;
+                }
+
+                if (!isAuthorized && User.IsInRole("HallManager"))
+                {
+                    var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(UserId);
+                    isAuthorized = hallManager?.Halls.Any(h => h.ID == booking.HallId) ?? false;
+                }
+
+                if (!isAuthorized && User.IsInRole("VendorManager"))
+                {
+                    var vendorManager = await _vendorManagerService.GetVendorManagerByAppUserIdAsync(UserId);
+                    isAuthorized = booking.VendorBookings?.Any(bv =>
+                        vendorManager?.Vendors.Any(v => v.Id == bv.VendorId) ?? false) ?? false;
+                }
+
+                if (!isAuthorized)
+                {
+                    return Error<BookingDto>("You do not have permission to view this booking", 403);
+                }
+
                 var bookingDto = _mapper.Map<BookingDto>(booking);
                 return Success(bookingDto);
             }
             catch (Exception ex)
             {
-                return Error<BookingDto>($"Failed to retrieve booking: {ex.Message}", 500);
+                _logger.LogError(ex, "Error processing request for {Endpoint}", HttpContext.Request.Path);
+                return Error<BookingDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -805,7 +850,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<BookingDto>>($"Failed to retrieve your bookings: {ex.Message}", 500);
+                _logger.LogError(ex, "Error retrieving user bookings");
+                return Error<IEnumerable<BookingDto>>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -825,7 +871,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<BookingDto>>($"Failed to retrieve bookings: {ex.Message}", 500);
+                _logger.LogError(ex, "Error retrieving all bookings");
+                return Error<IEnumerable<BookingDto>>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -840,13 +887,25 @@ namespace HallApp.Web.Controllers.Booking
         {
             try
             {
+                // Authorization: Verify HallManager owns this hall
+                if (User.IsInRole("HallManager") && !IsAdmin)
+                {
+                    var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    var managerHalls = await _hallService.GetHallsByManagerAsync(userId ?? string.Empty);
+                    if (!managerHalls.Any(h => h.ID == hallId))
+                    {
+                        return Error<IEnumerable<BookingDto>>("You do not have access to bookings for this hall", 403);
+                    }
+                }
+
                 var bookings = await _bookingService.GetBookingsByHallIdAsync(hallId);
                 var bookingDtos = _mapper.Map<IEnumerable<BookingDto>>(bookings);
                 return Success(bookingDtos, $"Bookings for hall {hallId} retrieved successfully");
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<BookingDto>>($"Failed to retrieve bookings for hall: {ex.Message}", 500);
+                _logger.LogError(ex, "Error processing request for {Endpoint}", HttpContext.Request.Path);
+                return Error<IEnumerable<BookingDto>>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -861,13 +920,24 @@ namespace HallApp.Web.Controllers.Booking
         {
             try
             {
+                // Authorization: Verify VendorManager owns this vendor
+                if (User.IsInRole("VendorManager") && !IsAdmin)
+                {
+                    var vendorManager = await _vendorManagerService.GetVendorManagerByAppUserIdAsync(UserId);
+                    if (vendorManager == null || !vendorManager.Vendors.Any(v => v.Id == vendorId))
+                    {
+                        return Error<IEnumerable<BookingDto>>("You do not have access to bookings for this vendor", 403);
+                    }
+                }
+
                 var bookings = await _bookingService.GetBookingsByVendorIdAsync(vendorId);
                 var bookingDtos = _mapper.Map<IEnumerable<BookingDto>>(bookings);
                 return Success(bookingDtos, $"Bookings for vendor {vendorId} retrieved successfully");
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<BookingDto>>($"Failed to retrieve bookings for vendor: {ex.Message}", 500);
+                _logger.LogError(ex, "Error processing request for {Endpoint}", HttpContext.Request.Path);
+                return Error<IEnumerable<BookingDto>>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -901,7 +971,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<BookingDto>>($"Failed to retrieve bookings for customer: {ex.Message}", 500);
+                _logger.LogError(ex, "Error retrieving bookings for customer");
+                return Error<IEnumerable<BookingDto>>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -989,7 +1060,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<BookingDto>($"Failed to update booking: {ex.Message}", 500);
+                _logger.LogError(ex, "Error updating booking {BookingId}", id);
+                return Error<BookingDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -1049,7 +1121,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<string>($"Failed to cancel booking: {ex.Message}", 500);
+                _logger.LogError(ex, "Error cancelling booking {BookingId}", id);
+                return Error<string>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -1068,7 +1141,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<BookingStatisticsDto>($"Failed to retrieve booking statistics: {ex.Message}", 500);
+                _logger.LogError(ex, "Error retrieving booking statistics");
+                return Error<BookingStatisticsDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -1109,7 +1183,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<HallAvailabilityDto>($"Failed to check hall availability: {ex.Message}", 500);
+                _logger.LogError(ex, "Error checking hall availability");
+                return Error<HallAvailabilityDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -1151,7 +1226,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<object>($"Failed to get time slots: {ex.Message}", 500);
+                _logger.LogError(ex, "Error getting time slots for hall {HallId}", hallId);
+                return Error<object>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -1200,7 +1276,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<object>($"Failed to get available dates: {ex.Message}", 500);
+                _logger.LogError(ex, "Error getting available dates for hall {HallId}", hallId);
+                return Error<object>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -1290,7 +1367,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<object>($"Failed to calculate pricing: {ex.Message}", 500);
+                _logger.LogError(ex, "Error calculating booking pricing");
+                return Error<object>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -1320,7 +1398,8 @@ namespace HallApp.Web.Controllers.Booking
             }
             catch (Exception ex)
             {
-                return Error<object>($"Failed to validate discount code: {ex.Message}", 500);
+                _logger.LogError(ex, "Error validating discount code {DiscountCode}", discountCode);
+                return Error<object>("An error occurred processing your request. Please try again.", 500);
             }
         }
 

@@ -156,4 +156,24 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
             .OrderBy(b => b.BookingDate)
             .ToListAsync();
     }
+
+    public async Task<IEnumerable<Booking>> GetBookingsByHallIdsAsync(IEnumerable<int> hallIds)
+    {
+        var hallIdList = hallIds.ToList();
+        return await _context.Bookings
+            .Where(b => hallIdList.Contains(b.HallId))
+            .Include(b => b.Customer)
+                .ThenInclude(c => c.AppUser)
+            .Include(b => b.Hall)
+                .ThenInclude(h => h.Managers)
+            .Include(b => b.PackageDetails)
+            .Include(b => b.VendorBookings)
+                .ThenInclude(vb => vb.Vendor)
+            .Include(b => b.VendorBookings)
+                .ThenInclude(vb => vb.Services)
+                    .ThenInclude(s => s.ServiceItem)
+            .AsSplitQuery()
+            .OrderByDescending(b => b.Created)
+            .ToListAsync();
+    }
 }

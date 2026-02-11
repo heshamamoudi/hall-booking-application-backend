@@ -27,6 +27,7 @@
     <ProjectReference Include="..\..\src\HallApp.Core\HallApp.Core.csproj" />
     <ProjectReference Include="..\..\src\HallApp.Application\HallApp.Application.csproj" />
     <ProjectReference Include="..\..\src\HallApp.Infrastructure\HallApp.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\HallApp.Web\HallApp.Web.csproj" />
   </ItemGroup>
 
 </Project>

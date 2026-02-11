@@ -1,6 +1,7 @@
 using HallApp.Core.Exceptions;
 using HallApp.Application.DTOs.Booking;
 using HallApp.Core.Interfaces;
+using HallApp.Core.Interfaces.IServices;
 using HallApp.Web.Controllers.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,10 +17,20 @@ namespace HallApp.Web.Controllers.Bookings;
 public class BookingApprovalController : BaseApiController
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IHallManagerService _hallManagerService;
+    private readonly IVendorManagerService _vendorManagerService;
+    private readonly ILogger<BookingApprovalController> _logger;
 
-    public BookingApprovalController(IUnitOfWork unitOfWork)
+    public BookingApprovalController(
+        IUnitOfWork unitOfWork,
+        IHallManagerService hallManagerService,
+        IVendorManagerService vendorManagerService,
+        ILogger<BookingApprovalController> logger)
     {
         _unitOfWork = unitOfWork;
+        _hallManagerService = hallManagerService;
+        _vendorManagerService = vendorManagerService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -40,7 +51,14 @@ public class BookingApprovalController : BaseApiController
             }
 
             // Verify hall manager owns this hall
-            // TODO: Add proper authorization check using UserId from BaseApiController
+            if (!IsAdmin)
+            {
+                var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(UserId);
+                if (hallManager == null || !hallManager.Halls.Any(h => h.ID == booking.HallId))
+                {
+                    return Error<ApprovalResponseDto>("You do not have permission to approve bookings for this hall", 403);
+                }
+            }
 
             if (request.Approved)
             {
@@ -91,7 +109,8 @@ public class BookingApprovalController : BaseApiController
         }
         catch (Exception ex)
         {
-            return Error<ApprovalResponseDto>($"Error processing hall approval: {ex.Message}", 500);
+            _logger.LogError(ex, "Error processing hall approval for booking {BookingId}", bookingId);
+            return Error<ApprovalResponseDto>("An error occurred processing your request. Please try again.", 500);
         }
     }
 
@@ -119,7 +138,15 @@ public class BookingApprovalController : BaseApiController
                 return Error<ApprovalResponseDto>("Vendor booking not found", 404);
             }
 
-            // TODO: Verify vendor manager owns this vendor using UserId from BaseApiController
+            // Verify vendor manager owns this vendor
+            if (!IsAdmin)
+            {
+                var vendorManager = await _vendorManagerService.GetVendorManagerByAppUserIdAsync(UserId);
+                if (vendorManager == null || !vendorManager.Vendors.Any(v => v.Id == vendorBooking.VendorId))
+                {
+                    return Error<ApprovalResponseDto>("You do not have permission to approve services for this vendor", 403);
+                }
+            }
 
             if (request.Approved)
             {
@@ -168,7 +195,8 @@ public class BookingApprovalController : BaseApiController
         }
         catch (Exception ex)
         {
-            return Error<ApprovalResponseDto>($"Error processing vendor approval: {ex.Message}", 500);
+            _logger.LogError(ex, "Error processing vendor approval for booking {BookingId}, vendor booking {VendorBookingId}", bookingId, vendorBookingId);
+            return Error<ApprovalResponseDto>("An error occurred processing your request. Please try again.", 500);
         }
     }
 
@@ -211,7 +239,8 @@ public class BookingApprovalController : BaseApiController
         }
         catch (Exception ex)
         {
-            return Error<VendorApprovalStatusDto>($"Error retrieving vendor approval status: {ex.Message}", 500);
+            _logger.LogError(ex, "Error retrieving vendor approval status for booking {BookingId}", bookingId);
+            return Error<VendorApprovalStatusDto>("An error occurred processing your request. Please try again.", 500);
         }
     }
 }

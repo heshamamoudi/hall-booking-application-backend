@@ -65,6 +65,26 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Batch method to get invoices for multiple halls in a single query.
+    /// HIGH-001 FIX: Replaces N+1 parallel Task.WhenAll pattern.
+    /// </summary>
+    public async Task<IEnumerable<Invoice>> GetInvoicesByHallIdsAsync(IEnumerable<int> hallIds)
+    {
+        var hallIdsList = hallIds.ToList();
+
+        return await _context.Invoices
+            .Include(i => i.Booking)
+            .Include(i => i.Customer)
+                .ThenInclude(c => c.AppUser)
+            .Include(i => i.Hall)
+            .Include(i => i.LineItems)
+            .Where(i => i.HallId.HasValue && hallIdsList.Contains(i.HallId.Value))
+            .OrderByDescending(i => i.InvoiceDate)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<Invoice>> GetInvoicesByVendorIdAsync(int vendorId)
     {
         // Get invoices that contain line items referencing this vendor
@@ -138,7 +158,7 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
             .FirstOrDefaultAsync(i => i.Id == invoiceId);
     }
 
-    public new async Task<IEnumerable<Invoice>> GetAllAsync()
+    public override async Task<IEnumerable<Invoice>> GetAllAsync()
     {
         return await _context.Invoices
             .Include(i => i.Customer)
@@ -149,7 +169,7 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
             .ToListAsync();
     }
 
-    public new async Task<Invoice?> GetByIdAsync(int id)
+    public override async Task<Invoice?> GetByIdAsync(int id)
     {
         return await GetInvoiceWithDetailsAsync(id);
     }

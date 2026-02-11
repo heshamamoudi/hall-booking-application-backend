@@ -45,3 +45,38 @@ public enum ApprovalStatus
     Approved = 1,
     Rejected = 2
 }
+
+/// <summary>
+/// DUP-005 FIX: Centralized booking status string constants.
+/// Use these instead of magic strings throughout the codebase.
+/// Maps to the BookingStatus enum names for consistency.
+/// </summary>
+public static class BookingStatusConstants
+{
+    public const string Draft = nameof(BookingStatus.Draft);
+    public const string Pending = nameof(BookingStatus.Pending);
+    public const string HallApproved = nameof(BookingStatus.HallApproved);
+    public const string VendorsApproving = nameof(BookingStatus.VendorsApproving);
+    public const string ReadyForPayment = nameof(BookingStatus.ReadyForPayment);
+    public const string Paid = nameof(BookingStatus.Paid);
+    public const string Confirmed = nameof(BookingStatus.Confirmed);
+    public const string Cancelled = nameof(BookingStatus.Cancelled);
+    public const string HallRejected = nameof(BookingStatus.HallRejected);
+    public const string VendorRejected = nameof(BookingStatus.VendorRejected);
+    public const string Completed = "Completed";
+
+    /// <summary>Statuses considered "pending" for dashboard counts</summary>
+    public static readonly string[] PendingStatuses = [Pending, Draft];
+
+    /// <summary>Statuses considered "active" for dashboard counts</summary>
+    public static readonly string[] ActiveStatuses = [HallApproved, VendorsApproving, ReadyForPayment, Paid, Confirmed];
+
+    /// <summary>Statuses considered "completed" for dashboard counts</summary>
+    public static readonly string[] CompletedStatuses = [Completed];
+
+    /// <summary>Statuses considered "cancelled" for dashboard counts</summary>
+    public static readonly string[] CancelledStatuses = [Cancelled, HallRejected, VendorRejected];
+
+    /// <summary>Statuses where payment has been made</summary>
+    public static readonly string[] PaidStatuses = [Paid, Confirmed, Completed];
+}

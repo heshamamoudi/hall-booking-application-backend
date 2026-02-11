@@ -8,12 +8,13 @@ using HallApp.Core.Exceptions;
 using HallApp.Core.Entities.ChamperEntities;
 using HallApp.Web.Services;
 using HallApp.Web.DTOs;
+using System.Security.Claims;
 
 namespace HallApp.Web.Controllers.Hall
 {
     /// <summary>
-    /// Public Hall management controller for customer browsing
-    /// Handles hall retrieval for customers and guests
+    /// Public Hall browsing and HallManager CRUD operations.
+    /// Query endpoints (GET) are public. Command endpoints (POST/PUT/DELETE) require HallManager/Admin role.
     /// </summary>
     [AllowAnonymous]
     [Route("api/halls")]
@@ -22,19 +23,49 @@ namespace HallApp.Web.Controllers.Hall
         private readonly IHallService _hallService;
         private readonly IMapper _mapper;
         private readonly IFileUploadService _fileUploadService;
+        private readonly ILogger<HallController> _logger;
 
-        public HallController(IHallService hallService, IMapper mapper, IFileUploadService fileUploadService)
+        public HallController(
+            IHallService hallService,
+            IMapper mapper,
+            IFileUploadService fileUploadService,
+            ILogger<HallController> logger)
         {
             _hallService = hallService;
             _mapper = mapper;
             _fileUploadService = fileUploadService;
+            _logger = logger;
+        }
+
+        // DUP-001 + DUP-004: Centralized hall ownership check
+        private async Task<bool> UserOwnsHall(int hallId)
+        {
+            if (User.IsInRole("Admin")) return true;
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return false;
+
+            var managerHalls = await _hallService.GetHallsByManagerAsync(userId);
+            return managerHalls.Any(h => h.ID == hallId);
+        }
+
+        // DUP-002: Extracted admin flag preservation helper
+        private static void PreserveAdminOnlyFlags(
+            HallApp.Core.Entities.ChamperEntities.Hall target,
+            HallApp.Core.Entities.ChamperEntities.Hall source,
+            bool isAdmin)
+        {
+            if (!isAdmin)
+            {
+                target.IsFeatured = source.IsFeatured;
+                target.IsPremium = source.IsPremium;
+                target.HasSpecialOffer = source.HasSpecialOffer;
+            }
         }
 
         /// <summary>
         /// Get all halls for public browsing with pagination
         /// </summary>
-        /// <param name="hallParams">Pagination and filter parameters</param>
-        /// <returns>Paginated list of halls</returns>
         [HttpGet]
         public async Task<ActionResult<PaginatedApiResponse<HallDto>>> GetHalls([FromQuery] HallParams hallParams)
         {
@@ -58,23 +89,23 @@ namespace HallApp.Web.Controllers.Hall
 
                 // Apply filtering
                 var filteredHalls = hallEntities.AsQueryable();
-                
+
                 if (!string.IsNullOrEmpty(hallParams.SearchTerm))
                 {
-                    filteredHalls = filteredHalls.Where(h => 
+                    filteredHalls = filteredHalls.Where(h =>
                         h.Name.ToLower().Contains(hallParams.SearchTerm) ||
                         h.Description.ToLower().Contains(hallParams.SearchTerm));
                 }
 
                 if (hallParams.MinCapacity.HasValue)
                 {
-                    filteredHalls = filteredHalls.Where(h => 
+                    filteredHalls = filteredHalls.Where(h =>
                         Math.Max(h.MaleMax, h.FemaleMax) >= hallParams.MinCapacity);
                 }
 
                 if (hallParams.MaxCapacity.HasValue)
                 {
-                    filteredHalls = filteredHalls.Where(h => 
+                    filteredHalls = filteredHalls.Where(h =>
                         Math.Min(h.MaleMin, h.FemaleMin) <= hallParams.MaxCapacity);
                 }
 
@@ -89,7 +120,6 @@ namespace HallApp.Web.Controllers.Hall
                 var totalCount = filteredHalls.Count();
                 var totalPages = (int)Math.Ceiling((double)totalCount / hallParams.PageSize);
 
-                // Apply pagination
                 var pagedHalls = filteredHalls
                     .Skip((hallParams.PageNumber - 1) * hallParams.PageSize)
                     .Take(hallParams.PageSize)
@@ -111,10 +141,11 @@ namespace HallApp.Web.Controllers.Hall
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error processing request for {Endpoint}", HttpContext.Request.Path);
                 return StatusCode(500, new PaginatedApiResponse<HallDto>
                 {
                     StatusCode = 500,
-                    Message = $"Failed to retrieve halls: {ex.Message}",
+                    Message = "An error occurred processing your request. Please try again.",
                     IsSuccess = false
                 });
             }
@@ -123,8 +154,6 @@ namespace HallApp.Web.Controllers.Hall
         /// <summary>
         /// Get hall by ID for public viewing
         /// </summary>
-        /// <param name="id">Hall ID</param>
-        /// <returns>Hall details</returns>
         [HttpGet("{id:int}")]
         public async Task<ActionResult<ApiResponse<HallDto>>> GetHallById(int id)
         {
@@ -141,15 +170,14 @@ namespace HallApp.Web.Controllers.Hall
             }
             catch (Exception ex)
             {
-                return Error<HallDto>($"Failed to retrieve hall: {ex.Message}", 500);
+                _logger.LogError(ex, "Error retrieving hall {HallId}", id);
+                return Error<HallDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
         /// <summary>
         /// Search halls by name or description
         /// </summary>
-        /// <param name="searchTerm">Search term</param>
-        /// <returns>List of matching halls</returns>
         [HttpGet("search")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> SearchHalls([FromQuery] string searchTerm)
         {
@@ -162,28 +190,25 @@ namespace HallApp.Web.Controllers.Hall
 
                 var hallEntities = await _hallService.SearchHallsAsync(searchTerm);
                 var halls = _mapper.Map<List<HallDto>>(hallEntities);
-                
+
                 return Success<IEnumerable<HallDto>>(halls, $"Found {halls.Count} halls matching '{searchTerm}'");
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<HallDto>>($"Failed to search halls: {ex.Message}", 500);
+                _logger.LogError(ex, "Error searching halls");
+                return Error<IEnumerable<HallDto>>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
         /// <summary>
-        /// Get alternative halls available for the same date when one is rejected
+        /// Get alternative halls available for the same date when one is rejected.
+        /// PERF-002 FIX: Uses batch availability query instead of N+1 per-hall checks.
         /// </summary>
-        /// <param name="eventDate">Event date</param>
-        /// <param name="startTime">Start time</param>
-        /// <param name="endTime">End time</param>
-        /// <param name="genderPreference">Gender preference (0=Male, 1=Female, 2=Both)</param>
-        /// <returns>List of available alternative halls</returns>
         [AllowAnonymous]
         [HttpGet("alternatives")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetAlternativeHalls(
-            [FromQuery] DateTime eventDate, 
-            [FromQuery] TimeSpan startTime, 
+            [FromQuery] DateTime eventDate,
+            [FromQuery] TimeSpan startTime,
             [FromQuery] TimeSpan endTime,
             [FromQuery] int genderPreference = 2)
         {
@@ -191,169 +216,118 @@ namespace HallApp.Web.Controllers.Hall
             {
                 var startDateTime = eventDate.Add(startTime);
                 var endDateTime = eventDate.Add(endTime);
-                
-                var allHalls = await _hallService.GetAllHallsAsync();
-                var availableHalls = new List<HallApp.Core.Entities.ChamperEntities.Hall>();
-                
-                foreach (var hall in allHalls)
-                {
-                    // Check gender compatibility
-                    if (genderPreference != 2 && hall.Gender != genderPreference && hall.Gender != 2)
-                        continue;
-                        
-                    // Check availability
-                    var isAvailable = await _hallService.IsHallAvailableAsync(hall.ID, startDateTime, endDateTime);
-                    if (isAvailable)
-                    {
-                        availableHalls.Add(hall);
-                    }
-                }
-                
+
+                // PERF-002: Single batch query replaces N+1 per-hall availability check
+                var availableHalls = await _hallService.GetAvailableHallsForDateAsync(
+                    eventDate, startDateTime, endDateTime, genderPreference);
+
                 var hallDtos = _mapper.Map<List<HallDto>>(availableHalls);
                 return Success<IEnumerable<HallDto>>(hallDtos, $"Found {hallDtos.Count} alternative halls for {eventDate:yyyy-MM-dd}");
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<HallDto>>($"Failed to get alternative halls: {ex.Message}", 500);
+                _logger.LogError(ex, "Error getting alternative halls");
+                return Error<IEnumerable<HallDto>>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
         /// <summary>
-        /// Get special offer halls (halls with active discounts/offers)
+        /// Get special offer halls (halls with active discounts/offers).
+        /// PERF-001 FIX: Uses repository-level filtering instead of GetAllHallsAsync().
         /// </summary>
-        /// <param name="limit">Maximum number of halls to return</param>
-        /// <returns>List of special offer halls</returns>
         [HttpGet("special-offers")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetSpecialOfferHalls([FromQuery] int limit = 6)
         {
             try
             {
-                var allHalls = await _hallService.GetAllHallsAsync();
-                // Filter by HasSpecialOffer flag (set when hall has active discounts/offers)
-                var specialOfferHalls = allHalls
-                    .Where(h => h.HasSpecialOffer && h.IsActive)
-                    .OrderByDescending(h => h.AverageRating)
-                    .Take(limit)
-                    .ToList();
-
+                var specialOfferHalls = await _hallService.GetSpecialOfferHallsAsync(limit);
                 var hallDtos = _mapper.Map<List<HallDto>>(specialOfferHalls);
                 return Success<IEnumerable<HallDto>>(hallDtos, $"Found {hallDtos.Count} special offer halls");
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<HallDto>>($"Failed to get special offer halls: {ex.Message}", 500);
+                _logger.LogError(ex, "Error getting special offer halls");
+                return Error<IEnumerable<HallDto>>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
         /// <summary>
-        /// Get featured halls (halls that paid for featured placement)
+        /// Get featured halls.
+        /// PERF-001 FIX: Uses repository-level filtering instead of GetAllHallsAsync().
         /// </summary>
-        /// <param name="limit">Maximum number of halls to return</param>
-        /// <returns>List of featured halls</returns>
         [HttpGet("featured")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetFeaturedHalls([FromQuery] int limit = 6)
         {
             try
             {
-                var allHalls = await _hallService.GetAllHallsAsync();
-                // Filter by IsFeatured flag (set when hall owner pays for featured placement)
-                var featuredHalls = allHalls
-                    .Where(h => h.IsFeatured && h.IsActive)
-                    .OrderByDescending(h => h.AverageRating)
-                    .ThenByDescending(h => Math.Max(h.MaleMax, h.FemaleMax))
-                    .Take(limit)
-                    .ToList();
-
+                var featuredHalls = await _hallService.GetFeaturedHallsAsync(limit);
                 var hallDtos = _mapper.Map<List<HallDto>>(featuredHalls);
                 return Success<IEnumerable<HallDto>>(hallDtos, $"Found {hallDtos.Count} featured halls");
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<HallDto>>($"Failed to get featured halls: {ex.Message}", 500);
+                _logger.LogError(ex, "Error getting featured halls");
+                return Error<IEnumerable<HallDto>>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
         /// <summary>
-        /// Get popular halls (high rating and multiple reviews)
+        /// Get popular halls (high rating and multiple reviews).
+        /// PERF-001 FIX: Uses repository-level filtering instead of GetAllHallsAsync().
         /// </summary>
-        /// <param name="limit">Maximum number of halls to return</param>
-        /// <returns>List of popular halls</returns>
         [HttpGet("popular")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetPopularHalls([FromQuery] int limit = 6)
         {
             try
             {
-                var allHalls = await _hallService.GetAllHallsAsync();
-                var popularHalls = allHalls
-                    .Where(h => h.Reviews != null && 
-                               h.Reviews.Count >= 5 && 
-                               h.AverageRating >= 3.8 && 
-                               h.IsActive)
-                    .OrderByDescending(h => h.Reviews.Count)
-                    .ThenByDescending(h => h.AverageRating)
-                    .Take(limit)
-                    .ToList();
-
+                var popularHalls = await _hallService.GetPopularHallsFilteredAsync(5, 3.8, limit);
                 var hallDtos = _mapper.Map<List<HallDto>>(popularHalls);
                 return Success<IEnumerable<HallDto>>(hallDtos, $"Found {hallDtos.Count} popular halls");
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<HallDto>>($"Failed to get popular halls: {ex.Message}", 500);
+                _logger.LogError(ex, "Error getting popular halls");
+                return Error<IEnumerable<HallDto>>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
         /// <summary>
-        /// Get premium halls (halls with premium subscription)
+        /// Get premium halls.
+        /// PERF-001 FIX: Uses repository-level filtering instead of GetAllHallsAsync().
         /// </summary>
-        /// <param name="limit">Maximum number of halls to return</param>
-        /// <returns>List of premium halls</returns>
         [HttpGet("premium")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetPremiumHalls([FromQuery] int limit = 6)
         {
             try
             {
-                var allHalls = await _hallService.GetAllHallsAsync();
-                // Filter by IsPremium flag (set when hall has premium subscription)
-                var premiumHalls = allHalls
-                    .Where(h => h.IsPremium && h.IsActive)
-                    .OrderByDescending(h => h.AverageRating)
-                    .ThenByDescending(h => h.MediaFiles?.Count ?? 0)
-                    .Take(limit)
-                    .ToList();
-
+                var premiumHalls = await _hallService.GetPremiumHallsAsync(limit);
                 var hallDtos = _mapper.Map<List<HallDto>>(premiumHalls);
                 return Success<IEnumerable<HallDto>>(hallDtos, $"Found {hallDtos.Count} premium halls");
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<HallDto>>($"Failed to get premium halls: {ex.Message}", 500);
+                _logger.LogError(ex, "Error getting premium halls");
+                return Error<IEnumerable<HallDto>>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
         /// <summary>
-        /// Get newly added halls (recently created halls)
+        /// Get newly added halls (recently created halls).
+        /// PERF-001 FIX: Uses repository-level filtering instead of GetAllHallsAsync().
         /// </summary>
-        /// <param name="limit">Maximum number of halls to return</param>
-        /// <returns>List of newly added halls</returns>
         [HttpGet("newly-added")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetNewlyAddedHalls([FromQuery] int limit = 6)
         {
             try
             {
-                var allHalls = await _hallService.GetAllHallsAsync();
-                var newlyAddedHalls = allHalls
-                    .Where(h => h.IsActive)
-                    .OrderByDescending(h => h.Created)
-                    .Take(limit)
-                    .ToList();
-
+                var newlyAddedHalls = await _hallService.GetNewlyAddedHallsAsync(limit);
                 var hallDtos = _mapper.Map<List<HallDto>>(newlyAddedHalls);
                 return Success<IEnumerable<HallDto>>(hallDtos, $"Found {hallDtos.Count} newly added halls");
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<HallDto>>($"Failed to get newly added halls: {ex.Message}", 500);
+                _logger.LogError(ex, "Error getting newly added halls");
+                return Error<IEnumerable<HallDto>>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
@@ -362,8 +336,6 @@ namespace HallApp.Web.Controllers.Hall
         /// <summary>
         /// Create a new hall (HallManager only)
         /// </summary>
-        /// <param name="createHallDto">Hall creation data</param>
-        /// <returns>Created hall</returns>
         [Authorize(Roles = "Admin,HallManager")]
         [HttpPost]
         public async Task<ActionResult<ApiResponse<HallDto>>> CreateHall([FromBody] HallCreateDto createHallDto)
@@ -394,26 +366,31 @@ namespace HallApp.Web.Controllers.Hall
             }
             catch (ArgumentException ex)
             {
-                return Error<HallDto>(ex.Message, 400);
+                _logger.LogWarning(ex, "Validation error creating hall");
+                return Error<HallDto>("Invalid hall data provided", 400);
             }
             catch (Exception ex)
             {
-                return Error<HallDto>($"Failed to create hall: {ex.Message}", 500);
+                _logger.LogError(ex, "Error processing request for {Endpoint}", HttpContext.Request.Path);
+                return Error<HallDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
         /// <summary>
-        /// Update an existing hall (HallManager only)
+        /// Update an existing hall (HallManager only).
+        /// DUP-002 FIX: Uses centralized admin flag preservation helper.
         /// </summary>
-        /// <param name="id">Hall ID</param>
-        /// <param name="updateHallDto">Updated hall data</param>
-        /// <returns>Updated hall</returns>
         [Authorize(Roles = "Admin,HallManager")]
         [HttpPut("{id:int}")]
         public async Task<ActionResult<ApiResponse<HallDto>>> UpdateHall(int id, [FromBody] HallUpdateDto updateHallDto)
         {
             try
             {
+                if (!await UserOwnsHall(id))
+                {
+                    return Error<HallDto>("You do not have permission to modify this hall", 403);
+                }
+
                 if (!ModelState.IsValid)
                 {
                     var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
@@ -426,9 +403,21 @@ namespace HallApp.Web.Controllers.Hall
                     return Error<HallDto>($"Hall with ID {id} not found", 404);
                 }
 
-                // Map update DTO to entity, preserving the ID
+                // Capture original flags before mapping overwrites them
+                var originalFlags = (existingHall.IsFeatured, existingHall.IsPremium, existingHall.HasSpecialOffer);
+
                 _mapper.Map(updateHallDto, existingHall);
                 existingHall.ID = id;
+
+                // DUP-002: Centralized admin flag preservation
+                PreserveAdminOnlyFlags(existingHall,
+                    new HallApp.Core.Entities.ChamperEntities.Hall
+                    {
+                        IsFeatured = originalFlags.IsFeatured,
+                        IsPremium = originalFlags.IsPremium,
+                        HasSpecialOffer = originalFlags.HasSpecialOffer
+                    },
+                    User.IsInRole("Admin"));
 
                 var updatedHall = await _hallService.UpdateHallAsync(existingHall);
                 var hallDto = _mapper.Map<HallDto>(updatedHall);
@@ -437,16 +426,19 @@ namespace HallApp.Web.Controllers.Hall
             }
             catch (ArgumentException ex)
             {
-                return Error<HallDto>(ex.Message, 400);
+                _logger.LogWarning(ex, "Validation error updating hall {HallId}", id);
+                return Error<HallDto>("Invalid hall data provided", 400);
             }
             catch (Exception ex)
             {
-                return Error<HallDto>($"Failed to update hall: {ex.Message}", 500);
+                _logger.LogError(ex, "Error processing request for {Endpoint}", HttpContext.Request.Path);
+                return Error<HallDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
         /// <summary>
-        /// Update hall with file uploads (recommended - replaces base64)
+        /// Update hall with file uploads (recommended - replaces base64).
+        /// DUP-002 FIX: Uses centralized admin flag preservation helper.
         /// </summary>
         [Authorize(Roles = "Admin,HallManager")]
         [HttpPut("{id:int}/files")]
@@ -457,6 +449,11 @@ namespace HallApp.Web.Controllers.Hall
         {
             try
             {
+                if (!await UserOwnsHall(id))
+                {
+                    return Error<HallDto>("You do not have permission to modify this hall", 403);
+                }
+
                 if (id != hallUpdateDto.ID)
                 {
                     return Error<HallDto>("ID mismatch", 400);
@@ -468,27 +465,33 @@ namespace HallApp.Web.Controllers.Hall
                     return Error<HallDto>($"Invalid data: {errors}", 400);
                 }
 
+                var existingHallForFlags = await _hallService.GetHallByIdAsync(id);
+                if (existingHallForFlags == null)
+                {
+                    return Error<HallDto>($"Hall with ID {id} not found", 404);
+                }
+
                 var hallEntity = _mapper.Map<HallApp.Core.Entities.ChamperEntities.Hall>(hallUpdateDto);
-                
+
+                // DUP-002: Centralized admin flag preservation
+                PreserveAdminOnlyFlags(hallEntity, existingHallForFlags, User.IsInRole("Admin"));
+
                 // Build list of all image URLs (existing + new uploads)
                 var allImageUrls = new List<string>();
-                
-                // Add existing images that user wants to keep
+
                 if (hallUpdateDto.ExistingImageUrls != null && hallUpdateDto.ExistingImageUrls.Any())
                 {
                     allImageUrls.AddRange(hallUpdateDto.ExistingImageUrls);
                 }
-                
-                // Upload new images and get their URLs
+
                 if (hallUpdateDto.NewImages != null && hallUpdateDto.NewImages.Any())
                 {
                     var uploadedUrls = await _fileUploadService.SaveImagesAsync(
-                        hallUpdateDto.NewImages.ToList(), 
+                        hallUpdateDto.NewImages.ToList(),
                         "halls");
                     allImageUrls.AddRange(uploadedUrls);
                 }
-                
-                // Create MediaFiles from all URLs
+
                 hallEntity.MediaFiles = new List<HallApp.Core.Entities.ChamperEntities.MediaEntities.HallMedia>();
                 int index = 0;
                 foreach (var url in allImageUrls)
@@ -502,43 +505,43 @@ namespace HallApp.Web.Controllers.Hall
                         index = index++
                     });
                 }
-                
-                // Update the hall
+
                 var updatedHallEntity = await _hallService.UpdateHallAsync(hallEntity);
-                
                 if (updatedHallEntity == null)
                 {
                     return Error<HallDto>("Couldn't update hall", 500);
                 }
-                
-                // Handle manager assignments if provided
-                if (hallUpdateDto.ManagerIds != null && hallUpdateDto.ManagerIds.Any())
+
+                if (User.IsInRole("Admin") && hallUpdateDto.ManagerIds != null && hallUpdateDto.ManagerIds.Any())
                 {
                     await _hallService.UpdateHallManagersAsync(id, hallUpdateDto.ManagerIds);
                 }
-                
-                // Reload the hall with all relationships
+
                 var reloadedHall = await _hallService.GetHallByIdAsync(id);
                 var updatedHall = _mapper.Map<HallDto>(reloadedHall);
                 return Success(updatedHall, "Hall updated successfully with file uploads");
             }
             catch (Exception ex)
             {
-                return Error<HallDto>($"Failed to update hall: {ex.Message}", 500);
+                _logger.LogError(ex, "Error processing request for {Endpoint}", HttpContext.Request.Path);
+                return Error<HallDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
         /// <summary>
         /// Delete a hall (HallManager only)
         /// </summary>
-        /// <param name="id">Hall ID</param>
-        /// <returns>Success response</returns>
         [Authorize(Roles = "Admin,HallManager")]
         [HttpDelete("{id:int}")]
         public async Task<ActionResult<ApiResponse>> DeleteHall(int id)
         {
             try
             {
+                if (!await UserOwnsHall(id))
+                {
+                    return Error("You do not have permission to modify this hall", 403);
+                }
+
                 var existingHall = await _hallService.GetHallByIdAsync(id);
                 if (existingHall == null)
                 {
@@ -548,29 +551,32 @@ namespace HallApp.Web.Controllers.Hall
                 var result = await _hallService.DeleteHallAsync(id);
                 if (!result)
                 {
-                    return Error($"Failed to delete hall with ID {id}", 500);
+                    return Error("Failed to delete hall", 500);
                 }
 
                 return Success("Hall deleted successfully");
             }
             catch (Exception ex)
             {
-                return Error($"Failed to delete hall: {ex.Message}", 500);
+                _logger.LogError(ex, "Error processing request for {Endpoint}", HttpContext.Request.Path);
+                return Error("An error occurred processing your request. Please try again.", 500);
             }
         }
 
         /// <summary>
         /// Toggle hall active status (HallManager only)
         /// </summary>
-        /// <param name="id">Hall ID</param>
-        /// <param name="active">New active status</param>
-        /// <returns>Updated hall</returns>
         [Authorize(Roles = "Admin,HallManager")]
         [HttpPut("{id:int}/toggle-active")]
         public async Task<ActionResult<ApiResponse<HallDto>>> ToggleHallActive(int id, [FromQuery] bool active)
         {
             try
             {
+                if (!await UserOwnsHall(id))
+                {
+                    return Error<HallDto>("You do not have permission to modify this hall", 403);
+                }
+
                 var existingHall = await _hallService.GetHallByIdAsync(id);
                 if (existingHall == null)
                 {
@@ -585,21 +591,20 @@ namespace HallApp.Web.Controllers.Hall
             }
             catch (Exception ex)
             {
-                return Error<HallDto>($"Failed to toggle hall status: {ex.Message}", 500);
+                _logger.LogError(ex, "Error processing request for {Endpoint}", HttpContext.Request.Path);
+                return Error<HallDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
         /// <summary>
         /// Get halls for the current hall manager
         /// </summary>
-        /// <returns>List of halls managed by the current user</returns>
         [Authorize(Roles = "HallManager")]
         [HttpGet("my-halls")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetMyHalls()
         {
             try
             {
-                // Get the current user's ID from claims
                 var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userId))
                 {
@@ -613,7 +618,8 @@ namespace HallApp.Web.Controllers.Hall
             }
             catch (Exception ex)
             {
-                return Error<IEnumerable<HallDto>>($"Failed to get halls: {ex.Message}", 500);
+                _logger.LogError(ex, "Error getting manager halls");
+                return Error<IEnumerable<HallDto>>("An error occurred processing your request. Please try again.", 500);
             }
         }
 
