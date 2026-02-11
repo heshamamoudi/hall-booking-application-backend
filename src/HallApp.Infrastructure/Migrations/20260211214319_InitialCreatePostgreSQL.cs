@@ -2,10 +2,10 @@
 
 #nullable disable
 
-namespace HallApp.Infrastructure.Infrastructure.Data.Migrations
+namespace HallApp.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class FixBooleanToBitConversion : Migration
+    public partial class InitialCreatePostgreSQL : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

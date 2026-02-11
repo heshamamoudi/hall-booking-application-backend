@@ -34,8 +34,10 @@ namespace HallApp.Web.Extensions
             // In production, persist keys to database and configure encryption
             if (!environment.IsDevelopment())
             {
+                // TEMPORARY: Disabled to allow migrations to run first
                 // Keys will be stored in AspNetCore.DataProtection.EntityFrameworkCore table
-                dataProtectionBuilder.PersistKeysToDbContext<DataContext>();
+                // dataProtectionBuilder.PersistKeysToDbContext<DataContext>();
+                Console.WriteLine("⚠️ Data Protection: DB persistence temporarily disabled - using ephemeral storage");
 
                 // SECURITY: Configure at-rest encryption for data protection keys
                 // Option 1: Certificate-based encryption (recommended for production)
