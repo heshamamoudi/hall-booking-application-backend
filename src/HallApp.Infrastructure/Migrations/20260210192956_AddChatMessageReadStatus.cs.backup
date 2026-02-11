@@ -11,11 +11,6 @@ namespace HallApp.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // BUGFIX: Skip boolean->bit conversions for PostgreSQL as it requires explicit USING clause
-            // bit type is SQL Server specific; PostgreSQL uses boolean
-            var isPostgreSQL = migrationBuilder.ActiveProvider?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) ?? false;
-            var isSqlServer = migrationBuilder.ActiveProvider?.Contains("SqlServer", StringComparison.OrdinalIgnoreCase) ?? false;
-
             migrationBuilder.DropIndex(
                 name: "UserNameIndex",
                 table: "Users");
@@ -48,31 +43,21 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "RequiresTimeSlot",
                 table: "VendorTypes",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "RequiresHallBooking",
                 table: "VendorTypes",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<string>(
                 name: "Name",
@@ -92,18 +77,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsActive",
                 table: "VendorTypes",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<string>(
                 name: "Description",
@@ -125,18 +105,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer",
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "AllowsMultipleBookings",
                 table: "VendorTypes",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -236,70 +211,45 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "text",
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsPremium",
                 table: "Vendors",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsFeatured",
                 table: "Vendors",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsApproved",
                 table: "Vendors",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsActive",
                 table: "Vendors",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "HasSpecialOffer",
                 table: "Vendors",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<string>(
                 name: "Email",
@@ -421,31 +371,21 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldMaxLength: 20,
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsPrimary",
                 table: "VendorLocations",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsActive",
                 table: "VendorLocations",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<string>(
                 name: "Country",
@@ -515,18 +455,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(TimeSpan),
                 oldType: "interval");
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsClosed",
                 table: "VendorBusinessHours",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<int>(
                 name: "DayOfWeek",
@@ -603,18 +538,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsActive",
                 table: "VendorBookingServices",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
@@ -745,31 +675,21 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "text",
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsPaid",
                 table: "VendorBookings",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsActive",
                 table: "VendorBookings",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "EndTime",
@@ -866,18 +786,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldMaxLength: 200,
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsRecurring",
                 table: "VendorBlockedDates",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "EndDate",
@@ -956,18 +871,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "TwoFactorEnabled",
                 table: "Users",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<string>(
                 name: "SecurityStamp",
@@ -995,18 +905,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "text",
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "PhoneNumberConfirmed",
                 table: "Users",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<string>(
                 name: "PhoneNumber",
@@ -1057,18 +962,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "LockoutEnabled",
                 table: "Users",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<string>(
                 name: "LastName",
@@ -1097,18 +997,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "text",
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "EmailConfirmed",
                 table: "Users",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<string>(
                 name: "Email",
@@ -1146,18 +1041,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "text",
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "Active",
                 table: "Users",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<int>(
                 name: "AccessFailedCount",
@@ -1314,31 +1204,21 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(100)",
                 oldMaxLength: 100);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsAvailable",
                 table: "ServiceItems",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsActive",
                 table: "ServiceItems",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<string>(
                 name: "ImageUrl",
@@ -1445,18 +1325,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "text",
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsActive",
                 table: "Service",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<int>(
                 name: "HallID",
@@ -1609,31 +1484,21 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsFlagged",
                 table: "Reviews",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsApproved",
                 table: "Reviews",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<int>(
                 name: "HallId",
@@ -1792,18 +1657,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldMaxLength: 4,
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsRefunded",
                 table: "Payments",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<string>(
                 name: "IpAddress",
@@ -2059,18 +1919,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "text",
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsActive",
                 table: "Package",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<int>(
                 name: "HallID",
@@ -2163,31 +2018,21 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(1000)",
                 oldMaxLength: 1000);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsRead",
                 table: "Notifications",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsActive",
                 table: "Notifications",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
@@ -2547,31 +2392,21 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldMaxLength: 1000,
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsPdfGenerated",
                 table: "Invoices",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsCancelled",
                 table: "Invoices",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<string>(
                 name: "InvoiceType",
@@ -2879,18 +2714,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "MaleActive",
                 table: "Halls",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<string>(
                 name: "Logo",
@@ -2901,70 +2731,45 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "text",
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsPremium",
                 table: "Halls",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsFeatured",
                 table: "Halls",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsApproved",
                 table: "Halls",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsActive",
                 table: "Halls",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "HasSpecialOffer",
                 table: "Halls",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<int>(
                 name: "Gender",
@@ -2990,18 +2795,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "FemaleActive",
                 table: "Halls",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<string>(
                 name: "Email",
@@ -3244,18 +3044,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "Confirmed",
                 table: "Customers",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<int>(
                 name: "AppUserId",
@@ -3265,18 +3060,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "Active",
                 table: "Customers",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -3499,44 +3289,29 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(2000)",
                 oldMaxLength: 2000);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsSystemMessage",
                 table: "ChatMessages",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsRead",
                 table: "ChatMessages",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsDeleted",
                 table: "ChatMessages",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<DateTime>(
                 name: "DeletedAt",
@@ -3678,18 +3453,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsAutoCloseEnabled",
                 table: "ChatConversations",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<int>(
                 name: "HallId",
@@ -3869,31 +3639,21 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "timestamp with time zone",
                 oldNullable: true);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsVisitCompleted",
                 table: "Bookings",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsBookingConfirmed",
                 table: "Bookings",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<int>(
                 name: "HallId",
@@ -4045,18 +3805,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsActive",
                 table: "BookingPackages",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<string>(
                 name: "Features",
@@ -4131,18 +3886,13 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "character varying(50)",
                 oldMaxLength: 50);
 
-            
-            if (isSqlServer)
-            {
-                migrationBuilder.AlterColumn<bool>(
+            migrationBuilder.AlterColumn<bool>(
                 name: "IsMain",
                 table: "Addresses",
                 type: "bit",
                 nullable: false,
                 oldClrType: typeof(bool),
                 oldType: "boolean");
-            }
-            // else: Skip for PostgreSQL - keep boolean type
 
             migrationBuilder.AlterColumn<int>(
                 name: "CustomerId",
