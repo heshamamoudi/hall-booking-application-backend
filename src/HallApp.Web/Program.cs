@@ -10,6 +10,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using HallApp.Application.Validators;
 
+// FORCE RAILWAY REBUILD - All SQL Server type fixes applied: commit a79620b
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure logging to prevent duplicates
