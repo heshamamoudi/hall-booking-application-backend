@@ -94,8 +94,8 @@ namespace HallApp.Web.Extensions
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, "Database setup failed - continuing without database operations");
-                // Don't rethrow to prevent app startup failure
+                logger?.LogCritical(ex, "Database setup failed - application cannot start without a working database");
+                throw; // Fail fast: migrations must succeed before the app can serve requests
             }
         }
     }

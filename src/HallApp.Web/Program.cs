@@ -162,24 +162,22 @@ app.ConfigureMiddlewarePipeline();
 // Configure endpoints using extension
 app.ConfigureEndpoints();
 
-// Log startup information
+// CRITICAL: Run migrations BEFORE starting the app.
+// Data Protection is configured with PersistKeysToDbContext, which requires the
+// DataProtectionKeys table to exist. Migrations must complete first.
 var logger = app.Services.GetService<ILogger<Program>>();
-logger?.LogInformation("Server starting...");
+logger?.LogInformation("Running database migrations before startup...");
 
-// Run database setup in background after server starts (non-blocking for health checks)
-app.Lifetime.ApplicationStarted.Register(() =>
+try
 {
-    _ = Task.Run(async () =>
-    {
-        try
-        {
-            await app.Services.SetupDatabaseAsync();
-        }
-        catch (Exception ex)
-        {
-            logger?.LogError(ex, "Background database setup failed");
-        }
-    });
-});
+    await app.Services.SetupDatabaseAsync();
+    logger?.LogInformation("Database migrations completed successfully");
+}
+catch (Exception ex)
+{
+    logger?.LogCritical(ex, "Failed to run database migrations - application cannot start");
+    throw; // Fail fast: do not start with a broken database
+}
 
+logger?.LogInformation("Starting web server...");
 app.Run();
