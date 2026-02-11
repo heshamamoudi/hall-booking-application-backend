@@ -161,18 +161,57 @@ if (isSqlServer) {
 
 ---
 
+---
+
+## 🐛 BUG #5: PostgreSQL datetimeoffset Type Does Not Exist (CRITICAL)
+
+**Asana Task:** 1213234579554080
+**Status:** ✅ RESOLVED
+**Commit:** 7c1f571
+
+### Problem
+```
+ERROR: type "datetimeoffset" does not exist
+ALTER TABLE "Users" ALTER COLUMN "LockoutEnd" TYPE datetimeoffset;
+```
+
+Migration attempted to use SQL Server-specific `datetimeoffset` type on PostgreSQL.
+
+### Impact
+- Complete deployment failure
+- Blocked DataProtectionKeys table creation
+- Final SQL Server type causing deployment blocker
+
+### Solution
+Wrapped datetimeoffset type conversion with SQL Server provider detection:
+
+```csharp
+if (isSqlServer) {
+    migrationBuilder.AlterColumn<DateTimeOffset>(
+        name: "LockoutEnd",
+        type: "datetimeoffset", ...);
+}
+// PostgreSQL uses timestamp with time zone (timestamptz)
+```
+
+### Files Modified
+- `HallApp.Infrastructure/Migrations/20260210192956_AddChatMessageReadStatus.cs`
+
+---
+
 ## Summary Statistics
 
 | Category | Count | Status |
 |----------|-------|--------|
-| Critical Bugs | 2 | ✅ All Fixed |
+| Critical Bugs | 3 | ✅ All Fixed |
 | High Priority Bugs | 1 | ✅ Fixed |
 | Medium Priority Bugs | 1 | ✅ Fixed |
-| Total Bugs | 4 | ✅ 100% Resolved |
-| SQL Server Type Fixes | 333 | ✅ Complete |
+| Total Bugs | 5 | ✅ 100% Resolved |
+| SQL Server Type Fixes | 334 | ✅ Complete |
 | - nvarchar conversions | 162 | ✅ Wrapped |
 | - datetime2 conversions | 85 | ✅ Wrapped |
 | - bit conversions | 86 | ✅ Wrapped |
+| - datetimeoffset conversions | 1 | ✅ Wrapped |
 | Migrations Created | 1 | ✅ Ready |
 | NuGet Packages Added | 2 | ✅ Installed |
 
@@ -185,6 +224,7 @@ if (isSqlServer) {
 | `nvarchar(n)` | `varchar(n)` / `text` | ✅ Fixed | 162 |
 | `datetime2` | `timestamp` / `timestamptz` | ✅ Fixed | 85 |
 | `bit` | `boolean` | ✅ Fixed | 86 |
+| `datetimeoffset` | `timestamp with time zone` | ✅ Fixed | 1 |
 | `int` | `integer` | ✅ Auto-mapped | N/A |
 | `bigint` | `bigint` | ✅ Compatible | N/A |
 | `decimal(p,s)` | `numeric(p,s)` | ✅ Auto-mapped | N/A |
@@ -303,6 +343,8 @@ if (isSqlServer) {
 - `180a708` - Fixed nvarchar, Data Protection persistence, XML encryption
 - `86bcf12` - Added Railway deployment documentation
 - `2f52b2e` - Fixed datetime2 type compatibility
+- `95ab65a` - Added comprehensive bug fixes summary
+- `7c1f571` - Fixed datetimeoffset type compatibility ⭐ FINAL TYPE FIX
 
 ---
 
