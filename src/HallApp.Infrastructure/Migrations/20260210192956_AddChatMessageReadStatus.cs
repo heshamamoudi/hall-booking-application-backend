@@ -209,6 +209,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "UpdatedAt",
                 table: "Vendors",
@@ -217,6 +219,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "ReviewCount",
@@ -370,6 +373,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
                 table: "Vendors",
@@ -377,6 +382,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -408,6 +414,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ApprovedAt",
                 table: "Vendors",
@@ -416,6 +424,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -426,6 +435,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
                 table: "VendorManagers",
@@ -433,6 +444,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "AppUserId",
@@ -651,6 +663,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "UpdatedAt",
                 table: "VendorBookingServices",
@@ -658,7 +672,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
                 table: "VendorBookingServices",
@@ -667,6 +684,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -711,6 +729,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
                 table: "VendorBookingServices",
@@ -718,7 +738,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
                 table: "VendorBookingServices",
@@ -726,6 +749,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -744,6 +768,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "UpdatedAt",
                 table: "VendorBookings",
@@ -751,7 +777,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
                 table: "VendorBookings",
@@ -760,6 +789,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -775,6 +805,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "StartTime",
                 table: "VendorBookings",
@@ -782,6 +814,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -797,6 +830,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ServiceDate",
                 table: "VendorBookings",
@@ -804,7 +839,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "RejectedAt",
                 table: "VendorBookings",
@@ -813,6 +851,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -842,6 +881,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "PaidAt",
                 table: "VendorBookings",
@@ -850,6 +891,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -891,6 +933,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "EndTime",
                 table: "VendorBookings",
@@ -898,7 +942,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
                 table: "VendorBookings",
@@ -906,7 +953,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
                 table: "VendorBookings",
@@ -914,7 +964,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CancelledAt",
                 table: "VendorBookings",
@@ -923,6 +976,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -946,6 +1000,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ApprovedAt",
                 table: "VendorBookings",
@@ -954,6 +1010,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -972,6 +1029,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "StartDate",
                 table: "VendorBlockedDates",
@@ -979,6 +1038,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -1009,6 +1069,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "EndDate",
                 table: "VendorBlockedDates",
@@ -1016,7 +1078,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
                 table: "VendorBlockedDates",
@@ -1024,6 +1089,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -1098,6 +1164,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
                 table: "Users",
@@ -1105,6 +1173,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -1133,6 +1202,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "RefreshTokenExpiryTime",
                 table: "Users",
@@ -1140,6 +1211,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -1321,6 +1393,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "DOB",
                 table: "Users",
@@ -1328,7 +1402,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
                 table: "Users",
@@ -1336,6 +1413,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -1506,6 +1584,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "UpdatedAt",
                 table: "ServiceItems",
@@ -1514,6 +1594,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "SortOrder",
@@ -1610,6 +1691,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
                 table: "ServiceItems",
@@ -1617,6 +1700,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -1657,6 +1741,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
                 table: "ServiceItemImages",
@@ -1664,6 +1750,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -1688,6 +1775,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
                 table: "Service",
@@ -1695,6 +1784,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -1739,6 +1829,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
                 table: "Service",
@@ -1746,6 +1838,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -1879,6 +1972,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer",
                 oldNullable: true);
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
                 table: "Reviews",
@@ -1886,6 +1981,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -1952,6 +2048,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer",
                 oldNullable: true);
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
                 table: "Reviews",
@@ -1959,6 +2057,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -2071,6 +2170,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer",
                 oldNullable: true);
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "RefundedAt",
                 table: "Payments",
@@ -2079,6 +2180,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -2187,6 +2289,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "FailedAt",
                 table: "Payments",
@@ -2195,6 +2299,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -2251,6 +2356,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
                 table: "Payments",
@@ -2258,7 +2365,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CompletedAt",
                 table: "Payments",
@@ -2267,6 +2377,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -2402,6 +2513,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ProcessedAt",
                 table: "PaymentRefunds",
@@ -2410,6 +2523,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "PaymentId",
@@ -2419,6 +2533,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
                 table: "PaymentRefunds",
@@ -2426,6 +2542,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -2436,6 +2553,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
                 table: "Package",
@@ -2443,7 +2562,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "StartDate",
                 table: "Package",
@@ -2451,6 +2573,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<double>(
                 name: "Price",
@@ -2495,6 +2618,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "EndDate",
                 table: "Package",
@@ -2502,6 +2627,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -2517,6 +2643,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
                 table: "Package",
@@ -2524,6 +2652,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "ID",
@@ -2534,6 +2663,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
                 table: "Notifications",
@@ -2542,6 +2673,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -2574,6 +2706,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ReadAt",
                 table: "Notifications",
@@ -2582,6 +2716,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -2624,6 +2759,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
                 table: "Notifications",
@@ -2631,6 +2768,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "AppUserId",
@@ -2649,6 +2787,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
                 table: "Location",
@@ -2656,6 +2796,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -2695,6 +2836,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
                 table: "Location",
@@ -2702,6 +2845,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -2764,6 +2908,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ZATCA_SubmittedAt",
                 table: "Invoices",
@@ -2772,6 +2918,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -2805,6 +2952,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "UpdatedAt",
                 table: "Invoices",
@@ -2812,6 +2961,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -2829,6 +2979,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "SupplyDate",
                 table: "Invoices",
@@ -2836,6 +2988,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -3072,6 +3225,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "PaymentDate",
                 table: "Invoices",
@@ -3080,6 +3235,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -3169,6 +3325,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "InvoiceDate",
                 table: "Invoices",
@@ -3176,6 +3334,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "HallId",
@@ -3225,6 +3384,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
                 table: "Invoices",
@@ -3232,7 +3393,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CancelledAt",
                 table: "Invoices",
@@ -3241,6 +3405,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -3472,6 +3637,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
                 table: "Halls",
@@ -3479,6 +3646,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -3681,6 +3849,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
                 table: "Halls",
@@ -3688,6 +3858,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<double>(
                 name: "AverageRating",
@@ -3697,6 +3868,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(double),
                 oldType: "double precision");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ApprovedAt",
                 table: "Halls",
@@ -3705,6 +3878,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "ID",
@@ -3723,6 +3897,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
                 table: "HallMedia",
@@ -3730,6 +3906,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -3775,6 +3952,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
                 table: "HallMedia",
@@ -3782,6 +3961,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "ID",
@@ -3792,6 +3972,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
                 table: "HallManagers",
@@ -3799,6 +3981,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "AppUserId",
@@ -3857,6 +4040,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
                 table: "Favorites",
@@ -3864,6 +4049,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -3874,6 +4060,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
                 table: "Customers",
@@ -3881,6 +4069,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "SelectedAddressId",
@@ -3906,6 +4095,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
                 table: "Customers",
@@ -3913,6 +4104,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -3957,6 +4149,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
                 table: "Contact",
@@ -3964,6 +4158,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -4015,6 +4210,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
                 table: "Contact",
@@ -4022,6 +4219,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "ID",
@@ -4080,6 +4278,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Date",
                 table: "ChatStatistics",
@@ -4087,6 +4287,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<double>(
                 name: "CustomerSatisfactionScore",
@@ -4129,6 +4330,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "SentAt",
                 table: "ChatMessages",
@@ -4136,6 +4339,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -4160,6 +4364,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ReadAt",
                 table: "ChatMessages",
@@ -4168,6 +4374,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -4238,6 +4445,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep boolean type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "DeletedAt",
                 table: "ChatMessages",
@@ -4246,6 +4455,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "ConversationId",
@@ -4361,6 +4571,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "interval",
                 oldNullable: true);
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ResolvedAt",
                 table: "ChatConversations",
@@ -4369,6 +4581,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             migrationBuilder.AlterColumn<TimeSpan>(
                 name: "ResolutionTime",
@@ -4394,6 +4607,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "LastMessageAt",
                 table: "ChatConversations",
@@ -4402,6 +4617,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -4467,6 +4683,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(int),
                 oldType: "integer");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
                 table: "ChatConversations",
@@ -4474,6 +4692,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -4490,6 +4709,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ClosedAt",
                 table: "ChatConversations",
@@ -4498,7 +4719,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "ClaimedAt",
                 table: "ChatConversations",
@@ -4507,6 +4731,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -4541,6 +4766,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "VisitDate",
                 table: "Bookings",
@@ -4548,7 +4775,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "UpdatedAt",
                 table: "Bookings",
@@ -4556,7 +4786,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
                 table: "Bookings",
@@ -4564,6 +4797,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -4615,6 +4849,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "PaidAt",
                 table: "Bookings",
@@ -4623,6 +4859,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone",
                 oldNullable: true);
+            }
 
             
             if (isSqlServer)
@@ -4688,6 +4925,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "EventDate",
                 table: "Bookings",
@@ -4695,6 +4934,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<TimeSpan>(
                 name: "EndTime",
@@ -4726,6 +4966,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "CreatedAt",
                 table: "Bookings",
@@ -4733,7 +4975,10 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
                 table: "Bookings",
@@ -4741,6 +4986,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             
             if (isSqlServer)
@@ -4770,6 +5016,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "BookingDate",
                 table: "Bookings",
@@ -4777,6 +5025,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "Id",
@@ -4787,6 +5036,8 @@ namespace HallApp.Infrastructure.Data.Migrations
                 oldType: "integer")
                 .Annotation("SqlServer:Identity", "1, 1");
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Updated",
                 table: "BookingPackages",
@@ -4794,6 +5045,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<double>(
                 name: "Price",
@@ -4866,6 +5118,8 @@ namespace HallApp.Infrastructure.Data.Migrations
             }
             // else: Skip for PostgreSQL - keep character varying/text type
 
+            if (isSqlServer)
+            {
             migrationBuilder.AlterColumn<DateTime>(
                 name: "Created",
                 table: "BookingPackages",
@@ -4873,6 +5127,7 @@ namespace HallApp.Infrastructure.Data.Migrations
                 nullable: false,
                 oldClrType: typeof(DateTime),
                 oldType: "timestamp with time zone");
+            }
 
             migrationBuilder.AlterColumn<int>(
                 name: "BookingId",
