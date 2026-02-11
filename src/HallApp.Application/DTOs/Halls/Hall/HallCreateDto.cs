@@ -14,10 +14,16 @@ public class HallCreateDto
     [StringLength(100)]
     public string Name { get; set; }
     
-    [Range(1000000000, 9999999999, ErrorMessage = "Commercial Registration must be exactly 10 digits.")]
+    /// <summary>
+    /// Saudi Commercial Registration number (9 or 10 digits)
+    /// </summary>
+    [Range(100000000, 9999999999, ErrorMessage = "Commercial Registration must be 9 or 10 digits.")]
     public long CommercialRegistration { get; set; }
 
-    [Range(100000000000000, 999999999999999, ErrorMessage = "VAT must be exactly 15 digits.")]
+    /// <summary>
+    /// Saudi VAT Registration number (up to 15 digits)
+    /// </summary>
+    [Range(0, 999999999999999, ErrorMessage = "VAT number must not exceed 15 digits.")]
     public long Vat { get; set; }
     public double BothWeekDays { get; set; }
     public double BothWeekEnds { get; set; }
