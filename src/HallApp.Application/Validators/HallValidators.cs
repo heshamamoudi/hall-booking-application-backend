@@ -15,7 +15,9 @@ public class HallCreateDtoValidator : AbstractValidator<HallCreateDto>
 
         RuleFor(x => x.CommercialRegistration)
             .InclusiveBetween(100000000, 9999999999)
-            .WithMessage("Commercial Registration must be 9 or 10 digits.");
+            .WithMessage("Commercial Registration must be 9 or 10 digits.")
+            .Must(cr => cr.ToString().Length >= 9)
+            .WithMessage("Commercial Registration cannot start with 0. If your CR number starts with 0, please contact support.");
 
         RuleFor(x => x.Vat)
             .GreaterThanOrEqualTo(0)
@@ -127,7 +129,9 @@ public class HallUpdateDtoValidator : AbstractValidator<HallUpdateDto>
 
         RuleFor(x => x.CommercialRegistration)
             .InclusiveBetween(100000000, 9999999999)
-            .WithMessage("Commercial Registration must be 9 or 10 digits.");
+            .WithMessage("Commercial Registration must be 9 or 10 digits.")
+            .Must(cr => cr.ToString().Length >= 9)
+            .WithMessage("Commercial Registration cannot start with 0. If your CR number starts with 0, please contact support.");
 
         RuleFor(x => x.Vat)
             .GreaterThanOrEqualTo(0)

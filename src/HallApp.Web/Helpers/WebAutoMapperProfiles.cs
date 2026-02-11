@@ -25,8 +25,12 @@ namespace HallApp.Web.Helpers
                 .ForMember(dest => dest.FemaleMin, opt => opt.MapFrom(src => src.FemaleMin))
                 .ForMember(dest => dest.FemaleMax, opt => opt.MapFrom(src => src.FemaleMax))
                 .ForMember(dest => dest.FemaleActive, opt => opt.MapFrom(src => src.FemaleActive))
+                .ForMember(dest => dest.MaleActive, opt => opt.MapFrom(src => src.MaleActive))
                 .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
                 .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+                .ForMember(dest => dest.Phone, opt => opt.MapFrom(src => src.Phone))
+                .ForMember(dest => dest.WhatsApp, opt => opt.MapFrom(src => src.WhatsApp))
                 .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.Logo, opt => opt.Ignore())
                 .ForMember(dest => dest.MediaFiles, opt => opt.Ignore())  // Handled separately in controller
@@ -38,8 +42,12 @@ namespace HallApp.Web.Helpers
                 .ForMember(dest => dest.Reviews, opt => opt.Ignore())
                 .ForMember(dest => dest.AverageRating, opt => opt.Ignore())
                 .ForMember(dest => dest.IsActive, opt => opt.Ignore())
-                .ForMember(dest => dest.Created, opt => opt.Ignore())
-                .ForMember(dest => dest.MaleActive, opt => opt.Ignore());
+                .ForMember(dest => dest.IsApproved, opt => opt.Ignore())
+                .ForMember(dest => dest.ApprovedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.HasSpecialOffer, opt => opt.Ignore())
+                .ForMember(dest => dest.IsFeatured, opt => opt.Ignore())
+                .ForMember(dest => dest.IsPremium, opt => opt.Ignore())
+                .ForMember(dest => dest.Created, opt => opt.Ignore());
         }
     }
 }

@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using HallApp.Application.Validators;
+using HallApp.Web.Validators;
 
 // FORCE RAILWAY REBUILD - All SQL Server type fixes applied: commit a79620b
 var builder = WebApplication.CreateBuilder(args);
@@ -41,9 +42,10 @@ builder.Services.AddControllers(options =>
     options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
 });
 
-// Register FluentValidation validators
+// Register FluentValidation validators from Application and Web assemblies
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<HallUpdateWithFilesDtoValidator>();
 
 // Configure consistent validation error responses for [ApiController] auto-validation
 builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options =>
