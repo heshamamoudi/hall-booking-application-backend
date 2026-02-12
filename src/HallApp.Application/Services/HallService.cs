@@ -426,44 +426,78 @@ public class HallService : IHallService
     {
         try
         {
-            var hall = await _unitOfWork.HallRepository.GetByIdAsync(hallId);
-            if (hall == null) return false;
-
             // Validate: at least one manager must remain
             if (managerIds == null || !managerIds.Any())
             {
                 throw new ArgumentException("At least one hall manager must remain. Cannot remove all managers.");
             }
 
-            // Get the hall managers by their IDs
-            var managers = new List<HallManager>();
-            foreach (var managerId in managerIds)
+            // Re-fetch the hall in a clean state to avoid tracking conflicts
+            // from earlier operations in the same request.
+            var hall = await _unitOfWork.HallRepository.GetByIdAsync(hallId);
+            if (hall == null) return false;
+
+            // Validate all provided manager IDs exist before modifying anything
+            var validManagerIds = new List<int>();
+            foreach (var managerId in managerIds.Distinct())
             {
                 var manager = await _unitOfWork.HallManagerRepository.GetByIdAsync(managerId);
                 if (manager != null)
                 {
-                    managers.Add(manager);
+                    validManagerIds.Add(managerId);
                 }
             }
 
             // Validate: ensure at least one valid manager was found
-            if (!managers.Any())
+            if (!validManagerIds.Any())
             {
                 throw new ArgumentException("None of the provided manager IDs are valid. At least one valid manager is required.");
             }
 
-            // Clear existing managers and add new ones
-            hall.Managers?.Clear();
-            hall.Managers = managers;
+            // Build the desired set of manager IDs and compare with current
+            var currentManagerIds = hall.Managers?.Select(m => m.Id).ToHashSet() ?? new HashSet<int>();
+            var desiredManagerIds = validManagerIds.ToHashSet();
 
-            await _unitOfWork.Complete();
+            // Only modify if the sets actually differ
+            if (!currentManagerIds.SetEquals(desiredManagerIds))
+            {
+                // Remove managers that are no longer in the desired set
+                if (hall.Managers != null)
+                {
+                    var managersToRemove = hall.Managers
+                        .Where(m => !desiredManagerIds.Contains(m.Id))
+                        .ToList();
+                    foreach (var managerToRemove in managersToRemove)
+                    {
+                        hall.Managers.Remove(managerToRemove);
+                    }
+                }
+                else
+                {
+                    hall.Managers = new List<HallManager>();
+                }
+
+                // Add managers that are not yet in the current set
+                var managerIdsToAdd = desiredManagerIds.Except(currentManagerIds);
+                foreach (var managerId in managerIdsToAdd)
+                {
+                    var manager = await _unitOfWork.HallManagerRepository.GetByIdAsync(managerId);
+                    if (manager != null)
+                    {
+                        hall.Managers.Add(manager);
+                    }
+                }
+
+                await _unitOfWork.Complete();
+            }
+
             return true;
         }
         catch (ArgumentException)
         {
             throw; // Re-throw validation errors
         }
-        catch
+        catch (Exception)
         {
             return false;
         }

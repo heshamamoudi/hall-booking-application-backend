@@ -405,8 +405,11 @@ namespace HallApp.Web.Controllers.Hall
                     return Error<HallDto>($"Hall with ID {id} not found", 404);
                 }
 
-                // Capture original flags before mapping overwrites them
+                // Capture original admin-only flags and current managers before mapping
                 var originalFlags = (existingHall.IsFeatured, existingHall.IsPremium, existingHall.HasSpecialOffer);
+                var existingManagerIds = existingHall.Managers?
+                    .Select(m => new { m.Id, m.AppUserId })
+                    .ToList() ?? [];
 
                 // AutoMapper ignores Managers for HallUpdateDto -> Hall mapping,
                 // so existing managers on the entity are preserved through the mapping step.
@@ -423,32 +426,38 @@ namespace HallApp.Web.Controllers.Hall
                     },
                     User.IsInRole("Admin"));
 
-                // MANAGER-FIX: Explicitly null out Managers so UpdateHallAsync
-                // does not attempt to reassign the tracked collection.
-                // Managers are only modified through UpdateHallManagersAsync.
-                existingHall.Managers = null;
-
+                // Update the hall entity (scalar properties, collections except Managers).
+                // Do NOT null out Managers -- let EF Core keep tracking the existing
+                // collection as-is. UpdateHallAsync skips Managers by design.
                 var updatedHall = await _hallService.UpdateHallAsync(existingHall);
 
-                // MANAGER-FIX: Only allow manager updates if ManagerIds is explicitly provided
-                // and contains at least one valid ID. Prevent self-removal for HallManagers.
+                // Only update managers if ManagerIds is explicitly provided with valid entries.
                 if (updateHallDto.ManagerIds != null && updateHallDto.ManagerIds.Any())
                 {
                     // Validate: HallManagers cannot remove themselves
                     if (User.IsInRole("HallManager") && !User.IsInRole("Admin"))
                     {
                         var currentUserId = UserId;
-                        var existingHallForManagerCheck = await _hallService.GetHallByIdAsync(id);
-                        var currentManagerHallIds = existingHallForManagerCheck.Managers?
+
+                        // Use the manager snapshot captured before the update to avoid
+                        // re-fetching the same tracked entity in a potentially stale state.
+                        var currentManagerEntityIds = existingManagerIds
                             .Where(m => m.AppUserId == currentUserId)
                             .Select(m => m.Id)
-                            .ToList() ?? new List<int>();
+                            .ToList();
 
-                        if (currentManagerHallIds.Any() && !updateHallDto.ManagerIds.Intersect(currentManagerHallIds).Any())
+                        if (currentManagerEntityIds.Any() &&
+                            !updateHallDto.ManagerIds.Intersect(currentManagerEntityIds).Any())
                         {
-                            return Error<HallDto>("You cannot remove yourself as a manager of this hall. Another admin must perform this action.", 400);
+                            return Error<HallDto>(
+                                "You cannot remove yourself as a manager of this hall. Another admin must perform this action.",
+                                400);
                         }
                     }
+
+                    _logger.LogInformation(
+                        "Updating managers for hall {HallId}. Requested ManagerIds: [{ManagerIds}]",
+                        id, string.Join(", ", updateHallDto.ManagerIds));
 
                     await _hallService.UpdateHallManagersAsync(id, updateHallDto.ManagerIds);
                 }
@@ -465,7 +474,9 @@ namespace HallApp.Web.Controllers.Hall
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing request for {Endpoint}", HttpContext.Request.Path);
+                _logger.LogError(ex, "Unhandled error updating hall {HallId}. UserId: {UserId}, ManagerIds: [{ManagerIds}]",
+                    id, UserId,
+                    updateHallDto.ManagerIds != null ? string.Join(", ", updateHallDto.ManagerIds) : "null");
                 return Error<HallDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
@@ -546,24 +557,31 @@ namespace HallApp.Web.Controllers.Hall
                     return Error<HallDto>("Couldn't update hall", 500);
                 }
 
-                // MANAGER-FIX: Only allow manager updates if ManagerIds is explicitly provided
-                // and contains at least one valid ID. Prevent self-removal for HallManagers.
+                // Only update managers if ManagerIds is explicitly provided with valid entries.
                 if (hallUpdateDto.ManagerIds != null && hallUpdateDto.ManagerIds.Any())
                 {
-                    // Validate: HallManagers cannot remove themselves
+                    // Validate: HallManagers cannot remove themselves.
+                    // Use the snapshot captured before UpdateHallAsync to avoid tracking issues.
                     if (User.IsInRole("HallManager") && !User.IsInRole("Admin"))
                     {
                         var currentUserId = UserId;
-                        var currentManagerHallIds = existingHallForFlags.Managers?
+                        var currentManagerEntityIds = existingHallForFlags.Managers?
                             .Where(m => m.AppUserId == currentUserId)
                             .Select(m => m.Id)
                             .ToList() ?? new List<int>();
 
-                        if (currentManagerHallIds.Any() && !hallUpdateDto.ManagerIds.Intersect(currentManagerHallIds).Any())
+                        if (currentManagerEntityIds.Any() &&
+                            !hallUpdateDto.ManagerIds.Intersect(currentManagerEntityIds).Any())
                         {
-                            return Error<HallDto>("You cannot remove yourself as a manager of this hall. Another admin must perform this action.", 400);
+                            return Error<HallDto>(
+                                "You cannot remove yourself as a manager of this hall. Another admin must perform this action.",
+                                400);
                         }
                     }
+
+                    _logger.LogInformation(
+                        "Updating managers for hall {HallId} (files endpoint). Requested ManagerIds: [{ManagerIds}]",
+                        id, string.Join(", ", hallUpdateDto.ManagerIds));
 
                     await _hallService.UpdateHallManagersAsync(id, hallUpdateDto.ManagerIds);
                 }
@@ -574,12 +592,14 @@ namespace HallApp.Web.Controllers.Hall
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning(ex, "Validation error updating hall {HallId}", id);
+                _logger.LogWarning(ex, "Validation error updating hall {HallId} (files endpoint)", id);
                 return Error<HallDto>(ex.Message, 400);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing request for {Endpoint}", HttpContext.Request.Path);
+                _logger.LogError(ex, "Unhandled error updating hall {HallId} (files endpoint). UserId: {UserId}, ManagerIds: [{ManagerIds}]",
+                    id, UserId,
+                    hallUpdateDto.ManagerIds != null ? string.Join(", ", hallUpdateDto.ManagerIds) : "null");
                 return Error<HallDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
