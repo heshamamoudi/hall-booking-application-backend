@@ -94,19 +94,27 @@ public class HallService : IHallService
                 }
             }
 
-            // Update Location
+            // Update Location -- only update scalar properties on the existing tracked entity.
+            // Never overwrite Location.ID or Location.HallID to avoid EF Core key tracking errors.
             if (hall.Location != null)
             {
                 if (existingHall.Location == null)
                 {
+                    // No existing location -- assign the new one.
+                    // Ensure HallID is set to the correct hall.
+                    hall.Location.HallID = existingHall.ID;
                     existingHall.Location = hall.Location;
                 }
                 else
                 {
+                    // Update scalar properties individually to preserve Location.ID (PK).
+                    existingHall.Location.City = hall.Location.City;
+                    existingHall.Location.State = hall.Location.State;
+                    existingHall.Location.Address = hall.Location.Address;
                     existingHall.Location.Latitude = hall.Location.Latitude;
                     existingHall.Location.Longitude = hall.Location.Longitude;
-                    existingHall.Location.City = hall.Location.City;
-                    existingHall.Location.Address = hall.Location.Address;
+                    existingHall.Location.Altitude = hall.Location.Altitude;
+                    existingHall.Location.Updated = DateTime.UtcNow;
                 }
             }
 

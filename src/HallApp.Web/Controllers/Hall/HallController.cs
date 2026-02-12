@@ -3,12 +3,14 @@ using Microsoft.AspNetCore.Mvc;
 using AutoMapper;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Application.DTOs.Halls.Hall;
+using HallApp.Application.DTOs.Halls.Location;
 using HallApp.Web.Controllers.Common;
 using HallApp.Core.Exceptions;
 using HallApp.Core.Entities.ChamperEntities;
 using HallApp.Web.Services;
 using HallApp.Web.DTOs;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace HallApp.Web.Controllers.Hall
 {
@@ -411,10 +413,47 @@ namespace HallApp.Web.Controllers.Hall
                     .Select(m => new { m.Id, m.AppUserId })
                     .ToList() ?? [];
 
-                // AutoMapper ignores Managers for HallUpdateDto -> Hall mapping,
-                // so existing managers on the entity are preserved through the mapping step.
+                // AutoMapper ignores Managers and Location for HallUpdateDto -> Hall mapping.
+                // Managers are preserved through the mapping step.
+                // Location is ignored to prevent EF Core tracking errors on Location.ID (PK).
                 _mapper.Map(updateHallDto, existingHall);
                 existingHall.ID = id;
+
+                // Manually apply Location updates to avoid EF Core key modification errors.
+                // AutoMapper is configured to ignore Location on HallUpdateDto -> Hall mapping
+                // because mapping LocationDto onto a tracked Location entity would attempt to
+                // modify the Location.ID primary key, causing InvalidOperationException.
+                if (updateHallDto.Location != null)
+                {
+                    if (existingHall.Location != null)
+                    {
+                        // Update scalar properties on the existing tracked Location entity.
+                        // Do NOT touch Location.ID or Location.HallID -- they are key/FK properties.
+                        existingHall.Location.City = updateHallDto.Location.City;
+                        existingHall.Location.State = updateHallDto.Location.State;
+                        existingHall.Location.Address = updateHallDto.Location.Address;
+                        existingHall.Location.Latitude = updateHallDto.Location.Latitude;
+                        existingHall.Location.Longitude = updateHallDto.Location.Longitude;
+                        existingHall.Location.Altitude = updateHallDto.Location.Altitude;
+                        existingHall.Location.Updated = DateTime.UtcNow;
+                    }
+                    else
+                    {
+                        // Hall has no Location yet -- create a new one.
+                        existingHall.Location = new HallApp.Core.Entities.ChamperEntities.LocationEntities.Location
+                        {
+                            City = updateHallDto.Location.City,
+                            State = updateHallDto.Location.State,
+                            Address = updateHallDto.Location.Address,
+                            Latitude = updateHallDto.Location.Latitude,
+                            Longitude = updateHallDto.Location.Longitude,
+                            Altitude = updateHallDto.Location.Altitude,
+                            HallID = id,
+                            Created = DateTime.UtcNow,
+                            Updated = DateTime.UtcNow
+                        };
+                    }
+                }
 
                 // DUP-002: Centralized admin flag preservation
                 PreserveAdminOnlyFlags(existingHall,
@@ -517,6 +556,39 @@ namespace HallApp.Web.Controllers.Hall
                 }
 
                 var hallEntity = _mapper.Map<HallApp.Core.Entities.ChamperEntities.Hall>(hallUpdateDto);
+
+                // Parse LocationJson and set on hallEntity so HallService.UpdateHallAsync
+                // can apply location updates. The WebAutoMapperProfiles ignores Location
+                // (it's sent as a JSON string in multipart/form-data), so we deserialize manually.
+                if (!string.IsNullOrWhiteSpace(hallUpdateDto.LocationJson))
+                {
+                    try
+                    {
+                        var locationDto = JsonSerializer.Deserialize<LocationDto>(
+                            hallUpdateDto.LocationJson,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        if (locationDto != null)
+                        {
+                            hallEntity.Location = new HallApp.Core.Entities.ChamperEntities.LocationEntities.Location
+                            {
+                                City = locationDto.City,
+                                State = locationDto.State,
+                                Address = locationDto.Address,
+                                Latitude = locationDto.Latitude,
+                                Longitude = locationDto.Longitude,
+                                Altitude = locationDto.Altitude,
+                                HallID = id,
+                                Created = DateTime.UtcNow,
+                                Updated = DateTime.UtcNow
+                            };
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogWarning(ex, "Invalid LocationJson provided for hall {HallId}", id);
+                    }
+                }
 
                 // DUP-002: Centralized admin flag preservation
                 PreserveAdminOnlyFlags(hallEntity, existingHallForFlags, User.IsInRole("Admin"));

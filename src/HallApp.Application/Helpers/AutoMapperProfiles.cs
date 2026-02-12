@@ -417,7 +417,11 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
             .ForMember(dest => dest.MediaFiles, opt => opt.MapFrom(src => src.MediaFiles))
             .ForMember(dest => dest.Contacts, opt => opt.MapFrom(src => src.Contacts))
-            .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
+            // Location is intentionally ignored here to prevent EF Core tracking errors.
+            // When AutoMapper maps LocationDto onto a tracked Location entity, it attempts
+            // to modify the Location.ID primary key, causing InvalidOperationException.
+            // Location updates are handled manually in HallController and HallService.
+            .ForMember(dest => dest.Location, opt => opt.Ignore())
             .ForMember(dest => dest.Packages, opt => opt.MapFrom(src => src.Packages))
             .ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.Services))
             .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
