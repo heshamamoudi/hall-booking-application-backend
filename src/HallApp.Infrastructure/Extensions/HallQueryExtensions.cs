@@ -33,6 +33,8 @@ public static class HallQueryExtensions
             .Include(h => h.Packages)
             .Include(h => h.Services)
             .Include(h => h.Contacts)
+            .Include(h => h.Managers)
+                .ThenInclude(m => m.AppUser)
             .Include(h => h.Reviews);
     }
 }

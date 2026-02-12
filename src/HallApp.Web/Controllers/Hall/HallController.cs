@@ -379,6 +379,8 @@ namespace HallApp.Web.Controllers.Hall
         /// <summary>
         /// Update an existing hall (HallManager only).
         /// DUP-002 FIX: Uses centralized admin flag preservation helper.
+        /// MANAGER-FIX: Preserves existing managers unless explicitly updated by Admin.
+        /// Validates at least 1 manager remains and prevents hall managers from removing themselves.
         /// </summary>
         [Authorize(Roles = "Admin,HallManager")]
         [HttpPut("{id:int}")]
@@ -406,6 +408,8 @@ namespace HallApp.Web.Controllers.Hall
                 // Capture original flags before mapping overwrites them
                 var originalFlags = (existingHall.IsFeatured, existingHall.IsPremium, existingHall.HasSpecialOffer);
 
+                // AutoMapper ignores Managers for HallUpdateDto -> Hall mapping,
+                // so existing managers on the entity are preserved through the mapping step.
                 _mapper.Map(updateHallDto, existingHall);
                 existingHall.ID = id;
 
@@ -419,6 +423,11 @@ namespace HallApp.Web.Controllers.Hall
                     },
                     User.IsInRole("Admin"));
 
+                // MANAGER-FIX: Explicitly null out Managers so UpdateHallAsync
+                // does not attempt to reassign the tracked collection.
+                // Managers are only modified through UpdateHallManagersAsync.
+                existingHall.Managers = null;
+
                 var updatedHall = await _hallService.UpdateHallAsync(existingHall);
                 var hallDto = _mapper.Map<HallDto>(updatedHall);
 
@@ -427,7 +436,7 @@ namespace HallApp.Web.Controllers.Hall
             catch (ArgumentException ex)
             {
                 _logger.LogWarning(ex, "Validation error updating hall {HallId}", id);
-                return Error<HallDto>("Invalid hall data provided", 400);
+                return Error<HallDto>(ex.Message, 400);
             }
             catch (Exception ex)
             {
@@ -512,14 +521,36 @@ namespace HallApp.Web.Controllers.Hall
                     return Error<HallDto>("Couldn't update hall", 500);
                 }
 
-                if (User.IsInRole("Admin") && hallUpdateDto.ManagerIds != null && hallUpdateDto.ManagerIds.Any())
+                // MANAGER-FIX: Only allow manager updates if ManagerIds is explicitly provided
+                // and contains at least one valid ID. Prevent self-removal for HallManagers.
+                if (hallUpdateDto.ManagerIds != null && hallUpdateDto.ManagerIds.Any())
                 {
+                    // Validate: HallManagers cannot remove themselves
+                    if (User.IsInRole("HallManager") && !User.IsInRole("Admin"))
+                    {
+                        var currentUserId = UserId;
+                        var currentManagerHallIds = existingHallForFlags.Managers?
+                            .Where(m => m.AppUserId == currentUserId)
+                            .Select(m => m.Id)
+                            .ToList() ?? new List<int>();
+
+                        if (currentManagerHallIds.Any() && !hallUpdateDto.ManagerIds.Intersect(currentManagerHallIds).Any())
+                        {
+                            return Error<HallDto>("You cannot remove yourself as a manager of this hall. Another admin must perform this action.", 400);
+                        }
+                    }
+
                     await _hallService.UpdateHallManagersAsync(id, hallUpdateDto.ManagerIds);
                 }
 
                 var reloadedHall = await _hallService.GetHallByIdAsync(id);
                 var updatedHall = _mapper.Map<HallDto>(reloadedHall);
                 return Success(updatedHall, "Hall updated successfully with file uploads");
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Validation error updating hall {HallId}", id);
+                return Error<HallDto>(ex.Message, 400);
             }
             catch (Exception ex)
             {

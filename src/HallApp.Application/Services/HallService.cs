@@ -69,21 +69,21 @@ public class HallService : IHallService
             existingHall.FemaleActive = hall.FemaleActive;
             existingHall.Gender = hall.Gender;
             existingHall.Description = hall.Description;
-            
+
             // Update direct contact information
             existingHall.Email = hall.Email ?? existingHall.Email;
             existingHall.Phone = hall.Phone ?? existingHall.Phone;
             existingHall.WhatsApp = hall.WhatsApp ?? existingHall.WhatsApp;
             existingHall.Logo = hall.Logo ?? existingHall.Logo;
-            
+
             // Update flags
             existingHall.IsActive = hall.IsActive;
             existingHall.HasSpecialOffer = hall.HasSpecialOffer;
             existingHall.IsFeatured = hall.IsFeatured;
             existingHall.IsPremium = hall.IsPremium;
-            
+
             existingHall.Updated = DateTime.UtcNow;
-            
+
             // Update MediaFiles collection
             if (hall.MediaFiles != null)
             {
@@ -93,7 +93,7 @@ public class HallService : IHallService
                     existingHall.MediaFiles.Add(mediaFile);
                 }
             }
-            
+
             // Update Location
             if (hall.Location != null)
             {
@@ -109,39 +109,38 @@ public class HallService : IHallService
                     existingHall.Location.Address = hall.Location.Address;
                 }
             }
-            
-            // Update Managers collection
-            if (hall.Managers != null)
-            {
-                existingHall.Managers?.Clear();
-                existingHall.Managers = hall.Managers;
-            }
-            
+
+            // CRITICAL FIX: Preserve existing managers by default.
+            // Managers are only updated through the explicit UpdateHallManagersAsync method.
+            // This prevents accidental removal of managers during hall info updates.
+            // The hall.Managers collection from the controller may reference the same
+            // tracked entities or be null/empty from AutoMapper, so we skip it here.
+
             // Update Contacts collection
             if (hall.Contacts != null)
             {
                 existingHall.Contacts?.Clear();
                 existingHall.Contacts = hall.Contacts;
             }
-            
+
             // Update Packages collection
             if (hall.Packages != null)
             {
                 existingHall.Packages?.Clear();
                 existingHall.Packages = hall.Packages;
             }
-            
+
             // Update Services collection
             if (hall.Services != null)
             {
                 existingHall.Services?.Clear();
                 existingHall.Services = hall.Services;
             }
-            
+
             await _unitOfWork.Complete();
             return existingHall;
         }
-        
+
         // If hall not found, try normal update
         _unitOfWork.HallRepository.Update(hall);
         await _unitOfWork.Complete();
@@ -430,6 +429,12 @@ public class HallService : IHallService
             var hall = await _unitOfWork.HallRepository.GetByIdAsync(hallId);
             if (hall == null) return false;
 
+            // Validate: at least one manager must remain
+            if (managerIds == null || !managerIds.Any())
+            {
+                throw new ArgumentException("At least one hall manager must remain. Cannot remove all managers.");
+            }
+
             // Get the hall managers by their IDs
             var managers = new List<HallManager>();
             foreach (var managerId in managerIds)
@@ -441,12 +446,22 @@ public class HallService : IHallService
                 }
             }
 
+            // Validate: ensure at least one valid manager was found
+            if (!managers.Any())
+            {
+                throw new ArgumentException("None of the provided manager IDs are valid. At least one valid manager is required.");
+            }
+
             // Clear existing managers and add new ones
             hall.Managers?.Clear();
             hall.Managers = managers;
 
             await _unitOfWork.Complete();
             return true;
+        }
+        catch (ArgumentException)
+        {
+            throw; // Re-throw validation errors
         }
         catch
         {
