@@ -85,17 +85,6 @@ var allowedOrigins = allowedOriginsConfig.Split(',', StringSplitOptions.RemoveEm
     .Select(o => o.Trim())
     .ToArray();
 
-// BUGFIX: Add known production domains if CORS env var is not set
-var knownProductionDomains = new[]
-{
-    "https://keen-lokum-f3d666.netlify.app",  // Current production frontend
-    "https://zawaji-app.netlify.app",
-    "https://zawaji.netlify.app",
-    "https://hall-frontend.netlify.app",
-    "http://localhost:4200",  // Local development
-    // Add future production domains here
-};
-
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -104,7 +93,7 @@ builder.Services.AddCors(options =>
         {
             if (builder.Environment.IsDevelopment())
             {
-                // Only allow wildcard origins in development
+                // Allow wildcard in development only
                 policy.SetIsOriginAllowed(_ => true)
                       .AllowAnyHeader()
                       .AllowAnyMethod()
@@ -112,20 +101,19 @@ builder.Services.AddCors(options =>
             }
             else
             {
-                // In production, wildcard with credentials is a security risk
-                // Fall back to known production domains
-                Console.WriteLine("⚠️  WARNING: Wildcard CORS in production - using known domains fallback");
-                policy.WithOrigins(knownProductionDomains)
-                      .AllowAnyHeader()
-                      .AllowAnyMethod()
-                      .AllowCredentials();
+                // Production: wildcard is insecure, require explicit origins
+                throw new InvalidOperationException(
+                    "SECURITY: Wildcard CORS (*) is not allowed in production. " +
+                    "Set CORS__AllowedOrigins environment variable with specific domains."
+                );
             }
         }
         else if (allowedOrigins.Any())
         {
-            // Specific origins mode - use configured origins plus localhost for dev
+            // Use configured origins from environment variable
             var origins = new List<string>();
 
+            // In development, add localhost for convenience
             if (builder.Environment.IsDevelopment())
             {
                 origins.AddRange(new[]
@@ -139,8 +127,9 @@ builder.Services.AddCors(options =>
                 });
             }
 
-            // Add configured origins (from CORS__AllowedOrigins env var)
             origins.AddRange(allowedOrigins);
+
+            Console.WriteLine($"CORS configured with {allowedOrigins.Length} domain(s): {string.Join(", ", allowedOrigins)}");
 
             policy.WithOrigins(origins.ToArray())
                   .AllowAnyHeader()
@@ -149,37 +138,36 @@ builder.Services.AddCors(options =>
         }
         else
         {
-            // No CORS origins configured - use defaults
-            // BUGFIX: Include known production domains to prevent HTTP 0 errors
-            var defaultOrigins = new List<string>
+            // No CORS configuration provided
+            if (builder.Environment.IsDevelopment())
             {
-                "http://localhost:4200",
-                "https://localhost:4200"
-            };
-
-            // Add production domains in production environment
-            if (!builder.Environment.IsDevelopment())
-            {
-                defaultOrigins.AddRange(knownProductionDomains);
-                Console.WriteLine($"⚠️  WARNING: No CORS__AllowedOrigins configured. Using fallback domains: {string.Join(", ", knownProductionDomains)}");
-                Console.WriteLine("💡 TIP: Set CORS__AllowedOrigins environment variable for production");
+                // Development: Allow localhost only
+                Console.WriteLine("WARNING: No CORS__AllowedOrigins set - using localhost for development");
+                policy.WithOrigins("http://localhost:4200", "https://localhost:4200")
+                      .AllowAnyHeader()
+                      .AllowAnyMethod()
+                      .AllowCredentials();
             }
-
-            policy.WithOrigins(defaultOrigins.ToArray())
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials();
+            else
+            {
+                // Production: FAIL LOUDLY - do not start without proper CORS configuration
+                throw new InvalidOperationException(
+                    "CRITICAL: CORS__AllowedOrigins environment variable is not set in production! " +
+                    "The application cannot start without proper CORS configuration. " +
+                    "Set CORS__AllowedOrigins=https://your-frontend-domain.com in Railway environment variables."
+                );
+            }
         }
     });
 });
 
-// Log CORS configuration for debugging
-var corsOriginsForLogging = allowedOrigins.Any()
-    ? string.Join(", ", allowedOrigins)
+// Log CORS configuration
+var corsStatus = allowedOrigins.Any()
+    ? $"CORS: {string.Join(", ", allowedOrigins)}"
     : builder.Environment.IsDevelopment()
-        ? "localhost:4200"
-        : string.Join(", ", knownProductionDomains);
-Console.WriteLine($"🌐 CORS configured for origins: {corsOriginsForLogging}");
+        ? "CORS: Development mode (localhost only)"
+        : "CORS: NOT CONFIGURED";
+Console.WriteLine(corsStatus);
 
 var app = builder.Build();
 
