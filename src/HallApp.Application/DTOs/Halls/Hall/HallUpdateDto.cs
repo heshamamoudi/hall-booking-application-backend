@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using HallApp.Application.DTOs.Halls.HallManager;
 using HallApp.Application.DTOs.Halls.Package;
 using HallApp.Application.DTOs.Halls.Service;
 using HallApp.Application.DTOs.Halls.Contact;
@@ -51,13 +50,13 @@ public class HallUpdateDto
 
     // Related entities
     public List<HallMediaDto> MediaFiles { get; set; }
-    public List<UserUpdateDto> Managers { get; set; }
     public List<ContactDto> Contacts { get; set; }
     public LocationDto Location { get; set; }
     public List<PackageDto> Packages { get; set; }
     public List<ServiceDto> Services { get; set; }
     public List<string> mediaBeforeUpload { get; set; }
-    
+    public List<int>? ManagerIds { get; set; }
+
     // Flags for categorization
     public bool IsActive { get; set; } = true;
     public bool IsApproved { get; set; } = false;

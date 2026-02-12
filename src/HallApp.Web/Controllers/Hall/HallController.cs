@@ -429,7 +429,32 @@ namespace HallApp.Web.Controllers.Hall
                 existingHall.Managers = null;
 
                 var updatedHall = await _hallService.UpdateHallAsync(existingHall);
-                var hallDto = _mapper.Map<HallDto>(updatedHall);
+
+                // MANAGER-FIX: Only allow manager updates if ManagerIds is explicitly provided
+                // and contains at least one valid ID. Prevent self-removal for HallManagers.
+                if (updateHallDto.ManagerIds != null && updateHallDto.ManagerIds.Any())
+                {
+                    // Validate: HallManagers cannot remove themselves
+                    if (User.IsInRole("HallManager") && !User.IsInRole("Admin"))
+                    {
+                        var currentUserId = UserId;
+                        var existingHallForManagerCheck = await _hallService.GetHallByIdAsync(id);
+                        var currentManagerHallIds = existingHallForManagerCheck.Managers?
+                            .Where(m => m.AppUserId == currentUserId)
+                            .Select(m => m.Id)
+                            .ToList() ?? new List<int>();
+
+                        if (currentManagerHallIds.Any() && !updateHallDto.ManagerIds.Intersect(currentManagerHallIds).Any())
+                        {
+                            return Error<HallDto>("You cannot remove yourself as a manager of this hall. Another admin must perform this action.", 400);
+                        }
+                    }
+
+                    await _hallService.UpdateHallManagersAsync(id, updateHallDto.ManagerIds);
+                }
+
+                var reloadedHall = await _hallService.GetHallByIdAsync(id);
+                var hallDto = _mapper.Map<HallDto>(reloadedHall);
 
                 return Success(hallDto, "Hall updated successfully");
             }
