@@ -22,17 +22,20 @@ public class PaymentsController : BaseApiController
     private readonly ILogger<PaymentsController> _logger;
     private readonly PaymentSettings _paymentSettings;
     private readonly IEnumerable<IPaymentProviderService> _paymentProviders;
+    private readonly IInvoiceService _invoiceService;
 
     public PaymentsController(
         IUnitOfWork unitOfWork,
         ILogger<PaymentsController> logger,
         IOptions<PaymentSettings> paymentSettings,
-        IEnumerable<IPaymentProviderService> paymentProviders)
+        IEnumerable<IPaymentProviderService> paymentProviders,
+        IInvoiceService invoiceService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _paymentSettings = paymentSettings.Value;
         _paymentProviders = paymentProviders;
+        _invoiceService = invoiceService;
     }
 
     /// <summary>
@@ -206,6 +209,7 @@ public class PaymentsController : BaseApiController
             {
                 payment.Booking.Status = "Confirmed";
                 payment.Booking.PaymentStatus = "Paid";
+                payment.Booking.PaymentMethod = payment.PaymentBrand;
                 payment.Booking.PaidAt = DateTime.UtcNow;
                 payment.Booking.UpdatedAt = DateTime.UtcNow;
 
@@ -214,6 +218,20 @@ public class PaymentsController : BaseApiController
                     payment.BookingId,
                     payment.TransactionId
                 );
+
+                // Auto-generate invoice for the paid booking
+                try
+                {
+                    await _invoiceService.GenerateInvoiceForBookingAsync(
+                        payment.BookingId, "system-payment");
+                    _logger.LogInformation(
+                        "Invoice auto-generated for booking {BookingId}", payment.BookingId);
+                }
+                catch (Exception invoiceEx)
+                {
+                    _logger.LogError(invoiceEx,
+                        "Failed to auto-generate invoice for booking {BookingId}", payment.BookingId);
+                }
             }
             else if (payment.Status == "Failed" && previousStatus != "Failed")
             {
@@ -580,11 +598,29 @@ public class PaymentsController : BaseApiController
             {
                 payment.Booking.Status = "Confirmed";
                 payment.Booking.PaymentStatus = "Paid";
+                payment.Booking.PaymentMethod = payment.PaymentBrand;
                 payment.Booking.PaidAt = DateTime.UtcNow;
                 payment.Booking.UpdatedAt = DateTime.UtcNow;
             }
 
             await _unitOfWork.Complete();
+
+            // Auto-generate invoice after successful payment (via webhook)
+            if (payment.Status == "Success" && previousStatus != "Success")
+            {
+                try
+                {
+                    await _invoiceService.GenerateInvoiceForBookingAsync(
+                        payment.BookingId, "system-webhook");
+                    _logger.LogInformation(
+                        "Invoice auto-generated via webhook for booking {BookingId}", payment.BookingId);
+                }
+                catch (Exception invoiceEx)
+                {
+                    _logger.LogError(invoiceEx,
+                        "Failed to auto-generate invoice via webhook for booking {BookingId}", payment.BookingId);
+                }
+            }
 
             return Ok();
         }
