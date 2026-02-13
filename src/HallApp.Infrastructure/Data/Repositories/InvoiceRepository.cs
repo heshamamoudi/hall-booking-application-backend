@@ -173,4 +173,45 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
     {
         return await GetInvoiceWithDetailsAsync(id);
     }
+
+    // --- Hall Statistics queries (optimized, read-only) ---
+
+    /// <inheritdoc />
+    public async Task<int> GetInvoiceCountByHallIdAsync(int hallId, string? paymentStatus = null)
+    {
+        var query = _context.Invoices
+            .AsNoTracking()
+            .Where(i => i.HallId == hallId && !i.IsCancelled);
+
+        if (!string.IsNullOrEmpty(paymentStatus))
+        {
+            query = query.Where(i => i.PaymentStatus == paymentStatus);
+        }
+
+        return await query.CountAsync();
+    }
+
+    /// <inheritdoc />
+    public async Task<decimal> GetTotalRevenueByHallIdAsync(int hallId)
+    {
+        return await _context.Invoices
+            .AsNoTracking()
+            .Where(i => i.HallId == hallId && i.PaymentStatus == "Paid" && !i.IsCancelled)
+            .SumAsync(i => i.TotalAmountWithTax);
+    }
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<Invoice>> GetInvoicesByHallIdAndDateRangeAsync(
+        int hallId, DateTime startDate, DateTime endDate)
+    {
+        return await _context.Invoices
+            .AsNoTracking()
+            .Where(i => i.HallId == hallId
+                     && i.PaymentStatus == "Paid"
+                     && !i.IsCancelled
+                     && i.InvoiceDate >= startDate
+                     && i.InvoiceDate <= endDate)
+            .OrderBy(i => i.InvoiceDate)
+            .ToListAsync();
+    }
 }

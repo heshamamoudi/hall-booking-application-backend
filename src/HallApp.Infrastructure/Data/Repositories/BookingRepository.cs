@@ -176,4 +176,47 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
             .OrderByDescending(b => b.Created)
             .ToListAsync();
     }
+
+    // --- Hall Statistics queries (optimized, read-only) ---
+
+    /// <inheritdoc />
+    public async Task<int> GetBookingCountByHallIdAsync(int hallId, IEnumerable<string>? statusFilter = null)
+    {
+        var query = _context.Bookings
+            .AsNoTracking()
+            .Where(b => b.HallId == hallId);
+
+        if (statusFilter != null)
+        {
+            var statuses = statusFilter.ToList();
+            query = query.Where(b => statuses.Contains(b.Status));
+        }
+
+        return await query.CountAsync();
+    }
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<Booking>> GetRecentBookingsByHallIdAsync(int hallId, int limit = 5)
+    {
+        return await _context.Bookings
+            .AsNoTracking()
+            .Where(b => b.HallId == hallId)
+            .Include(b => b.Customer)
+                .ThenInclude(c => c.AppUser)
+            .OrderByDescending(b => b.CreatedAt)
+            .Take(limit)
+            .AsSplitQuery()
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<Booking>> GetBookingsByHallIdAndDateRangeAsync(
+        int hallId, DateTime startDate, DateTime endDate)
+    {
+        return await _context.Bookings
+            .AsNoTracking()
+            .Where(b => b.HallId == hallId && b.CreatedAt >= startDate && b.CreatedAt <= endDate)
+            .OrderBy(b => b.CreatedAt)
+            .ToListAsync();
+    }
 }

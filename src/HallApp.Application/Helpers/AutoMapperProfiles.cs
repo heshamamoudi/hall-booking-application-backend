@@ -954,5 +954,42 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.PhoneNumber : ""));
 
         CreateMap<Hall, HallSimpleDto>();
+
+        // Hall -> HallWithStatsDto mapping (stats fields are populated after mapping)
+        CreateMap<Hall, HallWithStatsDto>()
+            .ForMember(dest => dest.ID, opt => opt.MapFrom(src => src.ID))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.CommercialRegistration, opt => opt.MapFrom(src => src.CommercialRegistration))
+            .ForMember(dest => dest.Vat, opt => opt.MapFrom(src => src.Vat))
+            .ForMember(dest => dest.BothWeekDays, opt => opt.MapFrom(src => src.BothWeekDays))
+            .ForMember(dest => dest.BothWeekEnds, opt => opt.MapFrom(src => src.BothWeekEnds))
+            .ForMember(dest => dest.MaleWeekDays, opt => opt.MapFrom(src => src.MaleWeekDays))
+            .ForMember(dest => dest.MaleWeekEnds, opt => opt.MapFrom(src => src.MaleWeekEnds))
+            .ForMember(dest => dest.MaleMin, opt => opt.MapFrom(src => src.MaleMin))
+            .ForMember(dest => dest.MaleMax, opt => opt.MapFrom(src => src.MaleMax))
+            .ForMember(dest => dest.MaleActive, opt => opt.MapFrom(src => src.MaleActive))
+            .ForMember(dest => dest.FemaleWeekDays, opt => opt.MapFrom(src => src.FemaleWeekDays))
+            .ForMember(dest => dest.FemaleWeekEnds, opt => opt.MapFrom(src => src.FemaleWeekEnds))
+            .ForMember(dest => dest.FemaleMin, opt => opt.MapFrom(src => src.FemaleMin))
+            .ForMember(dest => dest.FemaleMax, opt => opt.MapFrom(src => src.FemaleMax))
+            .ForMember(dest => dest.FemaleActive, opt => opt.MapFrom(src => src.FemaleActive))
+            .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+            .ForMember(dest => dest.AverageRating, opt => opt.MapFrom(src => src.AverageRating))
+            .ForMember(dest => dest.Media, opt => opt.MapFrom(src => src.Logo))
+            .ForMember(dest => dest.MediaFiles, opt => opt.MapFrom(src => src.MediaFiles ?? new List<HallMedia>()))
+            .ForMember(dest => dest.Managers, opt => opt.MapFrom(src => src.Managers ?? new List<HallManager>()))
+            .ForMember(dest => dest.Contacts, opt => opt.MapFrom(src => src.Contacts ?? new List<Contact>()))
+            .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
+            .ForMember(dest => dest.Packages, opt => opt.MapFrom(src => src.Packages ?? new List<Package>()))
+            .ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.Services ?? new List<Service>()))
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
+            // Stats fields will be populated manually after mapping
+            .ForMember(dest => dest.TotalBookings, opt => opt.Ignore())
+            .ForMember(dest => dest.TotalRevenue, opt => opt.Ignore())
+            .ForMember(dest => dest.PaidInvoices, opt => opt.Ignore())
+            .ForMember(dest => dest.PendingInvoices, opt => opt.Ignore())
+            .ForMember(dest => dest.TotalReviews, opt => opt.Ignore());
     }
 }
