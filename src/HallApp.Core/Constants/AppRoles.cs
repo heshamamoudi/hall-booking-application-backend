@@ -46,16 +46,6 @@ public static class AppRoles
     /// </summary>
     public const string Customer = "Customer";
 
-    /// <summary>
-    /// Hall employee with limited operational access.
-    /// </summary>
-    public const string HallEmployee = "HallEmployee";
-
-    /// <summary>
-    /// Hall supervisor with mid-level management capabilities.
-    /// </summary>
-    public const string HallSuperVisor = "HallSuperVisor";
-
     // --- Composite role strings for [Authorize(Roles = "...")] attributes ---
 
     /// <summary>

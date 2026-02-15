@@ -140,8 +140,6 @@ public class Seed
             new AppRole { Name = AppRoles.HallManager },
             new AppRole { Name = AppRoles.VendorManager },
             new AppRole { Name = AppRoles.Customer },
-            new AppRole { Name = AppRoles.HallEmployee },
-            new AppRole { Name = AppRoles.HallSuperVisor },
         };
 
         var createdCount = 0;
