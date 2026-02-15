@@ -212,4 +212,14 @@ public class HallRepository : GenericRepository<Hall>, IHallRepository
             .OrderBy(h => h.Name)
             .ToListAsync();
     }
+
+    /// <inheritdoc />
+    public async Task<List<Hall>> GetHallsByOrganizationIdAsync(int organizationId)
+    {
+        return await _context.Halls
+            .Where(h => h.OrganizationId == organizationId)
+            .AsNoTracking()
+            .IncludeForDetails()
+            .ToListAsync();
+    }
 }
