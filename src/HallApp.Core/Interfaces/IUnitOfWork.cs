@@ -22,5 +22,6 @@ public interface IUnitOfWork : IDisposable
     IInvoiceRepository InvoiceRepository { get; }
     IPaymentRepository PaymentRepository { get; }
     IPaymentRefundRepository PaymentRefundRepository { get; }
+    IHallBlockedDateRepository HallBlockedDateRepository { get; }
     Task<int> Complete();
 }

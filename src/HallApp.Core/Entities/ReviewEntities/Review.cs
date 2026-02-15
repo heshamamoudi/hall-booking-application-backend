@@ -17,10 +17,22 @@ public class Review
     public bool IsFlagged { get; set; } = false;
     public string RejectionReason { get; set; } = string.Empty;
 
+    // Manager response fields (one response per review)
+    public string? ManagerResponse { get; set; }
+    public DateTime? ManagerResponseDate { get; set; }
+    public int? ManagerResponderId { get; set; }
+    public AppUser? ManagerResponder { get; set; }
+
+    // Flag reason (when hall manager flags inappropriate content)
+    public string? FlagReason { get; set; }
+    public DateTime? FlaggedDate { get; set; }
+    public int? FlaggedByUserId { get; set; }
+    public AppUser? FlaggedByUser { get; set; }
+
     // Relationships
     public int? CustomerId { get; set; }
     public Customer Customer { get; set; } = null!;
-  
+
     public int HallId { get; set; }
     public Hall Hall { get; set; } = null!;
 

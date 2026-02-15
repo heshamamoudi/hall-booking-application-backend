@@ -104,7 +104,7 @@ public class VendorProfileService : IVendorProfileService
     public async Task<bool> SendVerificationEmailAsync(string userId)
     {
         // Implementation would generate token and send email
-        return await _userService.SendUserInvitationAsync(userId, "VendorManager");
+        return await _userService.SendUserInvitationAsync(userId, "VendorOrganizationManager");
     }
 
     // Business profile operations

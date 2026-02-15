@@ -16,6 +16,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
             .Where(r => r.HallId == hallId)
             .Include(r => r.Customer)
                 .ThenInclude(c => c.AppUser)
+            .Include(r => r.ManagerResponder)
             .OrderByDescending(r => r.Created)
             .ToListAsync();
     }
@@ -33,6 +34,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
         return await _context.Reviews
             .Include(r => r.Customer)
                 .ThenInclude(c => c.AppUser)
+            .Include(r => r.ManagerResponder)
             .FirstOrDefaultAsync(r => r.Id == reviewId);
     }
 

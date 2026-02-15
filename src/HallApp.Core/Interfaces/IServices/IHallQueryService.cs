@@ -35,4 +35,12 @@ public interface IHallQueryService
     Task<List<Hall>> GetNewlyAddedHallsAsync(int limit);
     Task<List<Hall>> GetPopularHallsFilteredAsync(int minReviewCount, double minRating, int limit);
     Task<List<Hall>> GetAvailableHallsForDateAsync(DateTime eventDate, DateTime start, DateTime end, int? genderPreference = null);
+    Task<List<Hall>> GetOrganizationHallsAsync(int orgId);
+    Task<List<Hall>> GetManagerAssignedHallsAsync(int managerId);
+
+    /// <summary>
+    /// Builds a mapping from AppUserId to HallManager.Id for a batch of user IDs.
+    /// HIGH-6 FIX: Enables efficient in-memory filtering without per-member database calls.
+    /// </summary>
+    Task<Dictionary<int, int>> GetAppUserToHallManagerIdMapAsync(IEnumerable<int> appUserIds);
 }

@@ -28,6 +28,7 @@ public class UnitOfWork : IUnitOfWork
         InvoiceRepository = new InvoiceRepository(_context);
         PaymentRepository = new PaymentRepository(_context);
         PaymentRefundRepository = new PaymentRefundRepository(_context);
+        HallBlockedDateRepository = new HallBlockedDateRepository(_context);
         // UserRepository requires additional dependencies - should be injected via DI
     }
 
@@ -49,6 +50,7 @@ public class UnitOfWork : IUnitOfWork
     public IInvoiceRepository InvoiceRepository { get; private set; }
     public IPaymentRepository PaymentRepository { get; private set; }
     public IPaymentRefundRepository PaymentRefundRepository { get; private set; }
+    public IHallBlockedDateRepository HallBlockedDateRepository { get; private set; }
 
     public async Task<int> Complete()
     {

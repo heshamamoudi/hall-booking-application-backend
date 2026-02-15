@@ -15,24 +15,27 @@ namespace HallApp.Web.Controllers.Hall;
 /// Provides per-hall aggregated data for the enhanced dashboard UI.
 /// Requires HallManager or Admin role. HallManagers can only access stats for their own halls.
 /// </summary>
-[Authorize(Roles = "Admin,HallManager")]
+[Authorize(Roles = "Admin,HallOrganizationManager,HallManager")]
 [Route("api/halls")]
 [ApiController]
 public class HallStatsController : BaseApiController
 {
     private readonly IHallStatsService _hallStatsService;
     private readonly IHallQueryService _hallQueryService;
+    private readonly IOrganizationService _organizationService;
     private readonly IMapper _mapper;
     private readonly ILogger<HallStatsController> _logger;
 
     public HallStatsController(
         IHallStatsService hallStatsService,
         IHallQueryService hallQueryService,
+        IOrganizationService organizationService,
         IMapper mapper,
         ILogger<HallStatsController> logger)
     {
         _hallStatsService = hallStatsService;
         _hallQueryService = hallQueryService;
+        _organizationService = organizationService;
         _mapper = mapper;
         _logger = logger;
     }
@@ -41,6 +44,8 @@ public class HallStatsController : BaseApiController
     /// Verifies the current user has access to the specified hall.
     /// Admins have access to all halls. HallManagers only have access to halls they manage.
     /// </summary>
+    // AUTH-FIX: Also checks organization ownership for HallOrganizationManager users,
+    // who access halls through Organization -> Hall (not through HallManager join table).
     private async Task<bool> UserOwnsHall(int hallId)
     {
         if (User.IsInRole("Admin")) return true;
@@ -48,8 +53,27 @@ public class HallStatsController : BaseApiController
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId)) return false;
 
+        // Check 1: HallManager team members -- halls linked via HallManager join table
         var managerHalls = await _hallQueryService.GetHallsByManagerAsync(userId);
-        return managerHalls.Any(h => h.ID == hallId);
+        if (managerHalls.Any(h => h.ID == hallId))
+            return true;
+
+        // Check 2: HallOrganizationManager owners -- halls linked via Organization
+        // Organization owners do NOT have HallManager entities; they access halls
+        // through their Organization -> Hall relationship.
+        if (User.IsInRole("HallOrganizationManager"))
+        {
+            var userIdInt = int.Parse(userId);
+            var organization = await _organizationService.GetOrganizationByOwnerId(userIdInt);
+            if (organization != null)
+            {
+                var orgHalls = await _hallQueryService.GetOrganizationHallsAsync(organization.Id);
+                if (orgHalls.Any(h => h.ID == hallId))
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

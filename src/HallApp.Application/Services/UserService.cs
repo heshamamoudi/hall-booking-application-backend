@@ -88,7 +88,7 @@ public class UserService : IUserService
         
         // Basic permission validation based on roles
         // This can be expanded based on specific business requirements
-        return roles.Contains("Admin") || roles.Contains("HallManager") || roles.Contains("VendorManager");
+        return roles.Contains("Admin") || roles.Contains("HallOrganizationManager") || roles.Contains("VendorOrganizationManager") || roles.Contains("HallManager") || roles.Contains("VendorManager");
     }
 
     public async Task<AppUser> CreateHallManagerAsync(AppUser hallManager)
@@ -98,7 +98,7 @@ public class UserService : IUserService
         if (!result.Succeeded)
             throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
 
-        await _userManager.AddToRoleAsync(hallManager, "HallManager");
+        await _userManager.AddToRoleAsync(hallManager, "HallOrganizationManager");
         await _unitOfWork.Complete();
         return hallManager;
     }

@@ -12,7 +12,7 @@ namespace HallApp.Web.Controllers.HallManagement;
 /// Provides aggregated statistics and data for the HallManager's assigned halls.
 /// Follows vertical slice architecture - all HallManager dashboard concerns in one place.
 /// </summary>
-[Authorize(Roles = "HallManager,Admin")]
+[Authorize(Roles = "HallOrganizationManager,HallManager,Admin")]
 [Route("api/hall-manager")]
 [ApiController]
 public class HallManagerDashboardController : BaseApiController

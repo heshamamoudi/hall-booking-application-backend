@@ -62,4 +62,12 @@ public class Hall
     public bool HasSpecialOffer { get; set; } = false;
     public bool IsFeatured { get; set; } = false;
     public bool IsPremium { get; set; } = false;
+
+    // Organization ownership - which organization this hall belongs to
+    public int? OrganizationId { get; set; }
+    public Organization Organization { get; set; }
+
+    // Direct assignment - which HallManager is assigned to manage this hall
+    public int? AssignedToHallManagerId { get; set; }
+    public HallManager AssignedToHallManager { get; set; }
 }

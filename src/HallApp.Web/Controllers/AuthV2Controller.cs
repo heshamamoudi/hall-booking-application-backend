@@ -9,6 +9,7 @@ using HallApp.Application.DTOs.Auth;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Core.Interfaces.IRepositories;
 using HallApp.Infrastructure.Data;
+using HallApp.Web.Services;
 
 namespace HallApp.Web.Controllers;
 
@@ -26,6 +27,7 @@ public class AuthV2Controller : ControllerBase
     private readonly ITokenService _tokenService;
     private readonly DataContext _context;
     private readonly IUserRepository _userRepository;
+    private readonly IFileUploadService _fileUploadService;
     private readonly ILogger<AuthV2Controller> _logger;
 
     public AuthV2Controller(
@@ -34,6 +36,7 @@ public class AuthV2Controller : ControllerBase
         ITokenService tokenService,
         DataContext context,
         IUserRepository userRepository,
+        IFileUploadService fileUploadService,
         ILogger<AuthV2Controller> logger)
     {
         _userManager = userManager;
@@ -41,6 +44,7 @@ public class AuthV2Controller : ControllerBase
         _tokenService = tokenService;
         _context = context;
         _userRepository = userRepository;
+        _fileUploadService = fileUploadService;
         _logger = logger;
     }
 
@@ -316,8 +320,13 @@ public class AuthV2Controller : ControllerBase
 
     // ── Get Current User ──────────────────────────────────────────────────
 
+    /// <summary>
+    /// Get the currently authenticated user's profile.
+    /// Accessible via both GET /api/v2/auth/me and GET /api/v2/auth/profile.
+    /// </summary>
     [Authorize]
     [HttpGet("me")]
+    [HttpGet("profile")]
     public async Task<ActionResult<UserV2Dto>> GetCurrentUser()
     {
         try
@@ -336,7 +345,10 @@ public class AuthV2Controller : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting current user (v2)");
+            _logger.LogError(ex, "Error getting current user (v2). UserId claim: {UserId}. Exception: {ExMessage}. Inner: {InnerMessage}",
+                GetCurrentUserId() ?? "null",
+                ex.Message,
+                ex.InnerException?.Message ?? "none");
             return StatusCode(500, ErrorResponse("An unexpected error occurred. Please try again."));
         }
     }
@@ -377,7 +389,15 @@ public class AuthV2Controller : ControllerBase
                 user.Gender = dto.Gender;
 
             if (dto.DateOfBirth.HasValue)
-                user.DOB = dto.DateOfBirth.Value;
+            {
+                // Npgsql requires DateTimeKind.Utc for 'timestamp with time zone' columns.
+                // The frontend may send date-only strings (e.g. "1990-05-15") which deserialize
+                // as DateTimeKind.Unspecified, causing a PostgreSQL exception on save.
+                var dob = dto.DateOfBirth.Value;
+                user.DOB = dob.Kind == DateTimeKind.Utc
+                    ? dob
+                    : DateTime.SpecifyKind(dob, DateTimeKind.Utc);
+            }
 
             user.Updated = DateTime.UtcNow;
 
@@ -397,7 +417,81 @@ public class AuthV2Controller : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating profile (v2)");
+            _logger.LogError(ex, "Error updating profile (v2). UserId: {UserId}. Exception: {ExMessage}. Inner: {InnerMessage}",
+                GetCurrentUserId() ?? "null",
+                ex.Message,
+                ex.InnerException?.Message ?? "none");
+            return StatusCode(500, ErrorResponse("An unexpected error occurred. Please try again."));
+        }
+    }
+
+    // ── Upload Profile Photo ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Upload a profile photo for the authenticated user. All roles are permitted.
+    /// Accepts multipart/form-data with a single file field named "photo".
+    /// Max 5 MB, allowed types: jpg, jpeg, png, gif, webp.
+    /// </summary>
+    [Authorize]
+    [HttpPost("upload-photo")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<UserV2Dto>> UploadProfilePhoto([FromForm] IFormFile photo)
+    {
+        try
+        {
+            if (photo == null || photo.Length == 0)
+                return BadRequest(ErrorResponse("No photo file provided"));
+
+            var userId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(ErrorResponse("User not authenticated"));
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound(ErrorResponse("User not found"));
+
+            // Delete old photo if it exists
+            if (!string.IsNullOrEmpty(user.PhotoUrl))
+            {
+                try
+                {
+                    await _fileUploadService.DeleteImageAsync(user.PhotoUrl);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete old profile photo for user {UserId}", userId);
+                }
+            }
+
+            // Save new photo to "avatars" folder
+            var photoUrl = await _fileUploadService.SaveImageAsync(photo, "avatars");
+
+            // Update user record
+            user.PhotoUrl = photoUrl;
+            user.Updated = DateTime.UtcNow;
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                var error = result.Errors.FirstOrDefault()?.Description ?? "Failed to update profile photo";
+                _logger.LogWarning("Photo upload failed for user {UserId}: {Error}", userId, error);
+                return BadRequest(ErrorResponse(error));
+            }
+
+            _logger.LogInformation("User {UserId} uploaded a profile photo (v2)", userId);
+
+            var userDto = MapToUserDto(user);
+            userDto.Roles = await _userManager.GetRolesAsync(user);
+            return Ok(userDto);
+        }
+        catch (ArgumentException ex)
+        {
+            // File validation errors from FileUploadService (size, type)
+            return BadRequest(ErrorResponse(ex.Message));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uploading profile photo (v2)");
             return StatusCode(500, ErrorResponse("An unexpected error occurred. Please try again."));
         }
     }
@@ -605,7 +699,8 @@ public class AuthV2Controller : ControllerBase
         Gender = user.Gender,
         EmailConfirmed = user.EmailConfirmed,
         Created = user.Created,
-        DateOfBirth = user.DOB
+        DateOfBirth = user.DOB,
+        PhotoUrl = user.PhotoUrl
     };
 
     /// <summary>

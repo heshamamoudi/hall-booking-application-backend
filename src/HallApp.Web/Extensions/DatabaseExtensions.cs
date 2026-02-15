@@ -4,6 +4,7 @@ using HallApp.Infrastructure.Data.Seed;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Hosting;
 
 namespace HallApp.Web.Extensions
 {
@@ -83,7 +84,8 @@ namespace HallApp.Web.Extensions
                 // Seed data
                 try
                 {
-                    await SeedAll.SeedAllData(userManager, roleManager, context);
+                    var env = scopedServices.GetRequiredService<IHostEnvironment>();
+                    await SeedAll.SeedAllData(userManager, roleManager, context, env, logger);
                     logger?.LogInformation("Database seeding completed successfully");
                 }
                 catch (Exception ex)

@@ -50,4 +50,19 @@ public class HallManagerRepository : GenericRepository<HallManager>, IHallManage
             .Include(hm => hm.Halls)
             .FirstOrDefaultAsync(hm => hm.Id == id);
     }
+
+    /// <inheritdoc />
+    public async Task<List<HallManager>> GetByAppUserIdsAsync(IEnumerable<int> appUserIds)
+    {
+        var userIdSet = appUserIds.ToList();
+        return await _context.HallManagers
+            .Where(hm => userIdSet.Contains(hm.AppUserId))
+            .AsNoTracking()
+            .Select(hm => new HallManager
+            {
+                Id = hm.Id,
+                AppUserId = hm.AppUserId
+            })
+            .ToListAsync();
+    }
 }

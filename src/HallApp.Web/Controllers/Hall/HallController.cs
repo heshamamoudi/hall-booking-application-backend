@@ -25,21 +25,26 @@ namespace HallApp.Web.Controllers.Hall
         private readonly IHallService _hallService;
         private readonly IMapper _mapper;
         private readonly IFileUploadService _fileUploadService;
+        private readonly IOrganizationService _organizationService;
         private readonly ILogger<HallController> _logger;
 
         public HallController(
             IHallService hallService,
             IMapper mapper,
             IFileUploadService fileUploadService,
+            IOrganizationService organizationService,
             ILogger<HallController> logger)
         {
             _hallService = hallService;
             _mapper = mapper;
             _fileUploadService = fileUploadService;
+            _organizationService = organizationService;
             _logger = logger;
         }
 
         // DUP-001 + DUP-004: Centralized hall ownership check
+        // AUTH-FIX: Also checks organization ownership for HallOrganizationManager users,
+        // who access halls through Organization -> Hall (not through HallManager join table).
         private async Task<bool> UserOwnsHall(int hallId)
         {
             if (User.IsInRole("Admin")) return true;
@@ -47,8 +52,27 @@ namespace HallApp.Web.Controllers.Hall
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userId)) return false;
 
+            // Check 1: HallManager team members -- halls linked via HallManager join table
             var managerHalls = await _hallService.GetHallsByManagerAsync(userId);
-            return managerHalls.Any(h => h.ID == hallId);
+            if (managerHalls.Any(h => h.ID == hallId))
+                return true;
+
+            // Check 2: HallOrganizationManager owners -- halls linked via Organization
+            // Organization owners do NOT have HallManager entities; they access halls
+            // through their Organization -> Hall relationship.
+            if (User.IsInRole("HallOrganizationManager"))
+            {
+                var userIdInt = int.Parse(userId);
+                var organization = await _organizationService.GetOrganizationByOwnerId(userIdInt);
+                if (organization != null)
+                {
+                    var orgHalls = await _hallService.GetOrganizationHallsAsync(organization.Id);
+                    if (orgHalls.Any(h => h.ID == hallId))
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         // DUP-002: Extracted admin flag preservation helper
@@ -338,7 +362,7 @@ namespace HallApp.Web.Controllers.Hall
         /// <summary>
         /// Create a new hall (HallManager only)
         /// </summary>
-        [Authorize(Roles = "Admin,HallManager")]
+        [Authorize(Roles = "Admin,HallOrganizationManager,HallManager")]
         [HttpPost]
         public async Task<ActionResult<ApiResponse<HallDto>>> CreateHall([FromBody] HallCreateDto createHallDto)
         {
@@ -351,6 +375,32 @@ namespace HallApp.Web.Controllers.Hall
                 }
 
                 var hallEntity = _mapper.Map<HallApp.Core.Entities.ChamperEntities.Hall>(createHallDto);
+
+                // Auto-link hall to the creating user's organization.
+                // Non-admin users (HallOrganizationManager, HallManager) must belong to a
+                // HallManagement organization. The hall is linked to that organization so it
+                // appears on the organization's resource pages.
+                // Admin users can create system-level halls without an organization.
+                if (!User.IsInRole("Admin"))
+                {
+                    var userId = UserId;
+                    var organization = await _organizationService.GetOrganizationByOwnerId(userId);
+
+                    if (organization == null || organization.Type != "HallManagement")
+                    {
+                        _logger.LogWarning(
+                            "User {UserId} attempted to create a hall without a HallManagement organization",
+                            userId);
+                        return Error<HallDto>(
+                            "You must belong to a hall management organization to create halls", 403);
+                    }
+
+                    hallEntity.OrganizationId = organization.Id;
+                    _logger.LogInformation(
+                        "Auto-linking new hall to organization {OrganizationId} for user {UserId}",
+                        organization.Id, userId);
+                }
+
                 var createdHall = await _hallService.CreateHallAsync(hallEntity);
                 var hallDto = _mapper.Map<HallDto>(createdHall);
 
@@ -379,12 +429,12 @@ namespace HallApp.Web.Controllers.Hall
         }
 
         /// <summary>
-        /// Update an existing hall (HallManager only).
+        /// Update an existing hall (HallOrganizationManager or HallManager).
         /// DUP-002 FIX: Uses centralized admin flag preservation helper.
-        /// MANAGER-FIX: Preserves existing managers unless explicitly updated by Admin.
-        /// Validates at least 1 manager remains and prevents hall managers from removing themselves.
+        /// Manager assignments are managed separately via the HallAssignmentController
+        /// to prevent accidental overwrites when HallManager users save hall details.
         /// </summary>
-        [Authorize(Roles = "Admin,HallManager")]
+        [Authorize(Roles = "Admin,HallOrganizationManager,HallManager")]
         [HttpPut("{id:int}")]
         public async Task<ActionResult<ApiResponse<HallDto>>> UpdateHall(int id, [FromBody] HallUpdateDto updateHallDto)
         {
@@ -407,17 +457,35 @@ namespace HallApp.Web.Controllers.Hall
                     return Error<HallDto>($"Hall with ID {id} not found", 404);
                 }
 
-                // Capture original admin-only flags and current managers before mapping
+                // Organization authorization: non-admin users can only update halls
+                // that belong to their organization. This prevents cross-organization tampering.
+                if (!User.IsInRole("Admin") && existingHall.OrganizationId.HasValue)
+                {
+                    var userId = UserId;
+                    var organization = await _organizationService.GetOrganizationByOwnerId(userId);
+
+                    if (organization == null || organization.Id != existingHall.OrganizationId.Value)
+                    {
+                        _logger.LogWarning(
+                            "User {UserId} attempted to update hall {HallId} belonging to organization {OrganizationId}",
+                            userId, id, existingHall.OrganizationId);
+                        return Error<HallDto>("You do not have permission to modify this hall", 403);
+                    }
+                }
+
+                // Capture original admin-only flags and OrganizationId before mapping
                 var originalFlags = (existingHall.IsFeatured, existingHall.IsPremium, existingHall.HasSpecialOffer);
-                var existingManagerIds = existingHall.Managers?
-                    .Select(m => new { m.Id, m.AppUserId })
-                    .ToList() ?? [];
+                var originalOrganizationId = existingHall.OrganizationId;
 
                 // AutoMapper ignores Managers and Location for HallUpdateDto -> Hall mapping.
-                // Managers are preserved through the mapping step.
+                // Managers are preserved through the mapping step (Managers are managed separately).
                 // Location is ignored to prevent EF Core tracking errors on Location.ID (PK).
                 _mapper.Map(updateHallDto, existingHall);
                 existingHall.ID = id;
+
+                // Preserve OrganizationId -- it must not be changed through updates.
+                // Organization linkage is set only during creation.
+                existingHall.OrganizationId = originalOrganizationId;
 
                 // Manually apply Location updates to avoid EF Core key modification errors.
                 // AutoMapper is configured to ignore Location on HallUpdateDto -> Hall mapping
@@ -466,40 +534,9 @@ namespace HallApp.Web.Controllers.Hall
                     User.IsInRole("Admin"));
 
                 // Update the hall entity (scalar properties, collections except Managers).
-                // Do NOT null out Managers -- let EF Core keep tracking the existing
-                // collection as-is. UpdateHallAsync skips Managers by design.
+                // Manager assignments are managed separately via the HallAssignmentController
+                // to prevent accidental overwrites when HallManager users save hall details.
                 var updatedHall = await _hallService.UpdateHallAsync(existingHall);
-
-                // Only update managers if ManagerIds is explicitly provided with valid entries.
-                if (updateHallDto.ManagerIds != null && updateHallDto.ManagerIds.Any())
-                {
-                    // Validate: HallManagers cannot remove themselves
-                    if (User.IsInRole("HallManager") && !User.IsInRole("Admin"))
-                    {
-                        var currentUserId = UserId;
-
-                        // Use the manager snapshot captured before the update to avoid
-                        // re-fetching the same tracked entity in a potentially stale state.
-                        var currentManagerEntityIds = existingManagerIds
-                            .Where(m => m.AppUserId == currentUserId)
-                            .Select(m => m.Id)
-                            .ToList();
-
-                        if (currentManagerEntityIds.Any() &&
-                            !updateHallDto.ManagerIds.Intersect(currentManagerEntityIds).Any())
-                        {
-                            return Error<HallDto>(
-                                "You cannot remove yourself as a manager of this hall. Another admin must perform this action.",
-                                400);
-                        }
-                    }
-
-                    _logger.LogInformation(
-                        "Updating managers for hall {HallId}. Requested ManagerIds: [{ManagerIds}]",
-                        id, string.Join(", ", updateHallDto.ManagerIds));
-
-                    await _hallService.UpdateHallManagersAsync(id, updateHallDto.ManagerIds);
-                }
 
                 var reloadedHall = await _hallService.GetHallByIdAsync(id);
                 var hallDto = _mapper.Map<HallDto>(reloadedHall);
@@ -513,9 +550,8 @@ namespace HallApp.Web.Controllers.Hall
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled error updating hall {HallId}. UserId: {UserId}, ManagerIds: [{ManagerIds}]",
-                    id, UserId,
-                    updateHallDto.ManagerIds != null ? string.Join(", ", updateHallDto.ManagerIds) : "null");
+                _logger.LogError(ex, "Unhandled error updating hall {HallId}. UserId: {UserId}",
+                    id, UserId);
                 return Error<HallDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
@@ -523,8 +559,10 @@ namespace HallApp.Web.Controllers.Hall
         /// <summary>
         /// Update hall with file uploads (recommended - replaces base64).
         /// DUP-002 FIX: Uses centralized admin flag preservation helper.
+        /// Manager assignments are managed separately via the HallAssignmentController
+        /// to prevent accidental overwrites when HallManager users save hall details.
         /// </summary>
-        [Authorize(Roles = "Admin,HallManager")]
+        [Authorize(Roles = "Admin,HallOrganizationManager,HallManager")]
         [HttpPut("{id:int}/files")]
         [Consumes("multipart/form-data")]
         public async Task<ActionResult<ApiResponse<HallDto>>> UpdateHallWithFiles(
@@ -555,7 +593,26 @@ namespace HallApp.Web.Controllers.Hall
                     return Error<HallDto>($"Hall with ID {id} not found", 404);
                 }
 
+                // Organization authorization: non-admin users can only update halls
+                // that belong to their organization. This prevents cross-organization tampering.
+                if (!User.IsInRole("Admin") && existingHallForFlags.OrganizationId.HasValue)
+                {
+                    var userId = UserId;
+                    var organization = await _organizationService.GetOrganizationByOwnerId(userId);
+
+                    if (organization == null || organization.Id != existingHallForFlags.OrganizationId.Value)
+                    {
+                        _logger.LogWarning(
+                            "User {UserId} attempted to update hall {HallId} (files) belonging to organization {OrganizationId}",
+                            userId, id, existingHallForFlags.OrganizationId);
+                        return Error<HallDto>("You do not have permission to modify this hall", 403);
+                    }
+                }
+
                 var hallEntity = _mapper.Map<HallApp.Core.Entities.ChamperEntities.Hall>(hallUpdateDto);
+
+                // Preserve OrganizationId -- it must not be changed through updates.
+                hallEntity.OrganizationId = existingHallForFlags.OrganizationId;
 
                 // Parse LocationJson and set on hallEntity so HallService.UpdateHallAsync
                 // can apply location updates. The WebAutoMapperProfiles ignores Location
@@ -623,39 +680,12 @@ namespace HallApp.Web.Controllers.Hall
                     });
                 }
 
+                // Manager assignments are managed separately via the HallAssignmentController
+                // to prevent accidental overwrites when HallManager users save hall details.
                 var updatedHallEntity = await _hallService.UpdateHallAsync(hallEntity);
                 if (updatedHallEntity == null)
                 {
                     return Error<HallDto>("Couldn't update hall", 500);
-                }
-
-                // Only update managers if ManagerIds is explicitly provided with valid entries.
-                if (hallUpdateDto.ManagerIds != null && hallUpdateDto.ManagerIds.Any())
-                {
-                    // Validate: HallManagers cannot remove themselves.
-                    // Use the snapshot captured before UpdateHallAsync to avoid tracking issues.
-                    if (User.IsInRole("HallManager") && !User.IsInRole("Admin"))
-                    {
-                        var currentUserId = UserId;
-                        var currentManagerEntityIds = existingHallForFlags.Managers?
-                            .Where(m => m.AppUserId == currentUserId)
-                            .Select(m => m.Id)
-                            .ToList() ?? new List<int>();
-
-                        if (currentManagerEntityIds.Any() &&
-                            !hallUpdateDto.ManagerIds.Intersect(currentManagerEntityIds).Any())
-                        {
-                            return Error<HallDto>(
-                                "You cannot remove yourself as a manager of this hall. Another admin must perform this action.",
-                                400);
-                        }
-                    }
-
-                    _logger.LogInformation(
-                        "Updating managers for hall {HallId} (files endpoint). Requested ManagerIds: [{ManagerIds}]",
-                        id, string.Join(", ", hallUpdateDto.ManagerIds));
-
-                    await _hallService.UpdateHallManagersAsync(id, hallUpdateDto.ManagerIds);
                 }
 
                 var reloadedHall = await _hallService.GetHallByIdAsync(id);
@@ -669,9 +699,8 @@ namespace HallApp.Web.Controllers.Hall
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled error updating hall {HallId} (files endpoint). UserId: {UserId}, ManagerIds: [{ManagerIds}]",
-                    id, UserId,
-                    hallUpdateDto.ManagerIds != null ? string.Join(", ", hallUpdateDto.ManagerIds) : "null");
+                _logger.LogError(ex, "Unhandled error updating hall {HallId} (files endpoint). UserId: {UserId}",
+                    id, UserId);
                 return Error<HallDto>("An error occurred processing your request. Please try again.", 500);
             }
         }
@@ -679,7 +708,7 @@ namespace HallApp.Web.Controllers.Hall
         /// <summary>
         /// Delete a hall (HallManager only)
         /// </summary>
-        [Authorize(Roles = "Admin,HallManager")]
+        [Authorize(Roles = "Admin,HallOrganizationManager,HallManager")]
         [HttpDelete("{id:int}")]
         public async Task<ActionResult<ApiResponse>> DeleteHall(int id)
         {
@@ -714,7 +743,7 @@ namespace HallApp.Web.Controllers.Hall
         /// <summary>
         /// Toggle hall active status (HallManager only)
         /// </summary>
-        [Authorize(Roles = "Admin,HallManager")]
+        [Authorize(Roles = "Admin,HallOrganizationManager,HallManager")]
         [HttpPut("{id:int}/toggle-active")]
         public async Task<ActionResult<ApiResponse<HallDto>>> ToggleHallActive(int id, [FromQuery] bool active)
         {
@@ -747,7 +776,7 @@ namespace HallApp.Web.Controllers.Hall
         /// <summary>
         /// Get halls for the current hall manager
         /// </summary>
-        [Authorize(Roles = "HallManager")]
+        [Authorize(Roles = "HallOrganizationManager,HallManager")]
         [HttpGet("my-halls")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetMyHalls()
         {

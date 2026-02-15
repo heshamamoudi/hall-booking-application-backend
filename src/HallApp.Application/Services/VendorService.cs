@@ -24,7 +24,13 @@ public class VendorService : IVendorService
     {
         var existingVendor = await _unitOfWork.VendorRepository.GetVendorByIdAsync(id);
         if (existingVendor == null) throw new ArgumentException($"Vendor with id {id} not found");
-        
+
+        // IMPORTANT: OrganizationId is IMMUTABLE after creation.
+        // It must NEVER be copied from the incoming vendor parameter.
+        // The controller explicitly preserves it as defense-in-depth.
+        // Only specific scalar fields are updated below.
+        // NOTE: OrganizationId is intentionally absent from this list and must never be added.
+
         // Update scalar properties
         existingVendor.Name = vendor.Name;
         existingVendor.Description = vendor.Description;
@@ -232,5 +238,51 @@ public class VendorService : IVendorService
         var result = await _unitOfWork.VendorRepository.DeleteVendorTypeAsync(id);
         await _unitOfWork.Complete();
         return result;
+    }
+
+    // Organization-based methods - delegates to repository
+
+    public async Task<bool> AssignVendorToManagerAsync(int vendorId, int vendorManagerId)
+    {
+        var vendor = await _unitOfWork.VendorRepository.GetVendorByIdAsync(vendorId);
+        if (vendor == null) return false;
+
+        if (vendor.AssignedToVendorManagerId != null)
+        {
+            throw new InvalidOperationException("Vendor is already assigned to a manager. Unassign first.");
+        }
+
+        var manager = await _unitOfWork.VendorManagerRepository.GetByIdAsync(vendorManagerId);
+        if (manager == null)
+        {
+            throw new ArgumentException($"VendorManager with id {vendorManagerId} not found.");
+        }
+
+        vendor.AssignedToVendorManagerId = vendorManagerId;
+        await _unitOfWork.Complete();
+
+        return true;
+    }
+
+    public async Task<List<Vendor>> GetOrganizationVendorsAsync(int orgId)
+    {
+        return await _unitOfWork.VendorRepository.GetVendorsByOrganizationIdAsync(orgId);
+    }
+
+    public async Task<List<Vendor>> GetManagerAssignedVendorsAsync(int managerId)
+    {
+        var allManagers = await _unitOfWork.VendorManagerRepository.GetAllAsync();
+        var vendorManager = allManagers.FirstOrDefault(vm => vm.AppUserId == managerId);
+
+        if (vendorManager == null) return new List<Vendor>();
+
+        var allVendors = await _unitOfWork.VendorRepository.GetAllVendorsAsync();
+        return allVendors.Where(v => v.AssignedToVendorManagerId == vendorManager.Id).ToList();
+    }
+
+    public async Task<Dictionary<int, int>> GetAppUserToVendorManagerIdMapAsync(IEnumerable<int> appUserIds)
+    {
+        var managers = await _unitOfWork.VendorManagerRepository.GetByAppUserIdsAsync(appUserIds);
+        return managers.ToDictionary(m => m.AppUserId, m => m.Id);
     }
 }

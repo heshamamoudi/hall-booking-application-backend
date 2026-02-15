@@ -64,8 +64,8 @@ namespace HallApp.Web.DTOs
         public bool IsFeatured { get; set; } = false;
         public bool IsPremium { get; set; } = false;
 
-        // Manager IDs to assign (list of HallManager IDs)
-        public List<int> ManagerIds { get; set; } = new List<int>();
+        // Manager assignments are managed separately via the HallAssignmentController
+        // to prevent accidental overwrites when HallManager users save hall details.
 
         // Contacts as JSON string (for form data)
         public string ContactsJson { get; set; }

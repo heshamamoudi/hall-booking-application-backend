@@ -5,6 +5,7 @@ using HallApp.Application.DTOs.Halls.HallManager;
 using HallApp.Core.Interfaces.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using AutoMapper;
 
 namespace HallApp.Web.Controllers.Admin
@@ -53,13 +54,15 @@ namespace HallApp.Web.Controllers.Admin
         }
 
         /// <summary>
-        /// Create vendor manager
+        /// Create vendor manager with auto-generated organization.
+        /// Creates the AppUser, VendorManager entity, and a VendorManagement organization atomically.
         /// </summary>
         /// <param name="userCreateDto">Vendor manager creation data</param>
         /// <returns>Created vendor manager</returns>
         [HttpPost("vendor-managers")]
         public async Task<ActionResult<ApiResponse<object>>> CreateVendorManager([FromBody] UserCreateDto userCreateDto)
         {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
                 if (!ModelState.IsValid)
@@ -68,37 +71,49 @@ namespace HallApp.Web.Controllers.Admin
                     return Error<object>($"Invalid data: {errors}", 400);
                 }
 
-                // Create AppUser first
+                // Step 1: Create AppUser
                 var userEntity = _mapper.Map<HallApp.Core.Entities.AppUser>(userCreateDto);
                 var user = await _userService.CreateUserAsync(userEntity);
 
-                if (user != null)
+                if (user == null)
                 {
-                    // Create VendorManager business entity
-                    var vendorManager = new HallApp.Core.Entities.VendorEntities.VendorManager
-                    {
-                        AppUserId = user.Id,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    var createdVendorManager = await _vendorManagerService.CreateVendorManagerAsync(vendorManager);
-
-                    var result = new
-                    {
-                        id = createdVendorManager.Id,
-                        appUserId = createdVendorManager.AppUserId,
-                        createdAt = createdVendorManager.CreatedAt,
-                        userName = user.UserName,
-                        email = user.Email
-                    };
-
-                    return Success((object)result, "Vendor manager created successfully");
+                    await transaction.RollbackAsync();
+                    return Error<object>("Couldn't create user account", 500);
                 }
 
-                return Error<object>("Couldn't create vendor manager", 500);
+                // Step 2: Create VendorManager business entity
+                var vendorManager = new HallApp.Core.Entities.VendorEntities.VendorManager
+                {
+                    AppUserId = user.Id,
+                    CreatedAt = DateTime.UtcNow
+                };
+                var createdVendorManager = await _vendorManagerService.CreateVendorManagerAsync(vendorManager);
+
+                // Step 3: Auto-create Organization for this VendorOrganizationManager
+                var displayName = !string.IsNullOrWhiteSpace(user.FirstName)
+                    ? $"{user.FirstName}'s Vendor Organization"
+                    : !string.IsNullOrWhiteSpace(user.UserName)
+                        ? $"{user.UserName}'s Vendor Organization"
+                        : "Vendor Organization";
+
+                await _organizationService.CreateOrganization(displayName, "VendorManagement", user.Id);
+
+                await transaction.CommitAsync();
+
+                var result = new
+                {
+                    id = createdVendorManager.Id,
+                    appUserId = createdVendorManager.AppUserId,
+                    createdAt = createdVendorManager.CreatedAt,
+                    userName = user.UserName,
+                    email = user.Email
+                };
+
+                return Success((object)result, "Vendor manager created successfully with organization");
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 return Error<object>($"Failed to create vendor manager: {ex.Message}", 500);
             }
         }

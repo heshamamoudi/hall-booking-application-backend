@@ -40,6 +40,7 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
     // Hall Entities
     public DbSet<Hall> Halls { get; set; }
     public DbSet<HallManager> HallManagers { get; set; }
+    public DbSet<HallBlockedDate> HallBlockedDates { get; set; }
 
     // Customer Entities
     public DbSet<Customer> Customers { get; set; }
@@ -69,6 +70,10 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
     public DbSet<ChatStatistics> ChatStatistics { get; set; }
     public DbSet<ChatRating> ChatRatings { get; set; }
     public DbSet<SupportCase> SupportCases { get; set; }
+
+    // Organization Entities
+    public DbSet<Organization> Organizations { get; set; }
+    public DbSet<OrganizationMember> OrganizationMembers { get; set; }
 
     // Data Protection Entities
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
@@ -225,6 +230,65 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
             .HasMany(h => h.Managers)
             .WithMany(hm => hm.Halls)
             .UsingEntity(j => j.ToTable("HallHallManager"));
+
+        // HallBlockedDate relationships and configurations
+        builder.Entity<HallBlockedDate>(entity =>
+        {
+            entity.HasKey(hbd => hbd.Id);
+
+            entity.HasOne(hbd => hbd.Hall)
+                .WithMany()
+                .HasForeignKey(hbd => hbd.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(hbd => hbd.BlockedByUser)
+                .WithMany()
+                .HasForeignKey(hbd => hbd.BlockedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.Property(hbd => hbd.Reason)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            // Indexes for performance
+            entity.HasIndex(hbd => hbd.HallId);
+            entity.HasIndex(hbd => new { hbd.HallId, hbd.IsActive });
+            entity.HasIndex(hbd => new { hbd.HallId, hbd.StartDate, hbd.EndDate });
+        });
+
+        // Review entity configuration
+        builder.Entity<Review>(entity =>
+        {
+            // Manager response relationship
+            entity.HasOne(r => r.ManagerResponder)
+                .WithMany()
+                .HasForeignKey(r => r.ManagerResponderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Flagged by user relationship
+            entity.HasOne(r => r.FlaggedByUser)
+                .WithMany()
+                .HasForeignKey(r => r.FlaggedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.Property(r => r.ManagerResponse)
+                .HasMaxLength(1000);
+
+            entity.Property(r => r.FlagReason)
+                .HasMaxLength(500);
+
+            entity.Property(r => r.Content)
+                .HasMaxLength(1000);
+
+            entity.Property(r => r.RejectionReason)
+                .HasMaxLength(500);
+
+            // Indexes for performance
+            entity.HasIndex(r => r.HallId);
+            entity.HasIndex(r => new { r.HallId, r.IsFlagged });
+            entity.HasIndex(r => new { r.HallId, r.Rating });
+            entity.HasIndex(r => r.CustomerId);
+        });
 
         // Notification relationships
         builder.Entity<Notification>()
@@ -588,6 +652,171 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
 
             // Index for closed conversations queries
             entity.HasIndex(c => c.ClosedByUserId);
+        });
+
+        // Organization relationships
+        builder.Entity<Organization>(entity =>
+        {
+            entity.HasKey(o => o.Id);
+
+            entity.HasOne(o => o.Owner)
+                .WithMany()
+                .HasForeignKey(o => o.OwnerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasMany(o => o.Members)
+                .WithOne(m => m.Organization)
+                .HasForeignKey(m => m.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(o => o.Halls)
+                .WithOne(h => h.Organization)
+                .HasForeignKey(h => h.OrganizationId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasMany(o => o.Vendors)
+                .WithOne(v => v.Organization)
+                .HasForeignKey(v => v.OrganizationId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.Property(o => o.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(o => o.Type)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            // Business Registration fields
+            entity.Property(o => o.CommercialRegistrationNumber)
+                .HasMaxLength(50)
+                .HasDefaultValue(string.Empty);
+
+            entity.Property(o => o.VatNumber)
+                .HasMaxLength(50)
+                .HasDefaultValue(string.Empty);
+
+            entity.Property(o => o.LegalName)
+                .HasMaxLength(200)
+                .HasDefaultValue(string.Empty);
+
+            // Legal Address fields
+            entity.Property(o => o.BuildingNumber)
+                .HasMaxLength(10)
+                .HasDefaultValue(string.Empty);
+
+            entity.Property(o => o.StreetName)
+                .HasMaxLength(100)
+                .HasDefaultValue(string.Empty);
+
+            entity.Property(o => o.District)
+                .HasMaxLength(100)
+                .HasDefaultValue(string.Empty);
+
+            entity.Property(o => o.City)
+                .HasMaxLength(100)
+                .HasDefaultValue(string.Empty);
+
+            entity.Property(o => o.PostalCode)
+                .HasMaxLength(10)
+                .HasDefaultValue(string.Empty);
+
+            entity.Property(o => o.CountryCode)
+                .HasMaxLength(2)
+                .HasDefaultValue("SA");
+
+            // Contact Information fields
+            entity.Property(o => o.Email)
+                .HasMaxLength(256)
+                .HasDefaultValue(string.Empty);
+
+            entity.Property(o => o.Phone)
+                .HasMaxLength(20)
+                .HasDefaultValue(string.Empty);
+
+            entity.Property(o => o.WhatsApp)
+                .HasMaxLength(20)
+                .HasDefaultValue(string.Empty);
+
+            entity.Property(o => o.Website)
+                .HasMaxLength(500)
+                .HasDefaultValue(string.Empty);
+
+            // Bank Account fields
+            entity.Property(o => o.BankName)
+                .HasMaxLength(100)
+                .HasDefaultValue(string.Empty);
+
+            entity.Property(o => o.BankAccountNumber)
+                .HasMaxLength(30)
+                .HasDefaultValue(string.Empty);
+
+            entity.Property(o => o.BankIban)
+                .HasMaxLength(34)
+                .HasDefaultValue(string.Empty);
+
+            // Metadata
+            entity.Property(o => o.IsVerified)
+                .HasDefaultValue(false);
+
+            entity.HasIndex(o => o.OwnerId);
+            entity.HasIndex(o => o.Type);
+
+            // Unique filtered index: only one active organization per owner.
+            // Prevents the check-then-create race condition at the database level.
+            entity.HasIndex(o => o.OwnerId)
+                .IsUnique()
+                .HasFilter("\"IsActive\" = true")
+                .HasDatabaseName("IX_Organizations_OwnerId_UniqueActive");
+        });
+
+        // OrganizationMember relationships
+        builder.Entity<OrganizationMember>(entity =>
+        {
+            entity.HasKey(m => m.Id);
+
+            entity.HasOne(m => m.AppUser)
+                .WithMany()
+                .HasForeignKey(m => m.AppUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(m => m.InvitedByUser)
+                .WithMany()
+                .HasForeignKey(m => m.InvitedBy)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.Property(m => m.Role)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.HasIndex(m => new { m.OrganizationId, m.AppUserId })
+                .IsUnique();
+
+            entity.HasIndex(m => m.AppUserId);
+        });
+
+        // Hall - AssignedToHallManager relationship
+        builder.Entity<Hall>(entity =>
+        {
+            entity.HasOne(h => h.AssignedToHallManager)
+                .WithMany()
+                .HasForeignKey(h => h.AssignedToHallManagerId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(h => h.OrganizationId);
+            entity.HasIndex(h => h.AssignedToHallManagerId);
+        });
+
+        // Vendor - AssignedToVendorManager relationship
+        builder.Entity<Vendor>(entity =>
+        {
+            entity.HasOne(v => v.AssignedToVendorManager)
+                .WithMany()
+                .HasForeignKey(v => v.AssignedToVendorManagerId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(v => v.OrganizationId);
+            entity.HasIndex(v => v.AssignedToVendorManagerId);
         });
     }
 }

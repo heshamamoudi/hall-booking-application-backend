@@ -30,11 +30,14 @@ public class TokenService : ITokenService
     // Method to create a token
     public async Task<string> CreateToken(AppUser user)
     {
+        // Note: JwtRegisteredClaimNames.NameId and ClaimTypes.NameIdentifier both map to "nameid"
+        // in the JWT payload. Including both causes a duplicate claim array ["5","5"].
+        // We keep ClaimTypes.NameIdentifier (needed for SignalR) and JwtRegisteredClaimNames.Sub
+        // (standard JWT subject claim), plus a custom "id" claim for controller compatibility.
         var claims = new List<Claim>{
-            new Claim(JwtRegisteredClaimNames.NameId, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName ?? string.Empty),
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),  // Add for SignalR
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),  // Standard subject claim
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),  // For SignalR and ASP.NET Core identity
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),  // Standard JWT subject claim
             new Claim("id", user.Id.ToString()),  // Custom claim for controller compatibility
             new Claim("email", user.Email ?? string.Empty),
             new Claim("name", $"{user.FirstName} {user.LastName}".Trim())
@@ -65,8 +68,7 @@ public class TokenService : ITokenService
     public Task<string> CreateRefreshToken(AppUser user)
     {
         var claims = new List<Claim>{
-            new Claim(JwtRegisteredClaimNames.NameId, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
+            new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName ?? string.Empty),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim("TokenType", "RefreshToken")

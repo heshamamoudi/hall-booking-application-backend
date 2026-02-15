@@ -549,4 +549,51 @@ public class HallService : IHallService
         var halls = await _unitOfWork.HallRepository.GetAvailableHallsForDateAsync(eventDate, start, end, genderPreference);
         return halls.ToList();
     }
+
+    // Organization-based methods - delegates to repository
+
+    public async Task<bool> AssignHallToManagerAsync(int hallId, int hallManagerId)
+    {
+        var hall = await _unitOfWork.HallRepository.GetByIdAsync(hallId);
+        if (hall == null) return false;
+
+        if (hall.AssignedToHallManagerId != null)
+        {
+            throw new InvalidOperationException("Hall is already assigned to a manager. Unassign first.");
+        }
+
+        var manager = await _unitOfWork.HallManagerRepository.GetByIdAsync(hallManagerId);
+        if (manager == null)
+        {
+            throw new ArgumentException($"HallManager with id {hallManagerId} not found.");
+        }
+
+        hall.AssignedToHallManagerId = hallManagerId;
+        await _unitOfWork.Complete();
+
+        return true;
+    }
+
+    public async Task<List<Hall>> GetOrganizationHallsAsync(int orgId)
+    {
+        return await _unitOfWork.HallRepository.GetHallsByOrganizationIdAsync(orgId);
+    }
+
+    public async Task<List<Hall>> GetManagerAssignedHallsAsync(int managerId)
+    {
+        // Find the HallManager by AppUserId
+        var allManagers = await _unitOfWork.HallManagerRepository.GetAllAsync();
+        var hallManager = allManagers.FirstOrDefault(hm => hm.AppUserId == managerId);
+
+        if (hallManager == null) return new List<Hall>();
+
+        var allHalls = await _unitOfWork.HallRepository.GetAllAsync();
+        return allHalls.Where(h => h.AssignedToHallManagerId == hallManager.Id).ToList();
+    }
+
+    public async Task<Dictionary<int, int>> GetAppUserToHallManagerIdMapAsync(IEnumerable<int> appUserIds)
+    {
+        var managers = await _unitOfWork.HallManagerRepository.GetByAppUserIdsAsync(appUserIds);
+        return managers.ToDictionary(m => m.AppUserId, m => m.Id);
+    }
 }

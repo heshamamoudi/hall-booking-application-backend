@@ -1,6 +1,9 @@
 using HallApp.Infrastructure.Data;
 using HallApp.Core.Entities;
+using HallApp.Core.Constants;
+using HallApp.Web.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -125,11 +128,38 @@ namespace HallApp.Web.Extensions
 
             services.AddAuthorization(opt =>
             {
-                opt.AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"));
-                opt.AddPolicy("RequireHallManagerRole", policy => policy.RequireRole("Admin", "HallManager"));
-                opt.AddPolicy("ModerateOrdersRole", policy => policy.RequireRole("Admin", "Moderator"));
-                opt.AddPolicy("CustomerRole", policy => policy.RequireRole("Admin", "Moderator", "Customer"));
+                // Legacy policies (preserved for backward compatibility)
+                opt.AddPolicy("RequireAdminRole", policy => policy.RequireRole(AppRoles.Admin));
+                opt.AddPolicy("RequireHallManagerRole", policy => policy.RequireRole(AppRoles.Admin, AppRoles.HallOrganizationManager, AppRoles.HallManager));
+                opt.AddPolicy("ModerateOrdersRole", policy => policy.RequireRole(AppRoles.Admin, AppRoles.Moderator));
+                opt.AddPolicy("CustomerRole", policy => policy.RequireRole(AppRoles.Admin, AppRoles.Moderator, AppRoles.Customer));
+
+                // Hall organization-level policies
+                opt.AddPolicy("CanManageHallOrganization", policy =>
+                    policy.RequireRole(AppRoles.Admin, AppRoles.HallOrganizationManager));
+
+                // Vendor organization-level policies
+                opt.AddPolicy("CanManageVendorOrganization", policy =>
+                    policy.RequireRole(AppRoles.Admin, AppRoles.VendorOrganizationManager));
+
+                // Generic organization policy (either hall or vendor org manager)
+                opt.AddPolicy("CanManageOrganization", policy =>
+                    policy.RequireRole(AppRoles.Admin, AppRoles.HallOrganizationManager, AppRoles.VendorOrganizationManager));
+
+                // HallManager can manage assigned halls; HallOrganizationManager and Admin can manage any hall
+                opt.AddPolicy("CanManageAssignedHalls", policy =>
+                {
+                    policy.RequireRole(AppRoles.Admin, AppRoles.HallOrganizationManager, AppRoles.HallManager);
+                    policy.AddRequirements(new HallAssignmentRequirement());
+                });
+
+                // Vendor management policy
+                opt.AddPolicy("CanManageVendors", policy =>
+                    policy.RequireRole(AppRoles.Admin, AppRoles.VendorOrganizationManager, AppRoles.VendorManager));
             });
+
+            // Register authorization handler for hall assignment checks
+            services.AddScoped<IAuthorizationHandler, HallAssignmentAuthorizationHandler>();
 
             // Register the custom UserIdProvider
             services.AddSingleton<IUserIdProvider, CustomUserIdProvider>();

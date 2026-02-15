@@ -27,6 +27,12 @@ public interface IVendorRepository : IGenericRepository<Vendor>
     Task<bool> IsEmailUniqueAsync(string email, int excludeId = 0);
     Task<bool> IsPhoneUniqueAsync(string phone, int excludeId = 0);
 
+    /// <summary>
+    /// Gets vendors belonging to a specific organization using AsNoTracking for read-only access.
+    /// HIGH-6 FIX: Replaces loading all vendors then filtering in memory.
+    /// </summary>
+    Task<List<Vendor>> GetVendorsByOrganizationIdAsync(int organizationId);
+
     // Vendor Type Operations
     Task<List<VendorType>> GetVendorTypesAsync();
     Task<VendorType> GetVendorTypeByIdAsync(int id);

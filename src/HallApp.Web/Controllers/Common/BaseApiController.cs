@@ -46,9 +46,34 @@ namespace HallApp.Web.Controllers.Common
         protected bool IsAdmin => HasRole("Admin");
 
         /// <summary>
-        /// Checks if the current user is a hall manager
+        /// Checks if the current user is a hall organization manager (hall organization owner)
+        /// </summary>
+        protected bool IsHallOrganizationManager => HasRole("HallOrganizationManager");
+
+        /// <summary>
+        /// Checks if the current user is a vendor organization manager (vendor organization owner)
+        /// </summary>
+        protected bool IsVendorOrganizationManager => HasRole("VendorOrganizationManager");
+
+        /// <summary>
+        /// Checks if the current user is a hall manager (team member assigned to specific halls)
         /// </summary>
         protected bool IsHallManager => HasRole("HallManager");
+
+        /// <summary>
+        /// Checks if the current user is a vendor manager (team member assigned to specific vendors)
+        /// </summary>
+        protected bool IsVendorManager => HasRole("VendorManager");
+
+        /// <summary>
+        /// Checks if the current user can manage halls (HallOrganizationManager or HallManager)
+        /// </summary>
+        protected bool CanManageHalls => IsHallOrganizationManager || IsHallManager;
+
+        /// <summary>
+        /// Checks if the current user can manage vendors (VendorOrganizationManager or VendorManager)
+        /// </summary>
+        protected bool CanManageVendors => IsVendorOrganizationManager || IsVendorManager;
 
         /// <summary>
         /// Checks if the current user is a customer

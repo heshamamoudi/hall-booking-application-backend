@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using HallApp.Core.Entities.ChamperEntities;
 using HallApp.Core.Entities.ReviewEntities;
 
 namespace HallApp.Core.Entities.VendorEntities;
@@ -60,4 +61,12 @@ public class Vendor
     public bool HasSpecialOffer { get; set; } = false;
     public bool IsFeatured { get; set; } = false;
     public bool IsPremium { get; set; } = false;
+
+    // Organization ownership - which organization this vendor belongs to
+    public int? OrganizationId { get; set; }
+    public Organization Organization { get; set; }
+
+    // Direct assignment - which VendorManager is assigned to manage this vendor
+    public int? AssignedToVendorManagerId { get; set; }
+    public VendorManager AssignedToVendorManager { get; set; }
 }

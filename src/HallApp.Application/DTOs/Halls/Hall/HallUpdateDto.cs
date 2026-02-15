@@ -55,7 +55,9 @@ public class HallUpdateDto
     public List<PackageDto> Packages { get; set; }
     public List<ServiceDto> Services { get; set; }
     public List<string> mediaBeforeUpload { get; set; }
-    public List<int>? ManagerIds { get; set; }
+
+    // Manager assignments are managed separately via the HallAssignmentController
+    // to prevent accidental overwrites when HallManager users save hall details.
 
     // Flags for categorization
     public bool IsActive { get; set; } = true;

@@ -421,16 +421,16 @@ namespace HallApp.Application.Services
             if (conversation.SupportAgentId == userId)
                 return true;
 
-            // HallManager - check if they manage the hall associated with the conversation
-            if (roles.Contains("HallManager", StringComparer.OrdinalIgnoreCase) && conversation.HallId.HasValue)
+            // HallOrganizationManager or HallManager - check if they manage the hall associated with the conversation
+            if ((roles.Contains("HallOrganizationManager", StringComparer.OrdinalIgnoreCase) || roles.Contains("HallManager", StringComparer.OrdinalIgnoreCase)) && conversation.HallId.HasValue)
             {
                 var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(userId);
                 if (hallManager?.Halls?.Any(h => h.ID == conversation.HallId.Value) == true)
                     return true;
             }
 
-            // VendorManager - check if they manage the vendor associated with the conversation
-            if (roles.Contains("VendorManager", StringComparer.OrdinalIgnoreCase) && conversation.VendorId.HasValue)
+            // VendorOrganizationManager or VendorManager - check if they manage the vendor associated with the conversation
+            if ((roles.Contains("VendorOrganizationManager", StringComparer.OrdinalIgnoreCase) || roles.Contains("VendorManager", StringComparer.OrdinalIgnoreCase)) && conversation.VendorId.HasValue)
             {
                 var vendorManager = await _vendorManagerService.GetVendorManagerByAppUserIdAsync(userId);
                 if (vendorManager?.Vendors?.Any(v => v.Id == conversation.VendorId.Value) == true)
@@ -571,16 +571,16 @@ namespace HallApp.Application.Services
 
             if (!isParticipant)
             {
-                // Check HallManager access
-                if (roles.Contains("HallManager", StringComparer.OrdinalIgnoreCase) && conversation.HallId.HasValue)
+                // Check HallOrganizationManager or HallManager access
+                if ((roles.Contains("HallOrganizationManager", StringComparer.OrdinalIgnoreCase) || roles.Contains("HallManager", StringComparer.OrdinalIgnoreCase)) && conversation.HallId.HasValue)
                 {
                     var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(userId);
                     if (hallManager?.Halls?.Any(h => h.ID == conversation.HallId.Value) == true)
                         isParticipant = true;
                 }
 
-                // Check VendorManager access
-                if (!isParticipant && roles.Contains("VendorManager", StringComparer.OrdinalIgnoreCase) && conversation.VendorId.HasValue)
+                // Check VendorOrganizationManager or VendorManager access
+                if (!isParticipant && (roles.Contains("VendorOrganizationManager", StringComparer.OrdinalIgnoreCase) || roles.Contains("VendorManager", StringComparer.OrdinalIgnoreCase)) && conversation.VendorId.HasValue)
                 {
                     var vendorManager = await _vendorManagerService.GetVendorManagerByAppUserIdAsync(userId);
                     if (vendorManager?.Vendors?.Any(v => v.Id == conversation.VendorId.Value) == true)

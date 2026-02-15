@@ -12,13 +12,11 @@
     "UserName": "ahmed.mansour",
     "Email": "ahmed.mansour@grandhall.com",
     "PhoneNumber": "+966501111111",
-    "Password": "HallManager@123",
-    "Role": "HallManager",
-    "HallManager": {
-      "CompanyName": "Grand Hall Events Company",
-      "CommercialRegistrationNumber": "1010123456",
-      "VatNumber": "300012345600003",
-      "IsApproved": true
+    "Password": "HallOrgManager@123",
+    "Role": "HallOrganizationManager",
+    "Organization": {
+      "Name": "Grand Hall Events Company",
+      "Type": "HallManagement"
     }
   },
   {
@@ -26,26 +24,44 @@
     "UserName": "sara.zahrani",
     "Email": "sara.zahrani@royalpalace.sa",
     "PhoneNumber": "+966501111112",
-    "Password": "HallManager@123",
-    "Role": "HallManager",
-    "HallManager": {
-      "CompanyName": "Royal Palace Events",
-      "CommercialRegistrationNumber": "1010234567",
-      "VatNumber": "300023456700003",
-      "IsApproved": true
+    "Password": "HallOrgManager@123",
+    "Role": "HallOrganizationManager",
+    "Organization": {
+      "Name": "Royal Palace Events",
+      "Type": "HallManagement"
     }
+  },
+  {
+    "Name": "Hall Owner Demo",
+    "UserName": "hallowner.demo",
+    "Email": "hallowner@example.com",
+    "PhoneNumber": "+966508100001",
+    "Password": "Pa$$w0rd",
+    "Role": "HallOrganizationManager",
+    "Organization": {
+      "Name": "Demo Hall Organization",
+      "Type": "HallManagement"
+    }
+  },
+  {
+    "Name": "Hall Manager Demo",
+    "UserName": "hallmanager.demo",
+    "Email": "hallmanager@example.com",
+    "PhoneNumber": "+966508300001",
+    "Password": "Pa$$w0rd",
+    "Role": "HallManager",
+    "TeamMemberOf": "Grand Hall Events Company"
   },
   {
     "Name": "Khalid Al-Otaibi",
     "UserName": "khalid.otaibi",
     "Email": "khalid.otaibi@elitecatering.sa",
     "PhoneNumber": "+966502222221",
-    "Password": "VendorManager@123",
-    "Role": "VendorManager",
-    "VendorManager": {
-      "CommercialRegistrationNumber": "2020456789",
-      "VatNumber": "300045678900003",
-      "IsApproved": true
+    "Password": "VendorOrgManager@123",
+    "Role": "VendorOrganizationManager",
+    "Organization": {
+      "Name": "Elite Catering & Events",
+      "Type": "VendorManagement"
     }
   },
   {
@@ -53,13 +69,33 @@
     "UserName": "noura.dosari",
     "Email": "noura.dosari@luxurydecor.sa",
     "PhoneNumber": "+966502222222",
-    "Password": "VendorManager@123",
-    "Role": "VendorManager",
-    "VendorManager": {
-      "CommercialRegistrationNumber": "2020567890",
-      "VatNumber": "300056789000003",
-      "IsApproved": true
+    "Password": "VendorOrgManager@123",
+    "Role": "VendorOrganizationManager",
+    "Organization": {
+      "Name": "Luxury Decor & Design",
+      "Type": "VendorManagement"
     }
+  },
+  {
+    "Name": "Vendor Owner Demo",
+    "UserName": "vendorowner.demo",
+    "Email": "vendorowner@example.com",
+    "PhoneNumber": "+966508200001",
+    "Password": "Pa$$w0rd",
+    "Role": "VendorOrganizationManager",
+    "Organization": {
+      "Name": "Demo Vendor Organization",
+      "Type": "VendorManagement"
+    }
+  },
+  {
+    "Name": "Vendor Manager Demo",
+    "UserName": "vendormanager.demo",
+    "Email": "vendormanager@example.com",
+    "PhoneNumber": "+966508400001",
+    "Password": "Pa$$w0rd",
+    "Role": "VendorManager",
+    "TeamMemberOf": "Elite Catering & Events"
   },
   {
     "Name": "Mohammed Al-Rashid",
@@ -156,6 +192,14 @@
         }
       ]
     }
+  },
+  {
+    "Name": "Customer Demo",
+    "UserName": "customer.demo",
+    "Email": "customer@example.com",
+    "PhoneNumber": "+966508000001",
+    "Password": "Pa$$w0rd",
+    "Role": "Customer"
   },
   {
     "Name": "Maha Al-Ghamdi",

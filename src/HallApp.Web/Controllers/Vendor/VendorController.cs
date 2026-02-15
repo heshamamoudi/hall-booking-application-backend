@@ -17,11 +17,16 @@ namespace HallApp.Web.Controllers.Vendor
     public class VendorController : BaseApiController
     {
         private readonly IVendorService _vendorService;
+        private readonly IOrganizationService _organizationService;
         private readonly IMapper _mapper;
 
-        public VendorController(IVendorService vendorService, IMapper mapper)
+        public VendorController(
+            IVendorService vendorService,
+            IOrganizationService organizationService,
+            IMapper mapper)
         {
             _vendorService = vendorService;
+            _organizationService = organizationService;
             _mapper = mapper;
         }
 
@@ -366,7 +371,7 @@ namespace HallApp.Web.Controllers.Vendor
         /// </summary>
         /// <param name="vendorDto">Vendor creation data</param>
         /// <returns>Created vendor</returns>
-        [Authorize(Roles = "Admin,HallManager")]
+        [Authorize(Roles = "Admin,VendorOrganizationManager,VendorManager")]
         [HttpPost]
         public async Task<ActionResult<ApiResponse<VendorDto>>> CreateVendor([FromForm] CreateVendorDto vendorDto)
         {
@@ -379,11 +384,27 @@ namespace HallApp.Web.Controllers.Vendor
                 }
 
                 var vendorEntity = _mapper.Map<HallApp.Core.Entities.VendorEntities.Vendor>(vendorDto);
+
+                // Auto-link vendor to organization for non-admin users
+                if (!IsAdmin)
+                {
+                    var organization = await _organizationService.GetOrganizationByOwnerId(UserId);
+
+                    if (organization == null || organization.Type != "VendorManagement")
+                    {
+                        return Error<VendorDto>(
+                            "User does not belong to a vendor management organization", 403);
+                    }
+
+                    vendorEntity.OrganizationId = organization.Id;
+                }
+                // Admin can create vendors without organization (system vendors)
+
                 var vendor = await _vendorService.CreateVendorAsync(vendorEntity);
-                
+
                 return CreatedAtAction(
-                    nameof(GetVendorById), 
-                    new { id = vendor.Id }, 
+                    nameof(GetVendorById),
+                    new { id = vendor.Id },
                     new ApiResponse<VendorDto>
                     {
                         StatusCode = 201,
@@ -409,7 +430,7 @@ namespace HallApp.Web.Controllers.Vendor
         /// <param name="id">Vendor ID</param>
         /// <param name="updateDto">Updated vendor data</param>
         /// <returns>Updated vendor</returns>
-        [Authorize(Roles = "Admin,VendorManager")]
+        [Authorize(Roles = "Admin,VendorOrganizationManager,VendorManager")]
         [HttpPut("{id:int}")]
         public async Task<ActionResult<ApiResponse<VendorDto>>> UpdateVendor(int id, [FromBody] UpdateVendorDto updateDto)
         {
@@ -426,10 +447,39 @@ namespace HallApp.Web.Controllers.Vendor
                     });
                 }
 
+                var existingVendor = await _vendorService.GetVendorByIdAsync(id);
+                if (existingVendor == null)
+                {
+                    return Error<VendorDto>($"Vendor with ID {id} not found", 404);
+                }
+
+                // Capture OrganizationId before any operations.
+                // OrganizationId is IMMUTABLE after creation and must never change via updates.
+                var originalOrganizationId = existingVendor.OrganizationId;
+
+                // Verify non-admin users belong to the vendor's organization
+                if (!IsAdmin)
+                {
+                    var organization = await _organizationService.GetOrganizationByOwnerId(UserId);
+
+                    if (organization == null
+                        || organization.Type != "VendorManagement"
+                        || existingVendor.OrganizationId != organization.Id)
+                    {
+                        return Error<VendorDto>(
+                            "You do not have permission to update this vendor", 403);
+                    }
+                }
+
                 var vendorEntity = _mapper.Map<HallApp.Core.Entities.VendorEntities.Vendor>(updateDto);
                 var updatedVendor = await _vendorService.UpdateVendorAsync(id, vendorEntity);
+
+                // Explicitly restore OrganizationId -- it must not be changed through updates.
+                // Organization linkage is set only during creation.
+                updatedVendor.OrganizationId = originalOrganizationId;
+
                 var updatedVendorDto = _mapper.Map<VendorDto>(updatedVendor);
-                
+
                 return Ok(new ApiResponse<VendorDto>
                 {
                     StatusCode = 200,
@@ -463,24 +513,38 @@ namespace HallApp.Web.Controllers.Vendor
         /// </summary>
         /// <param name="id">Vendor ID</param>
         /// <returns>Success response</returns>
-        [Authorize(Roles = "Admin,VendorManager")]
+        [Authorize(Roles = "Admin,VendorOrganizationManager,VendorManager")]
         [HttpDelete("{id:int}")]
         public async Task<ActionResult<ApiResponse>> DeleteVendor(int id)
         {
             try
             {
-                var result = await _vendorService.DeleteVendorAsync(id);
-                
-                if (!result)
+                // Organization authorization check for non-admin users
+                if (!IsAdmin)
                 {
-                    return Error($"Vendor with ID {id} not found", 404);
+                    var existingVendor = await _vendorService.GetVendorByIdAsync(id);
+                    if (existingVendor == null)
+                    {
+                        return Error("Vendor not found", 404);
+                    }
+
+                    var organization = await _organizationService.GetOrganizationByOwnerId(UserId);
+                    if (organization == null || organization.Type != "VendorManagement" || existingVendor.OrganizationId != organization.Id)
+                    {
+                        return Error("You do not have permission to delete this vendor", 403);
+                    }
                 }
 
-                return Success("Vendor deleted successfully");
+                var result = await _vendorService.DeleteVendorAsync(id);
+                if (result)
+                {
+                    return Success("Vendor deleted successfully");
+                }
+                return Error("Failed to delete vendor", 500);
             }
             catch (Exception ex)
             {
-                return Error($"Failed to delete vendor: {ex.Message}", 500);
+                return Error("An error occurred while deleting the vendor", 500);
             }
         }
 
@@ -490,7 +554,7 @@ namespace HallApp.Web.Controllers.Vendor
         /// <param name="id">Vendor ID</param>
         /// <param name="active">New active status</param>
         /// <returns>Updated vendor</returns>
-        [Authorize(Roles = "Admin,VendorManager")]
+        [Authorize(Roles = "Admin,VendorOrganizationManager,VendorManager")]
         [HttpPut("{id:int}/toggle-active")]
         public async Task<ActionResult<ApiResponse<VendorDto>>> ToggleVendorActive(int id, [FromQuery] bool active)
         {
@@ -499,7 +563,17 @@ namespace HallApp.Web.Controllers.Vendor
                 var existingVendor = await _vendorService.GetVendorByIdAsync(id);
                 if (existingVendor == null)
                 {
-                    return Error<VendorDto>($"Vendor with ID {id} not found", 404);
+                    return Error<VendorDto>("Vendor not found", 404);
+                }
+
+                // Organization authorization check for non-admin users
+                if (!IsAdmin)
+                {
+                    var organization = await _organizationService.GetOrganizationByOwnerId(UserId);
+                    if (organization == null || organization.Type != "VendorManagement" || existingVendor.OrganizationId != organization.Id)
+                    {
+                        return Error<VendorDto>("You do not have permission to modify this vendor", 403);
+                    }
                 }
 
                 existingVendor.IsActive = active;
@@ -510,7 +584,7 @@ namespace HallApp.Web.Controllers.Vendor
             }
             catch (Exception ex)
             {
-                return Error<VendorDto>($"Failed to toggle vendor status: {ex.Message}", 500);
+                return Error<VendorDto>("An error occurred while toggling vendor status", 500);
             }
         }
 
@@ -518,7 +592,7 @@ namespace HallApp.Web.Controllers.Vendor
         /// Get vendors for the current vendor manager
         /// </summary>
         /// <returns>List of vendors managed by the current user</returns>
-        [Authorize(Roles = "VendorManager")]
+        [Authorize(Roles = "VendorOrganizationManager,VendorManager")]
         [HttpGet("my-vendors")]
         public async Task<ActionResult<ApiResponse<IEnumerable<VendorDto>>>> GetMyVendors()
         {

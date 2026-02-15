@@ -38,7 +38,7 @@ public class InvoiceController : BaseApiController
     /// </summary>
     private async Task<bool> HallManagerOwnsInvoiceHall(Core.Entities.BookingEntities.Invoice invoice)
     {
-        if (!User.IsInRole("HallManager"))
+        if (!User.IsInRole("HallOrganizationManager") && !User.IsInRole("HallManager"))
         {
             return false;
         }
@@ -213,7 +213,7 @@ public class InvoiceController : BaseApiController
                 // Admin sees all invoices
                 invoices = await _invoiceService.GetAllInvoicesAsync();
             }
-            else if (User.IsInRole("HallManager"))
+            else if (User.IsInRole("HallOrganizationManager") || User.IsInRole("HallManager"))
             {
                 // Hall Manager sees invoices for their assigned halls
                 var hallManager = await hallManagerService.GetHallManagerByAppUserIdAsync(userId);
@@ -267,14 +267,14 @@ public class InvoiceController : BaseApiController
     /// <summary>
     /// Get invoices by hall ID (Admin/HallManager with ownership check)
     /// </summary>
-    [Authorize(Roles = "Admin,HallManager")]
+    [Authorize(Roles = "Admin,HallOrganizationManager,HallManager")]
     [HttpGet("by-hall/{hallId:int}")]
     public async Task<ActionResult<ApiResponse<IEnumerable<InvoiceListDto>>>> GetInvoicesByHallId(int hallId)
     {
         try
         {
             // VULN-005 FIX: Ownership check for HallManager
-            if (User.IsInRole("HallManager") && !User.IsInRole("Admin"))
+            if ((User.IsInRole("HallOrganizationManager") || User.IsInRole("HallManager")) && !User.IsInRole("Admin"))
             {
                 var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(UserId);
                 if (hallManager?.Halls == null || !hallManager.Halls.Any(h => h.ID == hallId))

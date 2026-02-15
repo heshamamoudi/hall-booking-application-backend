@@ -205,7 +205,7 @@ public class UserRepository : IUserRepository
 
     public async Task<IEnumerable<AppUser>> GetHallManagersAsync()
     {
-        return await _userManager.GetUsersInRoleAsync("HallManager");
+        return await _userManager.GetUsersInRoleAsync("HallOrganizationManager");
     }
 
     public async Task<AppUser> AuthenticateUser(string login, string password, bool isVendorManager)

@@ -197,4 +197,19 @@ public class VendorRepository : GenericRepository<Vendor>, IVendorRepository
         _context.VendorTypes.Remove(vendorType);
         return Task.FromResult(true);
     }
+
+    /// <inheritdoc />
+    public async Task<List<Vendor>> GetVendorsByOrganizationIdAsync(int organizationId)
+    {
+        return await _context.Vendors
+            .Where(v => v.OrganizationId == organizationId)
+            .AsNoTracking()
+            .Select(v => new Vendor
+            {
+                Id = v.Id,
+                Name = v.Name,
+                AssignedToVendorManagerId = v.AssignedToVendorManagerId
+            })
+            .ToListAsync();
+    }
 }

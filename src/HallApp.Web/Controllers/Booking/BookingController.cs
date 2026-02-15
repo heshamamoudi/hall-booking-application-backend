@@ -446,7 +446,7 @@ namespace HallApp.Web.Controllers.Booking
         /// </summary>
         /// <param name="bookingId">Booking ID</param>
         /// <returns>Booking approval status</returns>
-        [Authorize(Roles = "Admin,Customer,HallManager,VendorManager")]
+        [Authorize(Roles = "Admin,Customer,HallOrganizationManager,HallManager,VendorOrganizationManager,VendorManager")]
         [HttpGet("{bookingId:int}/approval-status")]
         public async Task<ActionResult<ApiResponse<object>>> GetBookingApprovalStatus(int bookingId)
         {
@@ -800,7 +800,7 @@ namespace HallApp.Web.Controllers.Booking
                     isAuthorized = customer != null && booking.CustomerId == customer.Id;
                 }
 
-                if (!isAuthorized && User.IsInRole("HallManager"))
+                if (!isAuthorized && (User.IsInRole("HallOrganizationManager") || User.IsInRole("HallManager")))
                 {
                     var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(UserId);
                     isAuthorized = hallManager?.Halls.Any(h => h.ID == booking.HallId) ?? false;
@@ -881,14 +881,14 @@ namespace HallApp.Web.Controllers.Booking
         /// </summary>
         /// <param name="hallId">Hall ID</param>
         /// <returns>List of bookings for the specified hall</returns>
-        [Authorize(Roles = "Admin,HallManager")]
+        [Authorize(Roles = "Admin,HallOrganizationManager,HallManager")]
         [HttpGet("hall/{hallId:int}")]
         public async Task<ActionResult<ApiResponse<IEnumerable<BookingDto>>>> GetBookingsByHall(int hallId)
         {
             try
             {
                 // Authorization: Verify HallManager owns this hall
-                if (User.IsInRole("HallManager") && !IsAdmin)
+                if ((User.IsInRole("HallOrganizationManager") || User.IsInRole("HallManager")) && !IsAdmin)
                 {
                     var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                     var managerHalls = await _hallService.GetHallsByManagerAsync(userId ?? string.Empty);
@@ -914,7 +914,7 @@ namespace HallApp.Web.Controllers.Booking
         /// </summary>
         /// <param name="vendorId">Vendor ID</param>
         /// <returns>List of bookings for the specified vendor</returns>
-        [Authorize(Roles = "Admin,VendorManager")]
+        [Authorize(Roles = "Admin,VendorOrganizationManager,VendorManager")]
         [HttpGet("vendor/{vendorId:int}")]
         public async Task<ActionResult<ApiResponse<IEnumerable<BookingDto>>>> GetBookingsByVendor(int vendorId)
         {
@@ -982,7 +982,7 @@ namespace HallApp.Web.Controllers.Booking
         /// <param name="id">Booking ID</param>
         /// <param name="updateDto">Updated booking data</param>
         /// <returns>Updated booking details</returns>
-        [Authorize(Roles = "Admin,Customer,HallManager")]
+        [Authorize(Roles = "Admin,Customer,HallOrganizationManager,HallManager")]
         [HttpPut("{id:int}")]
         public async Task<ActionResult<ApiResponse<BookingDto>>> UpdateBooking(int id, [FromBody] BookingUpdateDto updateDto)
         {

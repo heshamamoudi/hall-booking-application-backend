@@ -26,6 +26,10 @@ public static class DependencyInjection
         services.AddScoped<IHallAvailabilityService, HallAvailabilityService>();
         services.AddScoped<IPriceCalculationService, PriceCalculationService>();
 
+        // Organization & Team Management Services (require DataContext and UserManager)
+        services.AddScoped<IOrganizationService, OrganizationService>();
+        services.AddScoped<ITeamMemberService, TeamMemberService>();
+
         return services;
     }
 }

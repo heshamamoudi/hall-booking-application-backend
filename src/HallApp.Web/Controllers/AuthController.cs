@@ -178,8 +178,8 @@ namespace HallApp.Web.Controllers
                     return BadRequest(new ApiResponse(400, "User creation failed", result.Errors));
                 }
 
-                // Assign VendorManager role for vendor registration
-                await _userManager.AddToRoleAsync(user, "VendorManager");
+                // Assign VendorOrganizationManager role for vendor registration (org owner)
+                await _userManager.AddToRoleAsync(user, "VendorOrganizationManager");
 
                 // Generate tokens
                 var accessToken = await _tokenService.CreateToken(user);
@@ -460,7 +460,7 @@ namespace HallApp.Web.Controllers
                     return BadRequest(new ApiResponse(400, "User creation failed", result.Errors));
                 }
 
-                // Add the specified role (Admin or HallManager only)
+                // Add the specified role (Admin, HallOrganizationManager, HallManager, VendorOrganizationManager, or VendorManager)
                 await _userManager.AddToRoleAsync(user, createUserDto.Role);
 
                 // Generate tokens

@@ -33,3 +33,25 @@ public class UpdateReviewDtoValidator : AbstractValidator<UpdateReviewDto>
             .MaximumLength(1000).WithMessage("Comment cannot exceed 1000 characters");
     }
 }
+
+public class ReviewResponseRequestDtoValidator : AbstractValidator<ReviewResponseRequestDto>
+{
+    public ReviewResponseRequestDtoValidator()
+    {
+        RuleFor(x => x.Response)
+            .NotEmpty().WithMessage("Response text is required")
+            .MinimumLength(10).WithMessage("Response must be at least 10 characters")
+            .MaximumLength(1000).WithMessage("Response cannot exceed 1000 characters");
+    }
+}
+
+public class FlagReviewRequestDtoValidator : AbstractValidator<FlagReviewRequestDto>
+{
+    public FlagReviewRequestDtoValidator()
+    {
+        RuleFor(x => x.Reason)
+            .NotEmpty().WithMessage("Flag reason is required")
+            .MinimumLength(10).WithMessage("Reason must be at least 10 characters")
+            .MaximumLength(500).WithMessage("Reason cannot exceed 500 characters");
+    }
+}

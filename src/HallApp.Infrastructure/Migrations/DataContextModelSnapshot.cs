@@ -88,6 +88,12 @@ namespace HallApp.Infrastructure.Migrations
                     b.Property<string>("Gender")
                         .HasColumnType("text");
 
+                    b.Property<string>("InvitationToken")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("InvitationTokenExpiry")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("LastName")
                         .HasColumnType("text");
 
@@ -113,6 +119,9 @@ namespace HallApp.Infrastructure.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("PhotoUrl")
+                        .HasColumnType("text");
 
                     b.Property<string>("RefreshToken")
                         .HasColumnType("text");
@@ -629,6 +638,9 @@ namespace HallApp.Infrastructure.Migrations
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("AssignedToHallManagerId")
+                        .HasColumnType("integer");
+
                     b.Property<double>("AverageRating")
                         .HasColumnType("double precision");
 
@@ -704,6 +716,9 @@ namespace HallApp.Infrastructure.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("text");
 
+                    b.Property<int?>("OrganizationId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Phone")
                         .HasColumnType("text");
 
@@ -718,7 +733,61 @@ namespace HallApp.Infrastructure.Migrations
 
                     b.HasKey("ID");
 
+                    b.HasIndex("AssignedToHallManagerId");
+
+                    b.HasIndex("OrganizationId");
+
                     b.ToTable("Halls");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.ChamperEntities.HallBlockedDate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("BlockedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("BlockedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("HallId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BlockedByUserId");
+
+                    b.HasIndex("HallId");
+
+                    b.HasIndex("HallId", "IsActive");
+
+                    b.HasIndex("HallId", "StartDate", "EndDate");
+
+                    b.ToTable("HallBlockedDates");
                 });
 
             modelBuilder.Entity("HallApp.Core.Entities.ChamperEntities.HallManager", b =>
@@ -1445,6 +1514,195 @@ namespace HallApp.Infrastructure.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("HallApp.Core.Entities.Organization", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BankAccountNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("BankIban")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(34)
+                        .HasColumnType("character varying(34)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("BankName")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("BuildingNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("City")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("CommercialRegistrationNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("CountryCode")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasDefaultValue("SA");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("District")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("Email")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasDefaultValue("");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("LegalName")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("OwnerId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Phone")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("PostalCode")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("StreetName")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VatNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Website")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("WhatsApp")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Organizations_OwnerId_UniqueActive")
+                        .HasFilter("\"IsActive\" = true");
+
+                    b.HasIndex("Type");
+
+                    b.ToTable("Organizations");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.OrganizationMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AppUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("CanCreateResources")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanManageTeam")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("InvitedBy")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppUserId");
+
+                    b.HasIndex("InvitedBy");
+
+                    b.HasIndex("OrganizationId", "AppUserId")
+                        .IsUnique();
+
+                    b.ToTable("OrganizationMembers");
+                });
+
             modelBuilder.Entity("HallApp.Core.Entities.PaymentEntities.Payment", b =>
                 {
                     b.Property<int>("Id")
@@ -1635,13 +1893,24 @@ namespace HallApp.Infrastructure.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Content")
-                        .HasColumnType("text");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("CustomerId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("FlagReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int?>("FlaggedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("FlaggedDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("HallId")
                         .HasColumnType("integer");
@@ -1652,11 +1921,22 @@ namespace HallApp.Infrastructure.Migrations
                     b.Property<bool>("IsFlagged")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("ManagerResponderId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ManagerResponse")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime?>("ManagerResponseDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("Rating")
                         .HasColumnType("integer");
 
                     b.Property<string>("RejectionReason")
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTime>("Updated")
                         .HasColumnType("timestamp with time zone");
@@ -1668,9 +1948,17 @@ namespace HallApp.Infrastructure.Migrations
 
                     b.HasIndex("CustomerId");
 
+                    b.HasIndex("FlaggedByUserId");
+
                     b.HasIndex("HallId");
 
+                    b.HasIndex("ManagerResponderId");
+
                     b.HasIndex("VendorId");
+
+                    b.HasIndex("HallId", "IsFlagged");
+
+                    b.HasIndex("HallId", "Rating");
 
                     b.ToTable("Reviews");
                 });
@@ -1776,6 +2064,9 @@ namespace HallApp.Infrastructure.Migrations
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("AssignedToVendorManagerId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("CommercialRegistrationNumber")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -1817,6 +2108,9 @@ namespace HallApp.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int?>("OrganizationId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1844,6 +2138,10 @@ namespace HallApp.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssignedToVendorManagerId");
+
+                    b.HasIndex("OrganizationId");
 
                     b.HasIndex("VendorTypeId");
 
@@ -2407,6 +2705,42 @@ namespace HallApp.Infrastructure.Migrations
                     b.Navigation("Hall");
                 });
 
+            modelBuilder.Entity("HallApp.Core.Entities.ChamperEntities.Hall", b =>
+                {
+                    b.HasOne("HallApp.Core.Entities.ChamperEntities.HallManager", "AssignedToHallManager")
+                        .WithMany()
+                        .HasForeignKey("AssignedToHallManagerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("HallApp.Core.Entities.Organization", "Organization")
+                        .WithMany("Halls")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AssignedToHallManager");
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.ChamperEntities.HallBlockedDate", b =>
+                {
+                    b.HasOne("HallApp.Core.Entities.AppUser", "BlockedByUser")
+                        .WithMany()
+                        .HasForeignKey("BlockedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HallApp.Core.Entities.ChamperEntities.Hall", "Hall")
+                        .WithMany()
+                        .HasForeignKey("HallId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BlockedByUser");
+
+                    b.Navigation("Hall");
+                });
+
             modelBuilder.Entity("HallApp.Core.Entities.ChamperEntities.HallManager", b =>
                 {
                     b.HasOne("HallApp.Core.Entities.AppUser", "AppUser")
@@ -2663,6 +2997,43 @@ namespace HallApp.Infrastructure.Migrations
                     b.Navigation("AppUser");
                 });
 
+            modelBuilder.Entity("HallApp.Core.Entities.Organization", b =>
+                {
+                    b.HasOne("HallApp.Core.Entities.AppUser", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.OrganizationMember", b =>
+                {
+                    b.HasOne("HallApp.Core.Entities.AppUser", "AppUser")
+                        .WithMany()
+                        .HasForeignKey("AppUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HallApp.Core.Entities.AppUser", "InvitedByUser")
+                        .WithMany()
+                        .HasForeignKey("InvitedBy")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("HallApp.Core.Entities.Organization", "Organization")
+                        .WithMany("Members")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AppUser");
+
+                    b.Navigation("InvitedByUser");
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("HallApp.Core.Entities.PaymentEntities.Payment", b =>
                 {
                     b.HasOne("HallApp.Core.Entities.BookingEntities.Booking", "Booking")
@@ -2708,11 +3079,21 @@ namespace HallApp.Infrastructure.Migrations
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("HallApp.Core.Entities.AppUser", "FlaggedByUser")
+                        .WithMany()
+                        .HasForeignKey("FlaggedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("HallApp.Core.Entities.ChamperEntities.Hall", "Hall")
                         .WithMany("Reviews")
                         .HasForeignKey("HallId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("HallApp.Core.Entities.AppUser", "ManagerResponder")
+                        .WithMany()
+                        .HasForeignKey("ManagerResponderId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("HallApp.Core.Entities.VendorEntities.Vendor", "Vendor")
                         .WithMany("Reviews")
@@ -2721,7 +3102,11 @@ namespace HallApp.Infrastructure.Migrations
 
                     b.Navigation("Customer");
 
+                    b.Navigation("FlaggedByUser");
+
                     b.Navigation("Hall");
+
+                    b.Navigation("ManagerResponder");
 
                     b.Navigation("Vendor");
                 });
@@ -2758,11 +3143,25 @@ namespace HallApp.Infrastructure.Migrations
 
             modelBuilder.Entity("HallApp.Core.Entities.VendorEntities.Vendor", b =>
                 {
+                    b.HasOne("HallApp.Core.Entities.VendorEntities.VendorManager", "AssignedToVendorManager")
+                        .WithMany()
+                        .HasForeignKey("AssignedToVendorManagerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("HallApp.Core.Entities.Organization", "Organization")
+                        .WithMany("Vendors")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("HallApp.Core.Entities.VendorEntities.VendorType", "VendorType")
                         .WithMany("Vendors")
                         .HasForeignKey("VendorTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("AssignedToVendorManager");
+
+                    b.Navigation("Organization");
 
                     b.Navigation("VendorType");
                 });
@@ -2979,6 +3378,15 @@ namespace HallApp.Infrastructure.Migrations
                     b.Navigation("Favorites");
 
                     b.Navigation("Reviews");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.Organization", b =>
+                {
+                    b.Navigation("Halls");
+
+                    b.Navigation("Members");
+
+                    b.Navigation("Vendors");
                 });
 
             modelBuilder.Entity("HallApp.Core.Entities.PaymentEntities.Payment", b =>

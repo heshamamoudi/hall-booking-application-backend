@@ -69,6 +69,13 @@ public static class ApplicationServiceExtensions
 
             // Hall statistics service (per-hall analytics)
             services.AddScoped<IHallStatsService, HallStatsService>();
+
+            // Hall blocked date service (availability calendar management)
+            services.AddScoped<IHallBlockedDateService, HallBlockedDateService>();
+
+            // Hall review management service (manager review operations)
+            services.AddScoped<IHallReviewManagementService, HallReviewManagementService>();
+
             services.AddScoped<IChatService, ChatService>();
             // Register BookingFinancialService in the DI container
             services.AddScoped<IBookingFinancialService>(provider =>

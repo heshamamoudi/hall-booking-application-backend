@@ -4,6 +4,7 @@
     "UserName": "mohammed.rashid",
     "Email": "mohammed.rashid@example.com",
     "PhoneNumber": "+966501234567",
+    "Role": "Customer",
     "Customer": {
       "PhoneNumber": "+966501234567",
       "CreditMoney": 0,
@@ -28,6 +29,7 @@
     "UserName": "fatima.ahmed",
     "Email": "fatima.ahmed@example.com",
     "PhoneNumber": "+966502345678",
+    "Role": "Customer",
     "Customer": {
       "PhoneNumber": "+966502345678",
       "CreditMoney": 0,
@@ -52,6 +54,7 @@
     "UserName": "ali.hassan",
     "Email": "ali.hassan@example.com",
     "PhoneNumber": "+966503456789",
+    "Role": "Customer",
     "Customer": {
       "PhoneNumber": "+966503456789",
       "CreditMoney": 0,
@@ -76,17 +79,41 @@
     "UserName": "ahmed.mansour",
     "Email": "ahmed.mansour@grandhall.com",
     "PhoneNumber": "+966504567890",
-    "HallManager": {
-      "HallId": 1
-    }
+    "Role": "HallOrganizationManager"
   },
   {
     "Name": "Sara Al-Zahrani",
     "UserName": "sara.zahrani",
     "Email": "sara.zahrani@royalpalace.com",
     "PhoneNumber": "+966505678901",
-    "HallManager": {
-      "HallId": 2
-    }
+    "Role": "HallOrganizationManager"
+  },
+  {
+    "Name": "Hall Manager Demo",
+    "UserName": "hallmanager.demo",
+    "Email": "hallmanager@example.com",
+    "PhoneNumber": "+966508300001",
+    "Role": "HallManager"
+  },
+  {
+    "Name": "Khalid Al-Otaibi",
+    "UserName": "khalid.otaibi",
+    "Email": "khalid.otaibi@elitecatering.sa",
+    "PhoneNumber": "+966506789012",
+    "Role": "VendorOrganizationManager"
+  },
+  {
+    "Name": "Noura Al-Dosari",
+    "UserName": "noura.dosari",
+    "Email": "noura.dosari@luxurydecor.sa",
+    "PhoneNumber": "+966507890123",
+    "Role": "VendorOrganizationManager"
+  },
+  {
+    "Name": "Vendor Manager Demo",
+    "UserName": "vendormanager.demo",
+    "Email": "vendormanager@example.com",
+    "PhoneNumber": "+966508400001",
+    "Role": "VendorManager"
   }
 ]

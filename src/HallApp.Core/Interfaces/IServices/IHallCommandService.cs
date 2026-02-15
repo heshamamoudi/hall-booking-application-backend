@@ -20,4 +20,5 @@ public interface IHallCommandService
     Task<bool> SetHallMaintenanceModeAsync(int hallId, bool isMaintenanceMode);
     Task<bool> UpdateHallRatingAsync(int hallId);
     Task<bool> UpdateHallManagersAsync(int hallId, List<int> managerIds);
+    Task<bool> AssignHallToManagerAsync(int hallId, int hallManagerId);
 }

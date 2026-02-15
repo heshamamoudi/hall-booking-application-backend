@@ -25,26 +25,42 @@ namespace HallApp.Web.Extensions
             app.MapHub<HallApp.Web.Hubs.ChatHub>("/chatHub")
                 .RequireAuthorization(); // Ensure hub requires authentication
 
-            // Handle 404s for API routes
-            app.MapGet("api/{**catchAll}", (string catchAll, ILoggerFactory loggerFactory) => 
+            // Handle 404s for unmatched API routes using MapFallback.
+            // IMPORTANT: Do NOT use MapGet/MapMethods with "api/{**catchAll}" patterns here.
+            // Catch-all minimal API endpoints compete with MVC controller routes in ASP.NET Core
+            // endpoint routing, which can cause legitimate controller endpoints (especially those
+            // with [Consumes] constraints like multipart/form-data) to be shadowed by the catch-all.
+            // MapFallback has the lowest route priority and only runs when no other endpoint matches.
+            app.MapFallback(async (HttpContext context) =>
             {
-                var logger = loggerFactory.CreateLogger("API.NotFound");
-                logger.LogWarning("Unknown API route: api/{Path}", catchAll);
-                
-                return Results.NotFound(new { statusCode = 404, message = $"API endpoint 'api/{catchAll}' not found" });
-            }).WithDisplayName("API 404 Handler");
+                var path = context.Request.Path.Value ?? "";
+                if (path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+                {
+                    var logger = context.RequestServices
+                        .GetRequiredService<ILoggerFactory>()
+                        .CreateLogger("API.NotFound");
+                    logger.LogWarning("Unknown API route: {Method} {Path}", context.Request.Method, path);
 
-            app.MapMethods("api/{**catchAll}", new[] { "POST", "PUT", "DELETE", "PATCH" }, (string catchAll, ILoggerFactory loggerFactory) => 
-            {
-                var logger = loggerFactory.CreateLogger("API.NotFound");
-                logger.LogWarning("Unknown API route: api/{Path} with non-GET method", catchAll);
-                
-                return Results.NotFound(new { statusCode = 404, message = $"API endpoint 'api/{catchAll}' not found" });
-            }).WithDisplayName("API 404 Handler (Non-GET methods)");
-
-            // Fallback for SPA routes - DISABLED in development (Angular runs on port 4200)
-            // Enable this only when serving built Angular app from wwwroot in production
-            // app.MapFallbackToController("CatchAll", "FallBack");
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                    context.Response.ContentType = "application/json";
+                    await context.Response.WriteAsJsonAsync(new
+                    {
+                        statusCode = 404,
+                        message = $"API endpoint '{path}' not found"
+                    });
+                }
+                else
+                {
+                    // Non-API routes: return 404 since frontend is deployed separately
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                    context.Response.ContentType = "application/json";
+                    await context.Response.WriteAsJsonAsync(new
+                    {
+                        statusCode = 404,
+                        message = "Frontend is deployed separately. API-only backend."
+                    });
+                }
+            });
         }
 
         public static void ConfigureUrls(this WebApplication app, ILogger logger)

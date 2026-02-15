@@ -13,7 +13,7 @@ namespace HallApp.Web.Controllers.HallManagement;
 /// Follows vertical slice architecture - all HallManager booking concerns in one place.
 /// Separated from BookingController to enforce Single Responsibility Principle.
 /// </summary>
-[Authorize(Roles = "HallManager,Admin")]
+[Authorize(Roles = "HallOrganizationManager,HallManager,Admin")]
 [Route("api/bookings")]
 [ApiController]
 public class HallManagerBookingsController : BaseApiController

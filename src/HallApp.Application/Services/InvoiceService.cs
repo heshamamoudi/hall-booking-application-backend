@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
+using HallApp.Core.Entities;
 using HallApp.Core.Entities.BookingEntities;
+using HallApp.Core.Entities.ChamperEntities;
 using HallApp.Core.Interfaces;
 using HallApp.Core.Interfaces.IServices;
 using Microsoft.Extensions.Logging;
@@ -8,25 +10,25 @@ using Microsoft.Extensions.Logging;
 namespace HallApp.Application.Services;
 
 /// <summary>
-/// Invoice Service implementation - handles invoice generation, management and ZATCA compliance
+/// Invoice Service implementation - handles invoice generation, management and ZATCA compliance.
+/// Seller information is resolved dynamically from the Organization entity linked to each hall,
+/// ensuring each organization's own business registration data appears on its invoices.
 /// </summary>
 public class InvoiceService : IInvoiceService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IOrganizationService _organizationService;
     private readonly ILogger<InvoiceService> _logger;
 
-    // Platform seller information (should be configured in appsettings)
-    private const string PLATFORM_NAME = "HallApp Platform";
-    private const string PLATFORM_VAT_NUMBER = "300000000000003"; // Example 15-digit VAT
-    private const string PLATFORM_CR_NUMBER = "1010000000"; // Commercial Registration
-    private const string PLATFORM_ADDRESS = "Riyadh, Saudi Arabia";
-    private const string PLATFORM_CITY = "Riyadh";
-    private const string PLATFORM_POSTAL_CODE = "12345";
     private const decimal TAX_RATE = 15.00m; // 15% VAT in Saudi Arabia
 
-    public InvoiceService(IUnitOfWork unitOfWork, ILogger<InvoiceService> logger)
+    public InvoiceService(
+        IUnitOfWork unitOfWork,
+        IOrganizationService organizationService,
+        ILogger<InvoiceService> logger)
     {
         _unitOfWork = unitOfWork;
+        _organizationService = organizationService;
         _logger = logger;
     }
 
@@ -115,6 +117,44 @@ public class InvoiceService : IInvoiceService
         // Get hall details
         var hall = await _unitOfWork.HallRepository.GetByIdAsync(booking.HallId);
 
+        // Resolve the organization that owns this hall for ZATCA-compliant seller info
+        Organization? organization = null;
+        if (hall?.OrganizationId != null)
+        {
+            try
+            {
+                organization = await _organizationService.GetOrganizationById(hall.OrganizationId.Value);
+                if (organization == null)
+                {
+                    _logger.LogWarning(
+                        "Organization {OrganizationId} not found for hall {HallId} - invoice will use fallback seller info",
+                        hall.OrganizationId.Value, hall.ID);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to resolve organization {OrganizationId} for hall {HallId} - invoice will use fallback seller info",
+                    hall.OrganizationId.Value, hall.ID);
+            }
+        }
+        else
+        {
+            _logger.LogError(
+                "Hall {HallId} has no OrganizationId - invoice seller info will be incomplete. " +
+                "Ensure all halls are linked to an organization for ZATCA compliance",
+                hall?.ID ?? booking.HallId);
+        }
+
+        // Validate ZATCA-required fields on the organization
+        if (organization != null)
+        {
+            ValidateOrganizationForZatca(organization, hall?.ID ?? booking.HallId);
+        }
+
+        // Build the composite seller address from structured organization fields
+        var sellerAddress = BuildSellerAddress(organization, hall);
+
         // Generate invoice number
         var invoiceNumber = await GenerateInvoiceNumberAsync();
 
@@ -129,14 +169,23 @@ public class InvoiceService : IInvoiceService
             CustomerId = booking.CustomerId,
             HallId = booking.HallId,
 
-            // Seller Information (Platform/Hall)
-            SellerName = hall?.Name ?? PLATFORM_NAME,
-            SellerVatNumber = PLATFORM_VAT_NUMBER,
-            SellerCommercialRegistrationNumber = PLATFORM_CR_NUMBER,
-            SellerAddress = hall?.Location?.Address ?? PLATFORM_ADDRESS,
-            SellerCity = hall?.Location?.City ?? PLATFORM_CITY,
-            SellerPostalCode = PLATFORM_POSTAL_CODE,
-            SellerCountryCode = "SA",
+            // Seller Information - sourced from Organization business registration data
+            SellerName = organization?.LegalName is { Length: > 0 }
+                ? organization.LegalName
+                : organization?.Name is { Length: > 0 }
+                    ? organization.Name
+                    : hall?.Name ?? "Unknown",
+            SellerVatNumber = organization?.VatNumber ?? "",
+            SellerCommercialRegistrationNumber = organization?.CommercialRegistrationNumber ?? "",
+            SellerAddress = sellerAddress,
+            SellerBuildingNumber = organization?.BuildingNumber ?? "",
+            SellerStreetName = organization?.StreetName ?? "",
+            SellerDistrict = organization?.District ?? "",
+            SellerCity = organization?.City ?? "",
+            SellerPostalCode = organization?.PostalCode ?? "",
+            SellerCountryCode = organization?.CountryCode is { Length: > 0 }
+                ? organization.CountryCode
+                : "SA",
 
             // Buyer Information (Customer)
             BuyerName = customer.AppUser != null
@@ -462,6 +511,104 @@ public class InvoiceService : IInvoiceService
         // In a real implementation, this would read the PDF file from storage
         // For now, return empty array as placeholder
         return Array.Empty<byte>();
+    }
+
+    #endregion
+
+    #region Organization Validation
+
+    /// <summary>
+    /// Validates that an organization has all ZATCA-required fields populated.
+    /// Logs structured warnings for any missing fields to aid compliance monitoring.
+    /// </summary>
+    private void ValidateOrganizationForZatca(Organization organization, int hallId)
+    {
+        if (string.IsNullOrWhiteSpace(organization.VatNumber))
+        {
+            _logger.LogWarning(
+                "Organization {OrgId} missing VAT number - invoice for hall {HallId} may fail ZATCA validation",
+                organization.Id, hallId);
+        }
+
+        if (string.IsNullOrWhiteSpace(organization.CommercialRegistrationNumber))
+        {
+            _logger.LogWarning(
+                "Organization {OrgId} missing Commercial Registration number - invoice for hall {HallId} may fail ZATCA validation",
+                organization.Id, hallId);
+        }
+
+        if (string.IsNullOrWhiteSpace(organization.LegalName) && string.IsNullOrWhiteSpace(organization.Name))
+        {
+            _logger.LogWarning(
+                "Organization {OrgId} missing both LegalName and Name - invoice for hall {HallId} will use fallback seller name",
+                organization.Id, hallId);
+        }
+
+        if (string.IsNullOrWhiteSpace(organization.City))
+        {
+            _logger.LogWarning(
+                "Organization {OrgId} missing City - invoice for hall {HallId} may fail ZATCA address validation",
+                organization.Id, hallId);
+        }
+
+        if (string.IsNullOrWhiteSpace(organization.PostalCode))
+        {
+            _logger.LogWarning(
+                "Organization {OrgId} missing PostalCode - invoice for hall {HallId} may fail ZATCA address validation",
+                organization.Id, hallId);
+        }
+
+        if (string.IsNullOrWhiteSpace(organization.StreetName))
+        {
+            _logger.LogWarning(
+                "Organization {OrgId} missing StreetName - invoice for hall {HallId} may fail ZATCA address validation",
+                organization.Id, hallId);
+        }
+
+        if (string.IsNullOrWhiteSpace(organization.BuildingNumber))
+        {
+            _logger.LogWarning(
+                "Organization {OrgId} missing BuildingNumber - invoice for hall {HallId} may fail ZATCA address validation",
+                organization.Id, hallId);
+        }
+
+        if (string.IsNullOrWhiteSpace(organization.District))
+        {
+            _logger.LogWarning(
+                "Organization {OrgId} missing District - invoice for hall {HallId} may fail ZATCA address validation",
+                organization.Id, hallId);
+        }
+    }
+
+    /// <summary>
+    /// Builds a composite seller address string from structured organization fields.
+    /// Falls back to hall location address if organization data is unavailable.
+    /// </summary>
+    private static string BuildSellerAddress(Organization? organization, Hall? hall)
+    {
+        if (organization != null)
+        {
+            var parts = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(organization.BuildingNumber))
+                parts.Add(organization.BuildingNumber);
+            if (!string.IsNullOrWhiteSpace(organization.StreetName))
+                parts.Add(organization.StreetName);
+            if (!string.IsNullOrWhiteSpace(organization.District))
+                parts.Add(organization.District);
+            if (!string.IsNullOrWhiteSpace(organization.City))
+                parts.Add(organization.City);
+            if (!string.IsNullOrWhiteSpace(organization.PostalCode))
+                parts.Add(organization.PostalCode);
+            if (!string.IsNullOrWhiteSpace(organization.CountryCode))
+                parts.Add(organization.CountryCode);
+
+            if (parts.Count > 0)
+                return string.Join(", ", parts);
+        }
+
+        // Fallback to hall location if available
+        return hall?.Location?.Address ?? "";
     }
 
     #endregion

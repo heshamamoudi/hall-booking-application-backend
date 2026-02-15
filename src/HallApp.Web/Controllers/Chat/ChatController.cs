@@ -74,7 +74,7 @@ namespace HallApp.Web.Controllers.Chat
         /// Get current manager's assigned halls (for dropdown in conversation creation)
         /// </summary>
         [HttpGet("manager/halls")]
-        [Authorize(Roles = "HallManager")]
+        [Authorize(Roles = "HallOrganizationManager,HallManager")]
         public async Task<ActionResult<ApiResponse<IEnumerable<object>>>> GetManagerHalls()
         {
             try
@@ -159,7 +159,7 @@ namespace HallApp.Web.Controllers.Chat
                     conversations = await _chatService.GetAllConversationsAsync();
                     conversations = conversations.Where(c => c.Status == "Open" || c.Status == "InProgress");
                 }
-                else if (User.IsInRole("HallManager"))
+                else if (User.IsInRole("HallOrganizationManager") || User.IsInRole("HallManager"))
                 {
                     // Hall Managers see conversations for their assigned halls
                     var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(userId);
@@ -250,7 +250,7 @@ namespace HallApp.Web.Controllers.Chat
                     conversations = await _chatService.GetAllConversationsAsync();
                     conversations = conversations.Where(c => c.Status == "Resolved" || c.Status == "Closed");
                 }
-                else if (User.IsInRole("HallManager"))
+                else if (User.IsInRole("HallOrganizationManager") || User.IsInRole("HallManager"))
                 {
                     // Hall Managers see historical conversations for their assigned halls
                     var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(userId);
@@ -320,7 +320,7 @@ namespace HallApp.Web.Controllers.Chat
                 {
                     conversations = await _chatService.GetAllConversationsAsync();
                 }
-                else if (User.IsInRole("HallManager"))
+                else if (User.IsInRole("HallOrganizationManager") || User.IsInRole("HallManager"))
                 {
                     var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(userId);
                     if (hallManager != null)
@@ -502,7 +502,7 @@ namespace HallApp.Web.Controllers.Chat
         /// <summary>
         /// Create new conversation (Customers, Managers and Admins can create support cases)
         /// </summary>
-        [Authorize(Roles = "Customer,HallManager,VendorManager,Admin")]
+        [Authorize(Roles = "Customer,HallOrganizationManager,HallManager,VendorOrganizationManager,VendorManager,Admin")]
         [HttpPost("conversations")]
         public async Task<ActionResult<ApiResponse<ChatConversationDto>>> CreateConversation([FromBody] CreateChatConversationDto dto)
         {
@@ -537,7 +537,7 @@ namespace HallApp.Web.Controllers.Chat
                     conversation.ConversationType = "Customer";
                     senderType = "Customer";
                 }
-                else if (User.IsInRole("HallManager"))
+                else if (User.IsInRole("HallOrganizationManager") || User.IsInRole("HallManager"))
                 {
                     conversation.ConversationType = "HallManager";
                     
@@ -854,8 +854,8 @@ namespace HallApp.Web.Controllers.Chat
             if (conversation.SupportAgentId == userId)
                 return true;
 
-            // HallManager - check if they manage the hall associated with the conversation
-            if (User.IsInRole("HallManager") && conversation.HallId.HasValue)
+            // OrganizationManager or HallManager - check if they manage the hall associated with the conversation
+            if ((User.IsInRole("HallOrganizationManager") || User.IsInRole("HallManager")) && conversation.HallId.HasValue)
             {
                 var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(userId);
                 if (hallManager != null && hallManager.Halls.Any(h => h.ID == conversation.HallId.Value))
@@ -911,7 +911,7 @@ namespace HallApp.Web.Controllers.Chat
                 {
                     senderType = "Customer";
                 }
-                else if (User.IsInRole("HallManager"))
+                else if (User.IsInRole("HallOrganizationManager") || User.IsInRole("HallManager"))
                 {
                     senderType = "HallManager";
                 }
@@ -1007,7 +1007,7 @@ namespace HallApp.Web.Controllers.Chat
         /// Admins cannot rate conversations.
         /// Returns 400 if conversation is not closed or user already rated.
         /// </remarks>
-        [Authorize(Roles = "Customer,HallManager,VendorManager")]
+        [Authorize(Roles = "Customer,HallOrganizationManager,HallManager,VendorOrganizationManager,VendorManager")]
         [HttpPost("conversations/{id:int}/rate")]
         public async Task<ActionResult<ApiResponse<ChatRatingResponseDto>>> RateConversation(int id, [FromBody] RateConversationDto dto)
         {

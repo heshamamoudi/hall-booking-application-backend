@@ -36,4 +36,10 @@ public interface IHallRepository : IGenericRepository<Hall>
     Task<IEnumerable<Hall>> GetAvailableHallsForDateAsync(
         DateTime eventDate, DateTime startDateTime, DateTime endDateTime,
         int? genderPreference = null);
+
+    /// <summary>
+    /// Gets halls belonging to a specific organization using AsNoTracking for read-only access.
+    /// HIGH-6 FIX: Replaces loading all halls then filtering in memory.
+    /// </summary>
+    Task<List<Hall>> GetHallsByOrganizationIdAsync(int organizationId);
 }

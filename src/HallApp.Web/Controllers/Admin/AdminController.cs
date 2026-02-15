@@ -10,6 +10,7 @@ using HallApp.Application.DTOs.User;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Core.Entities;
 using HallApp.Core.Entities.ChamperEntities;
+using HallApp.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -36,6 +37,8 @@ namespace HallApp.Web.Controllers.Admin
         private readonly IVendorManagerService _vendorManagerService;
         private readonly IVendorProfileService _vendorProfileService;
         private readonly IBookingService _bookingService;
+        private readonly IOrganizationService _organizationService;
+        private readonly DataContext _context;
         private readonly IMapper _mapper;
         private readonly IFileUploadService _fileUploadService;
 
@@ -48,6 +51,8 @@ namespace HallApp.Web.Controllers.Admin
             IVendorManagerService vendorManagerService,
             IVendorProfileService vendorProfileService,
             IBookingService bookingService,
+            IOrganizationService organizationService,
+            DataContext context,
             IMapper mapper,
             UserManager<HallApp.Core.Entities.AppUser> userManager,
             IFileUploadService fileUploadService)
@@ -60,6 +65,8 @@ namespace HallApp.Web.Controllers.Admin
             _vendorManagerService = vendorManagerService;
             _vendorProfileService = vendorProfileService;
             _bookingService = bookingService;
+            _organizationService = organizationService;
+            _context = context;
             _mapper = mapper;
             _userManager = userManager;
             _fileUploadService = fileUploadService;
@@ -190,7 +197,12 @@ namespace HallApp.Web.Controllers.Admin
                     user.PhoneNumber = userUpdateDto.PhoneNumber;
                     
                 if (userUpdateDto.DOB != default(DateTime))
-                    user.DOB = userUpdateDto.DOB;
+                {
+                    var dob = userUpdateDto.DOB;
+                    user.DOB = dob.Kind == DateTimeKind.Utc
+                        ? dob
+                        : DateTime.SpecifyKind(dob, DateTimeKind.Utc);
+                }
                     
                 user.Active = userUpdateDto.Active;
                     
@@ -284,13 +296,15 @@ namespace HallApp.Web.Controllers.Admin
         }
 
         /// <summary>
-        /// Create new hall manager
+        /// Create new hall manager with auto-generated organization.
+        /// Creates the AppUser, HallManager entity, and a HallManagement organization atomically.
         /// </summary>
         /// <param name="userCreateDto">Hall manager creation data</param>
         /// <returns>Created hall manager</returns>
         [HttpPost("hall-managers")]
         public async Task<ActionResult<ApiResponse<HallManagerProfileDto>>> CreateHallManager([FromBody] UserCreateDto userCreateDto)
         {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
                 if (!ModelState.IsValid)
@@ -299,33 +313,47 @@ namespace HallApp.Web.Controllers.Admin
                     return Error<HallManagerProfileDto>($"Invalid data: {errors}", 400);
                 }
 
-                // Create AppUser first
+                // Step 1: Create AppUser
                 var userEntity = _mapper.Map<HallApp.Core.Entities.AppUser>(userCreateDto);
                 var user = await _userService.CreateUserAsync(userEntity);
 
-                if (user != null)
+                if (user == null)
                 {
-                    // Create HallManager entity - just links AppUser to managed Halls
-                    var hallManager = new HallManager
-                    {
-                        AppUserId = user.Id
-                    };
-
-                    var createdHallManager = await _hallManagerService.CreateHallManagerAsync(hallManager);
-                    
-                    // Get combined profile data
-                    var profile = await _hallManagerProfileService.GetHallManagerProfileAsync(user.Id.ToString());
-                    if (profile.HasValue)
-                    {
-                        var profileDto = _mapper.Map<HallManagerProfileDto>(profile.Value);
-                        return Success(profileDto, "Hall manager created successfully");
-                    }
+                    await transaction.RollbackAsync();
+                    return Error<HallManagerProfileDto>("Couldn't create user account", 500);
                 }
 
-                return Error<HallManagerProfileDto>("Couldn't create hall manager", 500);
+                // Step 2: Create HallManager entity - links AppUser to managed Halls
+                var hallManager = new HallManager
+                {
+                    AppUserId = user.Id
+                };
+                var createdHallManager = await _hallManagerService.CreateHallManagerAsync(hallManager);
+
+                // Step 3: Auto-create Organization for this HallOrganizationManager
+                var displayName = !string.IsNullOrWhiteSpace(user.FirstName)
+                    ? $"{user.FirstName}'s Hall Organization"
+                    : !string.IsNullOrWhiteSpace(user.UserName)
+                        ? $"{user.UserName}'s Hall Organization"
+                        : "Hall Organization";
+
+                await _organizationService.CreateOrganization(displayName, "HallManagement", user.Id);
+
+                await transaction.CommitAsync();
+
+                // Get combined profile data
+                var profile = await _hallManagerProfileService.GetHallManagerProfileAsync(user.Id.ToString());
+                if (profile.HasValue)
+                {
+                    var profileDto = _mapper.Map<HallManagerProfileDto>(profile.Value);
+                    return Success(profileDto, "Hall manager created successfully with organization");
+                }
+
+                return Error<HallManagerProfileDto>("Hall manager created but could not retrieve profile", 500);
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 return Error<HallManagerProfileDto>($"Failed to create hall manager: {ex.Message}", 500);
             }
         }
@@ -424,6 +452,8 @@ namespace HallApp.Web.Controllers.Admin
                     TotalUsers = await _userManager.Users.CountAsync(),
                     TotalCustomers = await _userManager.Users.Where(u => u.UserRoles.Any(ur => ur.Role.Name == "Customer")).CountAsync(),
                     TotalVendors = await _userManager.Users.Where(u => u.UserRoles.Any(ur => ur.Role.Name == "VendorManager")).CountAsync(),
+                    TotalHallOrganizationManagers = await _userManager.Users.Where(u => u.UserRoles.Any(ur => ur.Role.Name == "HallOrganizationManager")).CountAsync(),
+                    TotalVendorOrganizationManagers = await _userManager.Users.Where(u => u.UserRoles.Any(ur => ur.Role.Name == "VendorOrganizationManager")).CountAsync(),
                     TotalHallManagers = await _userManager.Users.Where(u => u.UserRoles.Any(ur => ur.Role.Name == "HallManager")).CountAsync(),
                     TotalHalls = allHalls?.Count ?? 0,
                     TotalVendorCount = allVendors?.Count() ?? 0,

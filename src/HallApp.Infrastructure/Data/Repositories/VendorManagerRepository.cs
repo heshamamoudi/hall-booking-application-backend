@@ -51,4 +51,19 @@ public class VendorManagerRepository : GenericRepository<VendorManager>, IVendor
         }
         return false;
     }
+
+    /// <inheritdoc />
+    public async Task<List<VendorManager>> GetByAppUserIdsAsync(IEnumerable<int> appUserIds)
+    {
+        var userIdSet = appUserIds.ToList();
+        return await _context.VendorManagers
+            .Where(vm => userIdSet.Contains(vm.AppUserId))
+            .AsNoTracking()
+            .Select(vm => new VendorManager
+            {
+                Id = vm.Id,
+                AppUserId = vm.AppUserId
+            })
+            .ToListAsync();
+    }
 }

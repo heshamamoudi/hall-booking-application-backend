@@ -4,6 +4,8 @@ using HallApp.Core.Entities.CustomerEntities;
 using HallApp.Core.Entities.VendorEntities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace HallApp.Infrastructure.Data.Seed;
@@ -23,26 +25,35 @@ public class ServiceItemSeed
 
 public class SeedAll
 {
-    public static async Task SeedAllData(UserManager<AppUser> userManager, RoleManager<AppRole> roleManager, DataContext context)
+    public static async Task SeedAllData(
+        UserManager<AppUser> userManager,
+        RoleManager<AppRole> roleManager,
+        DataContext context,
+        IHostEnvironment env,
+        ILogger logger)
     {
-        // First seed users and roles
-        await Seed.SeedInformation(userManager, roleManager, context);
+        // ---------------------------------------------------------------
+        // PRODUCTION GUARD: Never seed test data outside Development
+        // ---------------------------------------------------------------
+        if (!env.IsDevelopment())
+        {
+            logger?.LogInformation("Skipping seed data - not in Development environment (current: {Environment})", env.EnvironmentName);
+            return;
+        }
 
-        // Then add our own seeding logic in the correct order
-        // Use the SeedVendors class to handle both vendor types and vendors
+        // First seed users and roles
+        await Seed.SeedInformation(userManager, roleManager, context, env, logger);
+
+        // Then add our own seeding logic in the correct order.
+        // SeedVendors now handles vendor types, vendors, locations, business hours,
+        // and service items internally -- no need for separate calls.
         Console.WriteLine("Starting vendor data seeding...");
         await SeedVendors.SeedVendorData(context, userManager);
-        
+
         // Ensure all vendor data is saved before proceeding
         await context.SaveChangesAsync();
         Console.WriteLine("Vendor data seeding completed, proceeding with dependent data...");
-        
-        await SeedVendorBusinessHours(context);
-        
-        // Only seed service items after vendors are confirmed to exist
-        Console.WriteLine("Starting service items seeding...");
-        await SeedServiceItems(context);
-        
+
         await SeedCustomers(context);
         await SeedBookings(context);
         
@@ -186,102 +197,254 @@ public class SeedAll
         }
     }
     
+    /// <summary>
+    /// Creates Customer entities for each AppUser that has the Customer role.
+    /// Maps by looking up actual customer AppUser IDs instead of using hardcoded
+    /// JSON values (which may not match actual database IDs).
+    /// </summary>
     private static async Task SeedCustomers(DataContext context)
     {
         if (await context.Customers.AnyAsync())
             return;
-            
+
         try
         {
-            // Read customers from JSON file
-            var customersPath = Seed.GetSeedDataPath("customers.json");
-            
-            if (!File.Exists(customersPath))
-            {
-                Console.WriteLine($"Customers JSON file not found at: {customersPath}");
-                return;
-            }
-            
-            var customersData = await File.ReadAllTextAsync(customersPath);
-            var customersFromJson = JsonSerializer.Deserialize<List<Customer>>(customersData, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            // Find customer users by their known usernames (seeded in Seed.cs)
+            var customerUsernames = new[] { "mohammed.rashid", "fatima.ahmed", "ali.hassan", "customer.demo" };
+            var customerUsers = await context.Users
+                .Where(u => customerUsernames.Contains(u.UserName))
+                .OrderBy(u => u.Id)
+                .ToListAsync();
 
-            if (customersFromJson == null || !customersFromJson.Any())
+            if (!customerUsers.Any())
             {
-                Console.WriteLine("No customers found in JSON file.");
+                Console.WriteLine("[SeedAll] No customer users found, skipping customer entity creation");
                 return;
             }
 
-            // Get existing AppUsers to map properly
-            var appUsers = await context.Users.ToListAsync();
-            
-            foreach (var customer in customersFromJson)
+            foreach (var user in customerUsers)
             {
-                // Set timestamps and add to context
-                customer.Created = DateTime.UtcNow;
-                customer.Updated = DateTime.UtcNow;
-                context.Customers.Add(customer);
+                context.Customers.Add(new Customer
+                {
+                    AppUserId = user.Id,
+                    NumberOfOrders = 0,
+                    SelectedAddressId = 0,
+                    CreditMoney = 0,
+                    Confirmed = true,
+                    Active = true,
+                    Created = DateTime.UtcNow,
+                    Updated = DateTime.UtcNow
+                });
             }
 
             await context.SaveChangesAsync();
-            Console.WriteLine($"Seeded {customersFromJson.Count} customers from JSON");
+            Console.WriteLine($"[SeedAll] Created {customerUsers.Count} customer entities mapped to actual user IDs");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error seeding customers: {ex.Message}");
+            Console.WriteLine($"[SeedAll] Error seeding customers: {ex.Message}");
         }
     }
-    
+
+    /// <summary>
+    /// Creates booking entities mapped to actual Customer IDs and Hall IDs.
+    /// No longer reads from JSON (which had hardcoded FK values that may not exist).
+    /// </summary>
     private static async Task SeedBookings(DataContext context)
     {
         if (await context.Bookings.AnyAsync())
             return;
-                
+
         try
         {
-            // Use direct absolute path
-            var bookingsPath = Seed.GetSeedDataPath("bookings.json");
-            var bookingsData = await File.ReadAllTextAsync(bookingsPath);
-                
-            var bookings = JsonSerializer.Deserialize<List<Booking>>(bookingsData, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-                
-            if (bookings != null && bookings.Any())
-            {
-                // Get existing customers to map properly
-                var customers = await context.Customers.OrderBy(c => c.Id).ToListAsync();
-                
-                for (int i = 0; i < bookings.Count && i < customers.Count; i++)
-                {
-                    var booking = bookings[i];
-                    var customer = customers[i];
+            var customers = await context.Customers.OrderBy(c => c.Id).ToListAsync();
+            var halls = await context.Halls.OrderBy(h => h.ID).ToListAsync();
 
-                    // Map booking to actual customer ID
-                    booking.CustomerId = customer.Id;
-                    booking.Created = DateTime.UtcNow;
-                    booking.Updated = DateTime.UtcNow;
-                    booking.CreatedAt = DateTime.UtcNow;
-                    booking.UpdatedAt = DateTime.UtcNow;
-                    // Ensure all DateTime fields are UTC (PostgreSQL requires it)
-                    booking.BookingDate = DateTime.SpecifyKind(booking.BookingDate, DateTimeKind.Utc);
-                    booking.VisitDate = DateTime.SpecifyKind(booking.VisitDate, DateTimeKind.Utc);
-                    booking.EventDate = DateTime.SpecifyKind(booking.EventDate, DateTimeKind.Utc);
-                    if (booking.PaidAt.HasValue)
-                        booking.PaidAt = DateTime.SpecifyKind(booking.PaidAt.Value, DateTimeKind.Utc);
-                    context.Bookings.Add(booking);
-                }
-                
-                await context.SaveChangesAsync();
-                Console.WriteLine($"Seeded {Math.Min(bookings.Count, customers.Count)} bookings mapped to existing customers");
+            if (!customers.Any())
+            {
+                Console.WriteLine("[SeedAll] No customers found, skipping booking creation");
+                return;
             }
+
+            if (!halls.Any())
+            {
+                Console.WriteLine("[SeedAll] No halls found, skipping booking creation");
+                return;
+            }
+
+            var bookings = new List<Booking>
+            {
+                new Booking
+                {
+                    HallId = halls[0].ID,
+                    CustomerId = customers[0].Id,
+                    PaymentMethod = "Credit Card",
+                    Coupon = "WELCOME10",
+                    Status = "Paid",
+                    Comments = "Need extra chairs and tables for 150 guests",
+                    VisitDate = DateTime.SpecifyKind(new DateTime(2026, 6, 15, 18, 0, 0), DateTimeKind.Utc),
+                    IsVisitCompleted = false,
+                    IsBookingConfirmed = true,
+                    BookingDate = DateTime.SpecifyKind(new DateTime(2026, 1, 10, 10, 30, 0), DateTimeKind.Utc),
+                    EventDate = DateTime.SpecifyKind(new DateTime(2026, 6, 15, 18, 0, 0), DateTimeKind.Utc),
+                    StartTime = TimeSpan.FromHours(18),
+                    EndTime = TimeSpan.FromHours(23),
+                    EventType = "Wedding",
+                    GuestCount = 150,
+                    GenderPreference = 2, // Both
+                    HallCost = 15000m,
+                    VendorServicesCost = 3000m,
+                    Subtotal = 18000m,
+                    DiscountAmount = 1800m,
+                    TaxRate = 0.15m,
+                    TaxAmount = 2430m,
+                    TotalAmount = 18630m,
+                    Currency = "SAR",
+                    PaymentStatus = "Completed",
+                    PaidAt = DateTime.UtcNow,
+                    Created = DateTime.UtcNow,
+                    Updated = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Booking
+                {
+                    HallId = halls.Count > 1 ? halls[1].ID : halls[0].ID,
+                    CustomerId = customers.Count > 1 ? customers[1].Id : customers[0].Id,
+                    PaymentMethod = "Bank Transfer",
+                    Coupon = "",
+                    Status = "HallApproved",
+                    Comments = "Wedding reception for 200 guests - need vendor approval",
+                    VisitDate = DateTime.SpecifyKind(new DateTime(2026, 7, 20, 19, 0, 0), DateTimeKind.Utc),
+                    IsVisitCompleted = false,
+                    IsBookingConfirmed = false,
+                    BookingDate = DateTime.SpecifyKind(new DateTime(2026, 1, 11, 14, 15, 0), DateTimeKind.Utc),
+                    EventDate = DateTime.SpecifyKind(new DateTime(2026, 7, 20, 19, 0, 0), DateTimeKind.Utc),
+                    StartTime = TimeSpan.FromHours(19),
+                    EndTime = TimeSpan.FromHours(1), // 1 AM next day
+                    EventType = "Wedding",
+                    GuestCount = 200,
+                    GenderPreference = 2,
+                    HallCost = 18000m,
+                    VendorServicesCost = 4000m,
+                    Subtotal = 22000m,
+                    DiscountAmount = 0m,
+                    TaxRate = 0.15m,
+                    TaxAmount = 3300m,
+                    TotalAmount = 25300m,
+                    Currency = "SAR",
+                    PaymentStatus = "Pending",
+                    Created = DateTime.UtcNow,
+                    Updated = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Booking
+                {
+                    HallId = halls[0].ID,
+                    CustomerId = customers.Count > 2 ? customers[2].Id : customers[0].Id,
+                    PaymentMethod = "Cash",
+                    Coupon = "",
+                    Status = "Pending",
+                    Comments = "Corporate event - awaiting hall manager approval",
+                    VisitDate = DateTime.SpecifyKind(new DateTime(2026, 8, 10, 9, 0, 0), DateTimeKind.Utc),
+                    IsVisitCompleted = false,
+                    IsBookingConfirmed = false,
+                    BookingDate = DateTime.SpecifyKind(new DateTime(2026, 1, 12, 11, 45, 0), DateTimeKind.Utc),
+                    EventDate = DateTime.SpecifyKind(new DateTime(2026, 8, 10, 9, 0, 0), DateTimeKind.Utc),
+                    StartTime = TimeSpan.FromHours(9),
+                    EndTime = TimeSpan.FromHours(17),
+                    EventType = "Corporate",
+                    GuestCount = 120,
+                    GenderPreference = 0, // Male
+                    HallCost = 8000m,
+                    VendorServicesCost = 3000m,
+                    Subtotal = 11000m,
+                    DiscountAmount = 0m,
+                    TaxRate = 0.15m,
+                    TaxAmount = 1650m,
+                    TotalAmount = 12650m,
+                    Currency = "SAR",
+                    PaymentStatus = "Pending",
+                    Created = DateTime.UtcNow,
+                    Updated = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Booking
+                {
+                    HallId = halls.Count > 1 ? halls[1].ID : halls[0].ID,
+                    CustomerId = customers[0].Id,
+                    PaymentMethod = "Credit Card",
+                    Coupon = "VIP2026",
+                    Status = "VendorsApproving",
+                    Comments = "VIP wedding - waiting for all vendor confirmations",
+                    VisitDate = DateTime.SpecifyKind(new DateTime(2026, 9, 5, 20, 0, 0), DateTimeKind.Utc),
+                    IsVisitCompleted = false,
+                    IsBookingConfirmed = false,
+                    BookingDate = DateTime.SpecifyKind(new DateTime(2026, 1, 13, 16, 0, 0), DateTimeKind.Utc),
+                    EventDate = DateTime.SpecifyKind(new DateTime(2026, 9, 5, 20, 0, 0), DateTimeKind.Utc),
+                    StartTime = TimeSpan.FromHours(20),
+                    EndTime = TimeSpan.FromHours(2), // 2 AM next day
+                    EventType = "Wedding",
+                    GuestCount = 300,
+                    GenderPreference = 2,
+                    HallCost = 25000m,
+                    VendorServicesCost = 5000m,
+                    Subtotal = 30000m,
+                    DiscountAmount = 1500m,
+                    TaxRate = 0.15m,
+                    TaxAmount = 4275m,
+                    TotalAmount = 32775m,
+                    Currency = "SAR",
+                    PaymentStatus = "Pending",
+                    Created = DateTime.UtcNow,
+                    Updated = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new Booking
+                {
+                    HallId = halls[0].ID,
+                    CustomerId = customers.Count > 1 ? customers[1].Id : customers[0].Id,
+                    PaymentMethod = "Bank Transfer",
+                    Coupon = "",
+                    Status = "ReadyForPayment",
+                    Comments = "All approvals received - ready to proceed with payment",
+                    VisitDate = DateTime.SpecifyKind(new DateTime(2026, 10, 12, 17, 0, 0), DateTimeKind.Utc),
+                    IsVisitCompleted = false,
+                    IsBookingConfirmed = false,
+                    BookingDate = DateTime.SpecifyKind(new DateTime(2026, 1, 14, 9, 20, 0), DateTimeKind.Utc),
+                    EventDate = DateTime.SpecifyKind(new DateTime(2026, 10, 12, 17, 0, 0), DateTimeKind.Utc),
+                    StartTime = TimeSpan.FromHours(17),
+                    EndTime = TimeSpan.FromHours(23),
+                    EventType = "Engagement",
+                    GuestCount = 180,
+                    GenderPreference = 1, // Female
+                    HallCost = 12500m,
+                    VendorServicesCost = 3500m,
+                    Subtotal = 16000m,
+                    DiscountAmount = 0m,
+                    TaxRate = 0.15m,
+                    TaxAmount = 2400m,
+                    TotalAmount = 18400m,
+                    Currency = "SAR",
+                    PaymentStatus = "Pending",
+                    Created = DateTime.UtcNow,
+                    Updated = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                }
+            };
+
+            await context.Bookings.AddRangeAsync(bookings);
+            await context.SaveChangesAsync();
+            Console.WriteLine($"[SeedAll] Created {bookings.Count} bookings with valid Hall and Customer FK references");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error seeding bookings: {ex.Message}");
+            Console.WriteLine($"[SeedAll] Error seeding bookings: {ex.Message}");
+            Console.WriteLine($"[SeedAll] Stack trace: {ex.StackTrace}");
         }
     }
     

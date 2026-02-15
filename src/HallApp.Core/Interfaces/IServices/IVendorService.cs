@@ -27,4 +27,15 @@ public interface IVendorService
     Task<VendorType> CreateVendorTypeAsync(VendorType vendorType);
     Task<VendorType> UpdateVendorTypeAsync(VendorType vendorType);
     Task<bool> DeleteVendorTypeAsync(int id);
+
+    // Organization-based methods
+    Task<bool> AssignVendorToManagerAsync(int vendorId, int vendorManagerId);
+    Task<List<Vendor>> GetOrganizationVendorsAsync(int orgId);
+    Task<List<Vendor>> GetManagerAssignedVendorsAsync(int managerId);
+
+    /// <summary>
+    /// Builds a mapping from AppUserId to VendorManager.Id for a batch of user IDs.
+    /// HIGH-6 FIX: Enables efficient in-memory filtering without per-member database calls.
+    /// </summary>
+    Task<Dictionary<int, int>> GetAppUserToVendorManagerIdMapAsync(IEnumerable<int> appUserIds);
 }

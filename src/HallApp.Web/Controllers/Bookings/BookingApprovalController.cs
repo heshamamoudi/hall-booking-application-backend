@@ -37,7 +37,7 @@ public class BookingApprovalController : BaseApiController
     /// Hall manager approves or rejects a booking
     /// </summary>
     [HttpPost("{bookingId}/hall-approval")]
-    [Authorize(Roles = "HallManager,Admin")]
+    [Authorize(Roles = "HallOrganizationManager,HallManager,Admin")]
     public async Task<ActionResult<ApiResponse<ApprovalResponseDto>>> HallApproval(
         int bookingId,
         [FromBody] HallApprovalRequestDto request)
@@ -118,7 +118,7 @@ public class BookingApprovalController : BaseApiController
     /// Vendor manager approves or rejects their service
     /// </summary>
     [HttpPost("{bookingId}/vendor-bookings/{vendorBookingId}/approval")]
-    [Authorize(Roles = "VendorManager,Admin")]
+    [Authorize(Roles = "VendorOrganizationManager,VendorManager,Admin")]
     public async Task<ActionResult<ApiResponse<ApprovalResponseDto>>> VendorApproval(
         int bookingId,
         int vendorBookingId,
