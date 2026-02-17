@@ -51,6 +51,7 @@ public class HallManagerBookingsController : BaseApiController
     /// <response code="401">User is not authenticated</response>
     /// <response code="403">User does not have the HallManager or Admin role</response>
     [HttpGet("my-hall-bookings")]
+    [Authorize(Roles = "HallManager,Admin")]
     [ProducesResponseType(typeof(PaginatedApiResponse<BookingDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
@@ -116,6 +117,102 @@ public class HallManagerBookingsController : BaseApiController
         {
             _logger.LogError(ex,
                 "Error retrieving bookings for HallManager {UserId}", UserId);
+            return StatusCode(500, new PaginatedApiResponse<BookingDto>
+            {
+                StatusCode = 500,
+                Message = "An error occurred while retrieving bookings. Please try again.",
+                IsSuccess = false
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get paginated bookings for all halls in the current HallOrganizationManager's organization
+    /// </summary>
+    /// <remarks>
+    /// Returns bookings for ALL halls belonging to the organization owned by the authenticated user.
+    /// Supports optional filtering by hallId and city.
+    /// Data isolation is enforced at the service layer - only the organization owner's halls are queried.
+    ///
+    /// Requires: HallOrganizationManager or Admin role
+    /// </remarks>
+    /// <param name="hallId">Optional hall ID filter</param>
+    /// <param name="city">Optional city filter (case-insensitive)</param>
+    /// <param name="pageNumber">Page number (1-based, default: 1)</param>
+    /// <param name="pageSize">Items per page (default: 20, max: 50)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <response code="200">Returns the paginated list of bookings for the organization's halls</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User does not have the HallOrganizationManager or Admin role</response>
+    [HttpGet("my-org-bookings")]
+    [Authorize(Roles = "HallOrganizationManager,Admin")]
+    [ProducesResponseType(typeof(PaginatedApiResponse<BookingDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<PaginatedApiResponse<BookingDto>>> GetMyOrgBookings(
+        [FromQuery] int? hallId = null,
+        [FromQuery] string? city = null,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (UserId == 0)
+            {
+                _logger.LogWarning("GetMyOrgBookings called with invalid user ID from token");
+                return StatusCode(401, new PaginatedApiResponse<BookingDto>
+                {
+                    StatusCode = 401,
+                    Message = "User authentication failed",
+                    IsSuccess = false
+                });
+            }
+
+            // Clamp pagination values
+            pageNumber = Math.Max(1, pageNumber);
+            pageSize = Math.Clamp(pageSize, 1, 50);
+
+            _logger.LogInformation(
+                "HallOrganizationManager {UserId} requesting org bookings (page {Page}, size {Size}, hallId {HallId}, city {City})",
+                UserId, pageNumber, pageSize, hallId, city);
+
+            var (bookings, totalCount) = await _hallManagerBookingService.GetBookingsForOrganizationPagedAsync(
+                UserId, hallId, city, pageNumber, pageSize, cancellationToken);
+
+            var bookingDtos = _mapper.Map<List<BookingDto>>(bookings);
+            var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            _logger.LogInformation(
+                "Returned {Count}/{Total} org bookings (page {Page}) for HallOrganizationManager {UserId}",
+                bookingDtos.Count, totalCount, pageNumber, UserId);
+
+            return Ok(new PaginatedApiResponse<BookingDto>
+            {
+                StatusCode = 200,
+                Message = $"Retrieved {bookingDtos.Count} of {totalCount} bookings successfully",
+                IsSuccess = true,
+                Data = bookingDtos,
+                CurrentPage = pageNumber,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = totalPages
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("GetMyOrgBookings request was cancelled for user {UserId}", UserId);
+            return StatusCode(499, new PaginatedApiResponse<BookingDto>
+            {
+                StatusCode = 499,
+                Message = "Request cancelled",
+                IsSuccess = false
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error retrieving org bookings for HallOrganizationManager {UserId}", UserId);
             return StatusCode(500, new PaginatedApiResponse<BookingDto>
             {
                 StatusCode = 500,

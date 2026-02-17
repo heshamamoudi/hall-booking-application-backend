@@ -13,13 +13,16 @@ namespace HallApp.Application.Services;
 public class HallManagerBookingService : IHallManagerBookingService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IOrganizationService _organizationService;
     private readonly ILogger<HallManagerBookingService> _logger;
 
     public HallManagerBookingService(
         IUnitOfWork unitOfWork,
+        IOrganizationService organizationService,
         ILogger<HallManagerBookingService> logger)
     {
         _unitOfWork = unitOfWork;
+        _organizationService = organizationService;
         _logger = logger;
     }
 
@@ -90,6 +93,86 @@ public class HallManagerBookingService : IHallManagerBookingService
 
         _logger.LogInformation(
             "Returned {PageCount}/{TotalCount} bookings (page {Page}) for HallManager {AppUserId}",
+            pagedBookings.Count, totalCount, pageNumber, appUserId);
+
+        return (pagedBookings, totalCount);
+    }
+
+    /// <inheritdoc />
+    public async Task<(IEnumerable<Booking> Bookings, int TotalCount)> GetBookingsForOrganizationPagedAsync(
+        int appUserId,
+        int? hallId,
+        string? city,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "Fetching org bookings (page {Page}, size {Size}, hallId {HallId}, city {City}) for user {AppUserId}",
+            pageNumber, pageSize, hallId, city, appUserId);
+
+        // Step 1: Find the organization where the user is the owner
+        var organization = await _organizationService.GetOrganizationByOwnerId(appUserId);
+
+        if (organization == null)
+        {
+            _logger.LogWarning(
+                "No organization found for user {AppUserId}", appUserId);
+            return (Enumerable.Empty<Booking>(), 0);
+        }
+
+        // Step 2: Get all halls belonging to this organization (includes Location via IncludeForDetails)
+        var orgHalls = await _unitOfWork.HallRepository.GetHallsByOrganizationIdAsync(organization.Id);
+
+        if (orgHalls == null || orgHalls.Count == 0)
+        {
+            _logger.LogWarning(
+                "Organization {OrgId} for user {AppUserId} has no halls", organization.Id, appUserId);
+            return (Enumerable.Empty<Booking>(), 0);
+        }
+
+        // Step 3: Apply optional hallId filter
+        var filteredHalls = orgHalls.AsEnumerable();
+
+        if (hallId.HasValue)
+        {
+            filteredHalls = filteredHalls.Where(h => h.ID == hallId.Value);
+        }
+
+        // Step 4: Apply optional city filter (case-insensitive)
+        if (!string.IsNullOrWhiteSpace(city))
+        {
+            filteredHalls = filteredHalls.Where(h =>
+                h.Location != null &&
+                h.Location.City.Equals(city, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var hallIds = filteredHalls.Select(h => h.ID).ToList();
+
+        if (hallIds.Count == 0)
+        {
+            _logger.LogInformation(
+                "No halls matched filters (hallId={HallId}, city={City}) in organization {OrgId}",
+                hallId, city, organization.Id);
+            return (Enumerable.Empty<Booking>(), 0);
+        }
+
+        _logger.LogDebug(
+            "Organization {OrgId} has {HallCount} halls matching filters: [{HallIds}]",
+            organization.Id, hallIds.Count, string.Join(", ", hallIds));
+
+        // Step 5: Get bookings for the filtered hall IDs
+        var allBookings = (await _unitOfWork.BookingRepository.GetBookingsByHallIdsAsync(hallIds)).ToList();
+        var totalCount = allBookings.Count;
+
+        // Step 6: Apply pagination in memory (same pattern as GetBookingsForManagedHallsPagedAsync)
+        var pagedBookings = allBookings
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        _logger.LogInformation(
+            "Returned {PageCount}/{TotalCount} org bookings (page {Page}) for user {AppUserId}",
             pagedBookings.Count, totalCount, pageNumber, appUserId);
 
         return (pagedBookings, totalCount);
