@@ -190,6 +190,8 @@ public class Seed
             .FirstOrDefaultAsync(o => o.Name == "Royal Palace Events");
         var eliteHallsOrg = await context.Organizations
             .FirstOrDefaultAsync(o => o.Name == "Elite Halls Management");
+        var diamondHallsOrg = await context.Organizations
+            .FirstOrDefaultAsync(o => o.Name == "Diamond Halls Group");
 
         if (grandHallOrg == null || royalPalaceOrg == null || eliteHallsOrg == null)
         {
@@ -203,7 +205,7 @@ public class Seed
 
         try
         {
-            var hallDefinitions = GetHallDefinitions(grandHallOrg, royalPalaceOrg, eliteHallsOrg);
+            var hallDefinitions = GetHallDefinitions(grandHallOrg, royalPalaceOrg, eliteHallsOrg, diamondHallsOrg);
 
             foreach (var hall in hallDefinitions)
             {
@@ -227,7 +229,8 @@ public class Seed
     private static List<Hall> GetHallDefinitions(
         Organization? grandHallOrg,
         Organization? royalPalaceOrg,
-        Organization? eliteHallsOrg)
+        Organization? eliteHallsOrg,
+        Organization? diamondHallsOrg)
     {
         // ---- Hall 1: Qasr Al Ahlam (Grand Hall Events) ----
         var hall1 = new Hall
@@ -827,7 +830,274 @@ public class Seed
             ]
         };
 
-        return [hall1, hall2, hall3, hall4, hall5, hall6, hall7, hall8, hall9];
+        // ---- Hall 10: Qasr Al Lulu (Royal Palace Events) ----
+        var hall10 = new Hall
+        {
+            Name = "Qasr Al Lulu",
+            CommercialRegistration = 4650456789,
+            Vat = 301123456789,
+            IsActive = true,
+            IsFeatured = true,
+            IsPremium = true,
+            HasSpecialOffer = false,
+            IsApproved = true,
+            ApprovedAt = DateTime.UtcNow,
+            Description = "Qasr Al Lulu -- the Pearl Palace -- is a stunning seaside venue in Dammam's Corniche district. With panoramic Arabian Gulf views and an open-air terrace, it offers a unique blend of indoor luxury and outdoor beauty.",
+            BothWeekDays = 16000.0,
+            BothWeekEnds = 22000.0,
+            MaleWeekDays = 9000.0,
+            MaleWeekEnds = 13000.0,
+            MaleMin = 200,
+            MaleMax = 700,
+            MaleActive = true,
+            FemaleWeekDays = 9500.0,
+            FemaleWeekEnds = 13500.0,
+            FemaleMin = 200,
+            FemaleMax = 700,
+            FemaleActive = true,
+            Gender = 3,
+            Email = "info@qasrallulu.sa",
+            Phone = "+966531112233",
+            WhatsApp = "+966531112233",
+            Logo = "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=100",
+            AverageRating = 4.6,
+            OrganizationId = royalPalaceOrg?.Id,
+            Location = new Location
+            {
+                Altitude = 5.0,
+                Latitude = 26.432222,
+                Longitude = 50.101389,
+                City = "Dammam",
+                State = "Eastern Region",
+                Address = "Corniche District, King Saud Street"
+            },
+            Contacts =
+            [
+                new Contact { Name = "Nawaf Al-Dawsari", Email = "nawaf@qasrallulu.sa", Phone = "+966531112233" }
+            ],
+            MediaFiles =
+            [
+                new HallMedia { MediaType = "image", URL = "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800", index = 0, Gender = 3 },
+                new HallMedia { MediaType = "image", URL = "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800", index = 1, Gender = 3 }
+            ],
+            Packages =
+            [
+                new Package { Name = "Pearl", Description = "Seaside decoration, professional lighting, sound system.", Price = 4000.0, IsActive = true },
+                new Package { Name = "Ocean", Description = "Premium beach-themed decor, photography, live music.", Price = 7500.0, IsActive = true },
+                new Package { Name = "Royal Pearl", Description = "All-inclusive seafood dinner, fireworks over the Gulf, VIP service.", Price = 12000.0, IsActive = true }
+            ],
+            Services =
+            [
+                new Service { Name = "Seafood Catering", ArabicName = "تموين مأكولات بحرية", IsActive = true },
+                new Service { Name = "Photography", ArabicName = "تصوير", IsActive = true },
+                new Service { Name = "Outdoor Decoration", ArabicName = "ديكور خارجي", IsActive = true }
+            ]
+        };
+
+        // ---- Hall 11: Al Jawharah Ballroom (Diamond Halls Group) ----
+        var hall11 = diamondHallsOrg != null ? new Hall
+        {
+            Name = "Al Jawharah Ballroom",
+            CommercialRegistration = 1010890123,
+            Vat = 301234567890,
+            IsActive = true,
+            IsFeatured = true,
+            IsPremium = true,
+            HasSpecialOffer = true,
+            IsApproved = true,
+            ApprovedAt = DateTime.UtcNow,
+            Description = "Al Jawharah -- the Jewel -- is a premium ballroom in Riyadh's newest luxury hotel. Featuring Swarovski crystal installations, marble floors, and a dedicated bridal wing with private salon.",
+            BothWeekDays = 20000.0,
+            BothWeekEnds = 28000.0,
+            MaleWeekDays = 11000.0,
+            MaleWeekEnds = 16000.0,
+            MaleMin = 250,
+            MaleMax = 850,
+            MaleActive = true,
+            FemaleWeekDays = 11500.0,
+            FemaleWeekEnds = 16500.0,
+            FemaleMin = 250,
+            FemaleMax = 850,
+            FemaleActive = true,
+            Gender = 3,
+            Email = "info@aljawharah.sa",
+            Phone = "+966541112233",
+            WhatsApp = "+966541112233",
+            Logo = "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=100",
+            AverageRating = 4.8,
+            OrganizationId = diamondHallsOrg.Id,
+            Location = new Location
+            {
+                Altitude = 615.0,
+                Latitude = 24.725000,
+                Longitude = 46.690000,
+                City = "Riyadh",
+                State = "Riyadh Region",
+                Address = "Al-Sulimaniyah District, Al-Dabab Street"
+            },
+            Contacts =
+            [
+                new Contact { Name = "Abdulaziz Al-Faisal", Email = "abdulaziz@aljawharah.sa", Phone = "+966541112233" },
+                new Contact { Name = "Sarah Al-Enezi", Email = "sarah@aljawharah.sa", Phone = "+966541445566" }
+            ],
+            MediaFiles =
+            [
+                new HallMedia { MediaType = "image", URL = "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800", index = 0, Gender = 3 },
+                new HallMedia { MediaType = "image", URL = "https://images.unsplash.com/photo-1549488344-1f9b8d2bd1f3?w=800", index = 1, Gender = 3 },
+                new HallMedia { MediaType = "image", URL = "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800", index = 2, Gender = 2 }
+            ],
+            Packages =
+            [
+                new Package { Name = "Diamond", Description = "Crystal-themed decoration, premium lighting, personal coordinator.", Price = 6000.0, IsActive = true },
+                new Package { Name = "Sapphire", Description = "Full luxury decoration, photography, videography, gourmet dinner.", Price = 10000.0, IsActive = true },
+                new Package { Name = "Crown Jewel", Description = "All-inclusive: Michelin chef, fireworks, helicopter transfer, celebrity DJ.", Price = 18000.0, IsActive = true }
+            ],
+            Services =
+            [
+                new Service { Name = "Premium Catering", ArabicName = "تموين فاخر", IsActive = true },
+                new Service { Name = "Photography", ArabicName = "تصوير", IsActive = true },
+                new Service { Name = "Decoration", ArabicName = "ديكور", IsActive = true },
+                new Service { Name = "Valet Parking", ArabicName = "خدمة صف السيارات", IsActive = true },
+                new Service { Name = "Bridal Suite", ArabicName = "جناح العروس", IsActive = true }
+            ]
+        } : null;
+
+        // ---- Hall 12: Nakheel Garden (Diamond Halls Group) ----
+        var hall12 = diamondHallsOrg != null ? new Hall
+        {
+            Name = "Nakheel Garden",
+            CommercialRegistration = 1010901234,
+            Vat = 301345678901,
+            IsActive = true,
+            IsFeatured = false,
+            IsPremium = false,
+            HasSpecialOffer = true,
+            IsApproved = true,
+            ApprovedAt = DateTime.UtcNow,
+            Description = "Nakheel Garden is a charming open-air garden venue perfect for intimate gatherings and engagement parties. Surrounded by date palms and water features, it offers an affordable yet elegant setting.",
+            BothWeekDays = 5000.0,
+            BothWeekEnds = 7500.0,
+            MaleWeekDays = 2800.0,
+            MaleWeekEnds = 4000.0,
+            MaleMin = 50,
+            MaleMax = 250,
+            MaleActive = true,
+            FemaleWeekDays = 3000.0,
+            FemaleWeekEnds = 4200.0,
+            FemaleMin = 50,
+            FemaleMax = 250,
+            FemaleActive = true,
+            Gender = 3,
+            Email = "info@nakheelgarden.sa",
+            Phone = "+966542223344",
+            WhatsApp = "+966542223344",
+            Logo = "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=100",
+            AverageRating = 4.1,
+            OrganizationId = diamondHallsOrg.Id,
+            Location = new Location
+            {
+                Altitude = 610.0,
+                Latitude = 24.750000,
+                Longitude = 46.720000,
+                City = "Riyadh",
+                State = "Riyadh Region",
+                Address = "Al-Narjis District, Prince Mohammed bin Salman Road"
+            },
+            Contacts =
+            [
+                new Contact { Name = "Faris Al-Shahrani", Email = "faris@nakheelgarden.sa", Phone = "+966542223344" }
+            ],
+            MediaFiles =
+            [
+                new HallMedia { MediaType = "image", URL = "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=800", index = 0, Gender = 3 },
+                new HallMedia { MediaType = "image", URL = "https://images.unsplash.com/photo-1469371670807-013ccf25f16a?w=800", index = 1, Gender = 3 }
+            ],
+            Packages =
+            [
+                new Package { Name = "Garden Party", Description = "Outdoor setup with fairy lights, basic decoration.", Price = 1500.0, IsActive = true },
+                new Package { Name = "Palm Oasis", Description = "Enhanced garden decor, photography, light catering.", Price = 3000.0, IsActive = true },
+                new Package { Name = "Royal Garden", Description = "Full outdoor luxury: tent, chandeliers, gourmet BBQ.", Price = 5500.0, IsActive = true }
+            ],
+            Services =
+            [
+                new Service { Name = "BBQ Catering", ArabicName = "تموين شواء", IsActive = true },
+                new Service { Name = "Garden Decoration", ArabicName = "ديكور حدائق", IsActive = true },
+                new Service { Name = "Photography", ArabicName = "تصوير", IsActive = true }
+            ]
+        } : null;
+
+        // ---- Hall 13: Al Sharq Palace (Diamond Halls Group) ----
+        var hall13 = diamondHallsOrg != null ? new Hall
+        {
+            Name = "Al Sharq Palace",
+            CommercialRegistration = 4650567890,
+            Vat = 301456789012,
+            IsActive = true,
+            IsFeatured = true,
+            IsPremium = true,
+            HasSpecialOffer = false,
+            IsApproved = true,
+            ApprovedAt = DateTime.UtcNow,
+            Description = "Al Sharq Palace in Khobar is the Eastern Province's finest wedding destination. With breathtaking Gulf views and a private beach, it combines modern Arabian architecture with traditional hospitality.",
+            BothWeekDays = 17000.0,
+            BothWeekEnds = 24000.0,
+            MaleWeekDays = 9500.0,
+            MaleWeekEnds = 14000.0,
+            MaleMin = 200,
+            MaleMax = 800,
+            MaleActive = true,
+            FemaleWeekDays = 10000.0,
+            FemaleWeekEnds = 14500.0,
+            FemaleMin = 200,
+            FemaleMax = 800,
+            FemaleActive = true,
+            Gender = 3,
+            Email = "info@alsharqpalace.sa",
+            Phone = "+966543334455",
+            WhatsApp = "+966543334455",
+            Logo = "https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?w=100",
+            AverageRating = 4.7,
+            OrganizationId = diamondHallsOrg.Id,
+            Location = new Location
+            {
+                Altitude = 3.0,
+                Latitude = 26.283333,
+                Longitude = 50.208333,
+                City = "Khobar",
+                State = "Eastern Region",
+                Address = "Corniche District, Prince Turkey Street"
+            },
+            Contacts =
+            [
+                new Contact { Name = "Khaled Al-Dosari", Email = "khaled@alsharqpalace.sa", Phone = "+966543334455" },
+                new Contact { Name = "Nouf Al-Rasheed", Email = "nouf@alsharqpalace.sa", Phone = "+966543556677" }
+            ],
+            MediaFiles =
+            [
+                new HallMedia { MediaType = "image", URL = "https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?w=800", index = 0, Gender = 3 },
+                new HallMedia { MediaType = "image", URL = "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800", index = 1, Gender = 3 },
+                new HallMedia { MediaType = "image", URL = "https://images.unsplash.com/photo-1522413452208-996ff3f3e740?w=800", index = 2, Gender = 2 }
+            ],
+            Packages =
+            [
+                new Package { Name = "Gulf View", Description = "Seaside decoration, sound system, event coordination.", Price = 5000.0, IsActive = true },
+                new Package { Name = "Sunset", Description = "Premium beach ceremony setup, photography, live entertainment.", Price = 9000.0, IsActive = true },
+                new Package { Name = "Sultan of the Sea", Description = "Ultimate: yacht arrival, beach fireworks, international chef, full-day coverage.", Price = 16000.0, IsActive = true }
+            ],
+            Services =
+            [
+                new Service { Name = "Seafood Banquet", ArabicName = "مأدبة مأكولات بحرية", IsActive = true },
+                new Service { Name = "Beach Photography", ArabicName = "تصوير شاطئي", IsActive = true },
+                new Service { Name = "Marine Decoration", ArabicName = "ديكور بحري", IsActive = true },
+                new Service { Name = "Yacht Service", ArabicName = "خدمة يخت", IsActive = true }
+            ]
+        } : null;
+
+        var halls = new List<Hall> { hall1, hall2, hall3, hall4, hall5, hall6, hall7, hall8, hall9, hall10 };
+        if (hall11 != null) halls.Add(hall11);
+        if (hall12 != null) halls.Add(hall12);
+        if (hall13 != null) halls.Add(hall13);
+        return halls;
     }
 
     // ===================================================================
@@ -927,6 +1197,163 @@ public class Seed
                 Created = DateTime.UtcNow,
                 Updated = DateTime.UtcNow,
                 Active = true
+            },
+            // Additional customers for comprehensive test data
+            new AppUser
+            {
+                UserName = "layla.omar",
+                PhoneNumber = "+966504567890",
+                Email = "layla.omar@example.com",
+                FirstName = "Layla",
+                LastName = "Omar",
+                Gender = "Female",
+                DOB = DateTime.SpecifyKind(new DateTime(1992, 11, 3), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            new AppUser
+            {
+                UserName = "omar.khalid",
+                PhoneNumber = "+966505678901",
+                Email = "omar.khalid@example.com",
+                FirstName = "Omar",
+                LastName = "Al-Khalid",
+                Gender = "Male",
+                DOB = DateTime.SpecifyKind(new DateTime(1983, 7, 22), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            new AppUser
+            {
+                UserName = "noor.sultan",
+                PhoneNumber = "+966506789012",
+                Email = "noor.sultan@example.com",
+                FirstName = "Noor",
+                LastName = "Al-Sultan",
+                Gender = "Female",
+                DOB = DateTime.SpecifyKind(new DateTime(1994, 2, 14), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            new AppUser
+            {
+                UserName = "yousef.tamimi",
+                PhoneNumber = "+966507890123",
+                Email = "yousef.tamimi@example.com",
+                FirstName = "Yousef",
+                LastName = "Al-Tamimi",
+                Gender = "Male",
+                DOB = DateTime.SpecifyKind(new DateTime(1987, 9, 30), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            new AppUser
+            {
+                UserName = "amira.fahad",
+                PhoneNumber = "+966508901234",
+                Email = "amira.fahad@example.com",
+                FirstName = "Amira",
+                LastName = "Al-Fahad",
+                Gender = "Female",
+                DOB = DateTime.SpecifyKind(new DateTime(1996, 4, 18), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            new AppUser
+            {
+                UserName = "sultan.harbi",
+                PhoneNumber = "+966509012345",
+                Email = "sultan.harbi@example.com",
+                FirstName = "Sultan",
+                LastName = "Al-Harbi",
+                Gender = "Male",
+                DOB = DateTime.SpecifyKind(new DateTime(1981, 12, 5), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            new AppUser
+            {
+                UserName = "hana.qahtani",
+                PhoneNumber = "+966510123456",
+                Email = "hana.qahtani@example.com",
+                FirstName = "Hana",
+                LastName = "Al-Qahtani",
+                Gender = "Female",
+                DOB = DateTime.SpecifyKind(new DateTime(1993, 6, 9), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            new AppUser
+            {
+                UserName = "bandar.otaibi",
+                PhoneNumber = "+966511234567",
+                Email = "bandar.otaibi@example.com",
+                FirstName = "Bandar",
+                LastName = "Al-Otaibi",
+                Gender = "Male",
+                DOB = DateTime.SpecifyKind(new DateTime(1986, 1, 25), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            new AppUser
+            {
+                UserName = "maha.anazi",
+                PhoneNumber = "+966512345678",
+                Email = "maha.anazi@example.com",
+                FirstName = "Maha",
+                LastName = "Al-Anazi",
+                Gender = "Female",
+                DOB = DateTime.SpecifyKind(new DateTime(1991, 10, 12), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            new AppUser
+            {
+                UserName = "tariq.shammari",
+                PhoneNumber = "+966513456789",
+                Email = "tariq.shammari@example.com",
+                FirstName = "Tariq",
+                LastName = "Al-Shammari",
+                Gender = "Male",
+                DOB = DateTime.SpecifyKind(new DateTime(1989, 8, 7), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            new AppUser
+            {
+                UserName = "reem.dosari",
+                PhoneNumber = "+966514567890",
+                Email = "reem.dosari@example.com",
+                FirstName = "Reem",
+                LastName = "Al-Dosari",
+                Gender = "Female",
+                DOB = DateTime.SpecifyKind(new DateTime(1997, 3, 28), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            new AppUser
+            {
+                UserName = "faisal.mutairi",
+                PhoneNumber = "+966515678901",
+                Email = "faisal.mutairi@example.com",
+                FirstName = "Faisal",
+                LastName = "Al-Mutairi",
+                Gender = "Male",
+                DOB = DateTime.SpecifyKind(new DateTime(1984, 5, 16), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
             }
         };
 
@@ -983,6 +1410,20 @@ public class Seed
                 LastName = "Demo",
                 Gender = "Male",
                 DOB = DateTime.SpecifyKind(new DateTime(1978, 6, 15), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            // 4th hall organization owner for additional halls
+            new AppUser
+            {
+                UserName = "turki.faisal",
+                PhoneNumber = "+966508500001",
+                Email = "turki.faisal@diamondhalls.sa",
+                FirstName = "Turki",
+                LastName = "Al-Faisal",
+                Gender = "Male",
+                DOB = DateTime.SpecifyKind(new DateTime(1976, 2, 20), DateTimeKind.Utc),
                 Created = DateTime.UtcNow,
                 Updated = DateTime.UtcNow,
                 Active = true
@@ -1063,23 +1504,56 @@ public class Seed
 
     private static async Task SeedHallManagerTeamMemberUser(UserManager<AppUser> userManager)
     {
-        var hallManagerUser = new AppUser
+        var hallManagerUsers = new List<AppUser>
         {
-            UserName = "hallmanager.demo",
-            PhoneNumber = "+966508300001",
-            Email = "hallmanager@example.com",
-            FirstName = "Hall Manager",
-            LastName = "Demo",
-            Gender = "Male",
-            DOB = DateTime.SpecifyKind(new DateTime(1992, 7, 10), DateTimeKind.Utc),
-            Created = DateTime.UtcNow,
-            Updated = DateTime.UtcNow,
-            Active = true
+            new AppUser
+            {
+                UserName = "hallmanager.demo",
+                PhoneNumber = "+966508300001",
+                Email = "hallmanager@example.com",
+                FirstName = "Hall Manager",
+                LastName = "Demo",
+                Gender = "Male",
+                DOB = DateTime.SpecifyKind(new DateTime(1992, 7, 10), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            new AppUser
+            {
+                UserName = "hallmanager.riyadh",
+                PhoneNumber = "+966508300002",
+                Email = "hallmanager.riyadh@example.com",
+                FirstName = "Abdulrahman",
+                LastName = "Al-Ghamdi",
+                Gender = "Male",
+                DOB = DateTime.SpecifyKind(new DateTime(1990, 4, 15), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            new AppUser
+            {
+                UserName = "hallmanager.jeddah",
+                PhoneNumber = "+966508300003",
+                Email = "hallmanager.jeddah@example.com",
+                FirstName = "Maryam",
+                LastName = "Al-Juhani",
+                Gender = "Female",
+                DOB = DateTime.SpecifyKind(new DateTime(1994, 11, 2), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            }
         };
 
-        await userManager.CreateAsync(hallManagerUser, "Pa$$w0rd");
-        await userManager.AddToRoleAsync(hallManagerUser, AppRoles.HallManager);
-        Console.WriteLine("[Seed] Created HallManager team member user (hallmanager@example.com)");
+        foreach (var user in hallManagerUsers)
+        {
+            await userManager.CreateAsync(user, "Pa$$w0rd");
+            await userManager.AddToRoleAsync(user, AppRoles.HallManager);
+        }
+
+        Console.WriteLine($"[Seed] Created {hallManagerUsers.Count} HallManager team member users");
     }
 
     // ===================================================================
@@ -1088,23 +1562,43 @@ public class Seed
 
     private static async Task SeedVendorManagerTeamMemberUser(UserManager<AppUser> userManager)
     {
-        var vendorManagerUser = new AppUser
+        var vendorManagerUsers = new List<AppUser>
         {
-            UserName = "vendormanager.demo",
-            PhoneNumber = "+966508400001",
-            Email = "vendormanager@example.com",
-            FirstName = "Vendor Manager",
-            LastName = "Demo",
-            Gender = "Male",
-            DOB = DateTime.SpecifyKind(new DateTime(1993, 2, 25), DateTimeKind.Utc),
-            Created = DateTime.UtcNow,
-            Updated = DateTime.UtcNow,
-            Active = true
+            new AppUser
+            {
+                UserName = "vendormanager.demo",
+                PhoneNumber = "+966508400001",
+                Email = "vendormanager@example.com",
+                FirstName = "Vendor Manager",
+                LastName = "Demo",
+                Gender = "Male",
+                DOB = DateTime.SpecifyKind(new DateTime(1993, 2, 25), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            },
+            new AppUser
+            {
+                UserName = "vendormanager.catering",
+                PhoneNumber = "+966508400002",
+                Email = "vendormanager.catering@example.com",
+                FirstName = "Hassan",
+                LastName = "Al-Shehri",
+                Gender = "Male",
+                DOB = DateTime.SpecifyKind(new DateTime(1991, 8, 18), DateTimeKind.Utc),
+                Created = DateTime.UtcNow,
+                Updated = DateTime.UtcNow,
+                Active = true
+            }
         };
 
-        await userManager.CreateAsync(vendorManagerUser, "Pa$$w0rd");
-        await userManager.AddToRoleAsync(vendorManagerUser, AppRoles.VendorManager);
-        Console.WriteLine("[Seed] Created VendorManager team member user (vendormanager@example.com)");
+        foreach (var user in vendorManagerUsers)
+        {
+            await userManager.CreateAsync(user, "Pa$$w0rd");
+            await userManager.AddToRoleAsync(user, AppRoles.VendorManager);
+        }
+
+        Console.WriteLine($"[Seed] Created {vendorManagerUsers.Count} VendorManager team member users");
     }
 
     // ===================================================================
@@ -1224,6 +1718,31 @@ public class Seed
                 BankIban = "SA0505000068201234567891"
             });
 
+        // ------- Hall Organization for Turki Al-Faisal (4th org) -------
+        await SeedSingleOrganization(context, userManager,
+            ownerUsername: "turki.faisal",
+            orgName: "Diamond Halls Group",
+            orgType: "HallManagement",
+            businessInfo: new Organization
+            {
+                CommercialRegistrationNumber = "1010890123",
+                VatNumber = "300078901200003",
+                LegalName = "Diamond Halls Group Co.",
+                BuildingNumber = "1234",
+                StreetName = "Al-Dabab Street",
+                District = "Al-Sulimaniyah",
+                City = "Riyadh",
+                PostalCode = "12234",
+                CountryCode = "SA",
+                Email = "turki.faisal@diamondhalls.sa",
+                Phone = "+966508500001",
+                WhatsApp = "+966508500001",
+                Website = "https://diamondhalls.sa",
+                BankName = "Bank Albilad",
+                BankAccountNumber = "7777888899",
+                BankIban = "SA1215000007777888899001"
+            });
+
         // ------- Primary Demo Organizations (with team member memberships) -------
         await SeedDemoOrganizations(context, userManager);
 
@@ -1243,6 +1762,7 @@ public class Seed
         // ---- 1. "Elite Halls Management" (HallManagement) ----
         var hallOwner = await userManager.FindByEmailAsync("hallowner@example.com");
         var hallManager = await userManager.FindByEmailAsync("hallmanager@example.com");
+        var hallManagerRiyadh = await userManager.FindByEmailAsync("hallmanager.riyadh@example.com");
 
         if (hallOwner != null)
         {
@@ -1296,6 +1816,21 @@ public class Seed
                     {
                         OrganizationId = eliteHallsOrg.Id,
                         AppUserId = hallManager.Id,
+                        Role = "Manager",
+                        CanManageTeam = false,
+                        CanCreateResources = true,
+                        JoinedAt = DateTime.UtcNow,
+                        InvitedBy = hallOwner.Id
+                    });
+                }
+
+                // Second team member: hallmanager.riyadh@example.com
+                if (hallManagerRiyadh != null)
+                {
+                    context.OrganizationMembers.Add(new OrganizationMember
+                    {
+                        OrganizationId = eliteHallsOrg.Id,
+                        AppUserId = hallManagerRiyadh.Id,
                         Role = "Manager",
                         CanManageTeam = false,
                         CanCreateResources = true,
@@ -1494,15 +2029,6 @@ public class Seed
 
         try
         {
-            var hallManagerDemo = await userManager.FindByNameAsync("hallmanager.demo");
-            if (hallManagerDemo == null)
-            {
-                Console.WriteLine("[Seed] hallmanager.demo user not found, skipping HallManager entity creation");
-                return;
-            }
-
-            // The hallmanager.demo is a team member in "Elite Halls Management" org.
-            // Assign the first 2 halls from that org to this team member.
             var eliteHallsOrg = await context.Organizations
                 .FirstOrDefaultAsync(o => o.Name == "Elite Halls Management");
 
@@ -1515,7 +2041,6 @@ public class Seed
             var orgHalls = await context.Halls
                 .Where(h => h.OrganizationId == eliteHallsOrg.Id)
                 .OrderBy(h => h.ID)
-                .Take(2)
                 .ToListAsync();
 
             if (orgHalls.Count == 0)
@@ -1524,25 +2049,93 @@ public class Seed
                 return;
             }
 
-            // Create HallManager entity ONLY for the team member (hallmanager@example.com).
-            // Organization owners do NOT get HallManager entities.
-            var teamMemberHallManager = new HallManager
+            // HallManager entity for hallmanager.demo -- first 2 halls
+            var hallManagerDemo = await userManager.FindByNameAsync("hallmanager.demo");
+            if (hallManagerDemo != null)
             {
-                AppUserId = hallManagerDemo.Id,
-                CreatedAt = DateTime.UtcNow,
-                Halls = orgHalls
-            };
-            context.HallManagers.Add(teamMemberHallManager);
-            await context.SaveChangesAsync();
+                var demoHalls = orgHalls.Take(2).ToList();
+                var teamMemberHallManager = new HallManager
+                {
+                    AppUserId = hallManagerDemo.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    Halls = demoHalls
+                };
+                context.HallManagers.Add(teamMemberHallManager);
+                await context.SaveChangesAsync();
 
-            // Now set AssignedToHallManagerId on the halls for direct assignment
-            foreach (var hall in orgHalls)
-            {
-                hall.AssignedToHallManagerId = teamMemberHallManager.Id;
+                foreach (var hall in demoHalls)
+                {
+                    hall.AssignedToHallManagerId = teamMemberHallManager.Id;
+                }
+                await context.SaveChangesAsync();
+                Console.WriteLine($"[Seed] Created HallManager entity for hallmanager.demo with {demoHalls.Count} halls");
             }
 
-            await context.SaveChangesAsync();
-            Console.WriteLine($"[Seed] Created HallManager entity for team member (hallmanager@example.com) with {orgHalls.Count} halls");
+            // HallManager entity for hallmanager.riyadh -- remaining halls from Elite
+            var hallManagerRiyadh = await userManager.FindByNameAsync("hallmanager.riyadh");
+            if (hallManagerRiyadh != null && orgHalls.Count > 2)
+            {
+                var riyadhHalls = orgHalls.Skip(2).ToList();
+                var riyadhManager = new HallManager
+                {
+                    AppUserId = hallManagerRiyadh.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    Halls = riyadhHalls
+                };
+                context.HallManagers.Add(riyadhManager);
+                await context.SaveChangesAsync();
+
+                foreach (var hall in riyadhHalls)
+                {
+                    hall.AssignedToHallManagerId = riyadhManager.Id;
+                }
+                await context.SaveChangesAsync();
+                Console.WriteLine($"[Seed] Created HallManager entity for hallmanager.riyadh with {riyadhHalls.Count} halls");
+            }
+
+            // HallManager entity for hallmanager.jeddah -- assigned to Grand Hall Events
+            var hallManagerJeddah = await userManager.FindByNameAsync("hallmanager.jeddah");
+            var grandHallOrg = await context.Organizations
+                .FirstOrDefaultAsync(o => o.Name == "Grand Hall Events Company");
+            if (hallManagerJeddah != null && grandHallOrg != null)
+            {
+                var jeddahHalls = await context.Halls
+                    .Where(h => h.OrganizationId == grandHallOrg.Id)
+                    .OrderBy(h => h.ID)
+                    .Take(2)
+                    .ToListAsync();
+
+                if (jeddahHalls.Count > 0)
+                {
+                    // Add hallmanager.jeddah as a member of Grand Hall Events
+                    context.OrganizationMembers.Add(new OrganizationMember
+                    {
+                        OrganizationId = grandHallOrg.Id,
+                        AppUserId = hallManagerJeddah.Id,
+                        Role = "Manager",
+                        CanManageTeam = false,
+                        CanCreateResources = true,
+                        JoinedAt = DateTime.UtcNow,
+                        InvitedBy = grandHallOrg.OwnerId
+                    });
+
+                    var jeddahManager = new HallManager
+                    {
+                        AppUserId = hallManagerJeddah.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        Halls = jeddahHalls
+                    };
+                    context.HallManagers.Add(jeddahManager);
+                    await context.SaveChangesAsync();
+
+                    foreach (var hall in jeddahHalls)
+                    {
+                        hall.AssignedToHallManagerId = jeddahManager.Id;
+                    }
+                    await context.SaveChangesAsync();
+                    Console.WriteLine($"[Seed] Created HallManager entity for hallmanager.jeddah with {jeddahHalls.Count} halls");
+                }
+            }
         }
         catch (Exception ex)
         {

@@ -183,6 +183,10 @@ public class Invoice
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    // BONUS: Optimistic concurrency token
+    [Timestamp]
+    public byte[]? RowVersion { get; set; }
+
     [StringLength(100)]
     public string CreatedBy { get; set; } = string.Empty;
 
@@ -191,6 +195,27 @@ public class Invoice
 
     [StringLength(500)]
     public string CancellationReason { get; set; } = string.Empty;
+
+    // Refund Information
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal RefundAmount { get; set; } = 0;
+
+    [StringLength(500)]
+    public string RefundReason { get; set; } = string.Empty;
+
+    [StringLength(50)]
+    public string RefundMethod { get; set; } = string.Empty;
+
+    public DateTime? RefundDate { get; set; }
+
+    public int? RefundedBy { get; set; }
+
+    // Regeneration Tracking
+    public bool IsRegenerated { get; set; } = false;
+
+    public DateTime? RegeneratedAt { get; set; }
+
+    public int RegenerationCount { get; set; } = 0;
 
     // PDF Generation
     [StringLength(500)]

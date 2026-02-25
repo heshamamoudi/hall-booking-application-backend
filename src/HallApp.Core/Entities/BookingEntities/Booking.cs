@@ -1,6 +1,7 @@
 using HallApp.Core.Entities.VendorEntities;
 using HallApp.Core.Entities.ChamperEntities;
 using HallApp.Core.Entities.CustomerEntities;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace HallApp.Core.Entities.BookingEntities;
@@ -19,9 +20,9 @@ public class Booking
     public bool IsBookingConfirmed { get; set; }
     public DateTime BookingDate { get; set; } = DateTime.UtcNow;
     public BookingPackage? PackageDetails { get; set; }
-    public DateTime Created { get; set; } = DateTime.UtcNow;
-    public DateTime Updated { get; set; } = DateTime.UtcNow;
-    
+    // CRIT-004 FIX: Removed duplicate Created/Updated fields.
+    // Use CreatedAt/UpdatedAt (lines 61-62) instead.
+
     // Event details
     public DateTime EventDate { get; set; } = DateTime.UtcNow.AddDays(14);
     public TimeSpan StartTime { get; set; }
@@ -45,9 +46,11 @@ public class Booking
     
     [Column(TypeName = "decimal(18,2)")]
     public decimal TaxAmount { get; set; }
-    
-    public decimal TaxRate { get; set; } = 0.15m; // 15% VAT for Saudi Arabia
-    
+
+    // HIGH-005 FIX: Added explicit decimal precision for tax rate
+    [Column(TypeName = "decimal(5,4)")]
+    public decimal TaxRate { get; set; } = 0.15m; // 15% VAT for Saudi Arabia (stored as 0.1500)
+
     [Column(TypeName = "decimal(18,2)")]
     public decimal TotalAmount { get; set; }
     
@@ -60,7 +63,11 @@ public class Booking
     // Timestamps
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    
+
+    // BONUS: Optimistic concurrency token
+    [Timestamp]
+    public byte[]? RowVersion { get; set; }
+
     // Navigation properties
     public Hall? Hall { get; set; }
     public Customer? Customer { get; set; }

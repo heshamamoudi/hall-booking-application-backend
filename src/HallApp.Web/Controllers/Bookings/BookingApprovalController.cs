@@ -19,18 +19,65 @@ public class BookingApprovalController : BaseApiController
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHallManagerService _hallManagerService;
     private readonly IVendorManagerService _vendorManagerService;
+    private readonly IOrganizationService _organizationService;
+    private readonly IHallService _hallService;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<BookingApprovalController> _logger;
 
     public BookingApprovalController(
         IUnitOfWork unitOfWork,
         IHallManagerService hallManagerService,
         IVendorManagerService vendorManagerService,
+        IOrganizationService organizationService,
+        IHallService hallService,
+        INotificationService notificationService,
         ILogger<BookingApprovalController> logger)
     {
         _unitOfWork = unitOfWork;
         _hallManagerService = hallManagerService;
         _vendorManagerService = vendorManagerService;
+        _organizationService = organizationService;
+        _hallService = hallService;
+        _notificationService = notificationService;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Helper method to check if the current HallManager or HallOrganizationManager user
+    /// owns the hall associated with a booking.
+    /// HallOrganizationManager: checks organization ownership via Organization entity,
+    /// then falls back to direct hall assignments.
+    /// HallManager: checks direct hall assignments via HallManager entity.
+    /// </summary>
+    private async Task<bool> CurrentUserOwnsBookingHall(int hallId)
+    {
+        if (!User.IsInRole("HallOrganizationManager") && !User.IsInRole("HallManager"))
+        {
+            return false;
+        }
+
+        // HallOrganizationManager: check org ownership of the hall
+        if (User.IsInRole("HallOrganizationManager"))
+        {
+            var org = await _organizationService.GetOrganizationByOwnerId(UserId);
+            if (org != null)
+            {
+                var orgHalls = await _hallService.GetOrganizationHallsAsync(org.Id);
+                if (orgHalls?.Any(h => h.ID == hallId) == true)
+                {
+                    return true;
+                }
+            }
+        }
+
+        // HallManager (or fallback for HallOrganizationManager): check direct hall assignments
+        var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(UserId);
+        if (hallManager?.Halls == null)
+        {
+            return false;
+        }
+
+        return hallManager.Halls.Any(h => h.ID == hallId);
     }
 
     /// <summary>
@@ -50,12 +97,15 @@ public class BookingApprovalController : BaseApiController
                 return Error<ApprovalResponseDto>("Booking not found", 404);
             }
 
-            // Verify hall manager owns this hall
+            // Verify hall manager or organization manager owns this hall
             if (!IsAdmin)
             {
-                var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(UserId);
-                if (hallManager == null || !hallManager.Halls.Any(h => h.ID == booking.HallId))
+                var ownsHall = await CurrentUserOwnsBookingHall(booking.HallId);
+                if (!ownsHall)
                 {
+                    _logger.LogWarning(
+                        "Access denied: User {UserId} attempted to approve/reject booking {BookingId} for hall {HallId}",
+                        UserId, bookingId, booking.HallId);
                     return Error<ApprovalResponseDto>("You do not have permission to approve bookings for this hall", 403);
                 }
             }
@@ -172,23 +222,62 @@ public class BookingApprovalController : BaseApiController
                 var allRejected = booking.VendorBookings
                     .All(vb => vb.Status == ApprovalStatusEnum.Rejected.ToString());
 
-                if (allApproved || allRejected)
+                var hasApprovals = booking.VendorBookings
+                    .Any(vb => vb.Status == ApprovalStatusEnum.Approved.ToString());
+
+                if (allApproved)
                 {
+                    // All vendors approved - proceed to payment
                     booking.Status = BookingStatusEnum.ReadyForPayment.ToString();
                 }
-                else
+                else if (allRejected)
                 {
-                    // Some approved, some rejected
+                    // All vendors rejected - mark as rejected
                     booking.Status = BookingStatusEnum.VendorRejected.ToString();
+                }
+                else if (hasApprovals)
+                {
+                    // Mixed: some approved, some rejected
+                    // Allow customer to proceed with approved vendors only
+                    booking.Status = BookingStatusEnum.ReadyForPayment.ToString();
+
+                    var rejectedVendors = booking.VendorBookings
+                        .Where(vb => vb.Status == ApprovalStatusEnum.Rejected.ToString())
+                        .Select(vb => vb.Vendor?.Name ?? "Unknown")
+                        .ToList();
+
+                    var approvedVendors = booking.VendorBookings
+                        .Where(vb => vb.Status == ApprovalStatusEnum.Approved.ToString())
+                        .Select(vb => vb.Vendor?.Name ?? "Unknown")
+                        .ToList();
+
+                    var noteMessage = $"Partial vendor approval: {rejectedVendors.Count} vendor(s) rejected ({string.Join(", ", rejectedVendors)}). Proceeding with {approvedVendors.Count} approved vendor(s).";
+
+                    booking.Comments = string.IsNullOrEmpty(booking.Comments)
+                        ? noteMessage
+                        : $"{booking.Comments} | {noteMessage}";
+
+                    _logger.LogInformation(
+                        "Booking {BookingId} has partial vendor approval. Approved: {ApprovedVendors}. Rejected: {RejectedVendors}",
+                        bookingId, string.Join(", ", approvedVendors), string.Join(", ", rejectedVendors));
+
+                    // Notify the customer about the partial approval
+                    await NotifyCustomerPartialApprovalAsync(
+                        booking, approvedVendors, rejectedVendors);
                 }
             }
 
             await _unitOfWork.Complete();
 
+            var isPartialApproval = booking.Status == BookingStatusEnum.ReadyForPayment.ToString()
+                && booking.VendorBookings!.Any(vb => vb.Status == ApprovalStatusEnum.Rejected.ToString());
+
             return Success(new ApprovalResponseDto
             {
                 Success = true,
-                Message = request.Approved ? "Vendor service approved" : "Vendor service rejected",
+                Message = isPartialApproval
+                    ? "Vendor service rejected. Booking can proceed with approved vendors."
+                    : request.Approved ? "Vendor service approved" : "Vendor service rejected",
                 NewStatus = booking.Status,
                 CanProceedToPayment = booking.Status == BookingStatusEnum.ReadyForPayment.ToString()
             }, "Vendor approval processed");
@@ -223,7 +312,16 @@ public class BookingApprovalController : BaseApiController
 
             var allApproved = vendorBookings.Any() && vendorBookings.All(vb => vb.Status == ApprovalStatusEnum.Approved.ToString());
             var allRejected = vendorBookings.Any() && vendorBookings.All(vb => vb.Status == ApprovalStatusEnum.Rejected.ToString());
-            var canProceedToPayment = !vendorBookings.Any() || allApproved || allRejected;
+            var hasApprovals = vendorBookings.Any(vb => vb.Status == ApprovalStatusEnum.Approved.ToString());
+            var isPartialApproval = hasApprovals && rejectedCount > 0 && pendingCount == 0;
+
+            // Partial approvals (some approved, some rejected) can proceed to payment
+            var canProceedToPayment = !vendorBookings.Any() || allApproved || (hasApprovals && pendingCount == 0);
+
+            var rejectedVendorNames = vendorBookings
+                .Where(vb => vb.Status == ApprovalStatusEnum.Rejected.ToString())
+                .Select(vb => vb.Vendor?.Name ?? "Unknown")
+                .ToList();
 
             var status = new VendorApprovalStatusDto
             {
@@ -232,7 +330,9 @@ public class BookingApprovalController : BaseApiController
                 RejectedCount = rejectedCount,
                 PendingCount = pendingCount,
                 AllApproved = allApproved,
-                CanProceedToPayment = canProceedToPayment
+                CanProceedToPayment = canProceedToPayment,
+                IsPartialApproval = isPartialApproval,
+                RejectedVendorNames = rejectedVendorNames
             };
 
             return Success(status, "Vendor approval status retrieved");
@@ -241,6 +341,51 @@ public class BookingApprovalController : BaseApiController
         {
             _logger.LogError(ex, "Error retrieving vendor approval status for booking {BookingId}", bookingId);
             return Error<VendorApprovalStatusDto>("An error occurred processing your request. Please try again.", 500);
+        }
+    }
+
+    /// <summary>
+    /// Sends a notification to the customer explaining which vendors rejected and that
+    /// they can proceed with approved vendors or choose to replace the rejected ones.
+    /// </summary>
+    private async Task NotifyCustomerPartialApprovalAsync(
+        Core.Entities.BookingEntities.Booking booking,
+        List<string> approvedVendors,
+        List<string> rejectedVendors)
+    {
+        try
+        {
+            var customer = await _unitOfWork.CustomerRepository.GetByIdAsync(booking.CustomerId);
+            if (customer == null)
+            {
+                _logger.LogWarning(
+                    "Cannot notify customer for booking {BookingId} - customer {CustomerId} not found",
+                    booking.Id, booking.CustomerId);
+                return;
+            }
+
+            var message =
+                $"Your booking #{booking.Id} has received partial vendor approval. " +
+                $"{approvedVendors.Count} vendor(s) approved ({string.Join(", ", approvedVendors)}). " +
+                $"{rejectedVendors.Count} vendor(s) rejected ({string.Join(", ", rejectedVendors)}). " +
+                "You can proceed to payment with the approved vendors, or you may choose to replace the rejected vendors before continuing.";
+
+            await _notificationService.SendBookingNotificationAsync(
+                customer.AppUserId,
+                booking.Id.ToString(),
+                booking.Status,
+                message);
+
+            _logger.LogInformation(
+                "Partial approval notification sent to customer {CustomerId} (AppUserId: {AppUserId}) for booking {BookingId}",
+                booking.CustomerId, customer.AppUserId, booking.Id);
+        }
+        catch (Exception ex)
+        {
+            // Notification failure should not block the approval workflow
+            _logger.LogError(ex,
+                "Failed to send partial approval notification for booking {BookingId} to customer {CustomerId}",
+                booking.Id, booking.CustomerId);
         }
     }
 }

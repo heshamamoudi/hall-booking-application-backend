@@ -1,0 +1,133 @@
+using HallApp.Application.Configuration;
+using HallApp.Core.Entities;
+using HallApp.Core.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Options;
+using System.Security.Claims;
+using System.Text.Json;
+
+namespace HallApp.Web.Filters;
+
+/// <summary>
+/// Idempotency filter for payment operations
+/// Prevents duplicate processing by caching the response (configurable expiration)
+/// Usage: [Idempotency("payment")] on controller action
+/// Requires header: X-Idempotency-Key
+/// </summary>
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+public class IdempotencyAttribute : Attribute, IAsyncActionFilter
+{
+    private const string IdempotencyKeyHeader = "X-Idempotency-Key";
+
+    private readonly string _operationType;
+
+    public IdempotencyAttribute(string operationType)
+    {
+        _operationType = operationType;
+    }
+
+    public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+    {
+        // Get idempotency key from header
+        if (!context.HttpContext.Request.Headers.TryGetValue(IdempotencyKeyHeader, out var idempotencyKeyValue))
+        {
+            // No idempotency key - proceed normally
+            await next();
+            return;
+        }
+
+        var idempotencyKey = idempotencyKeyValue.ToString();
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            context.Result = new BadRequestObjectResult(new
+            {
+                error = $"{IdempotencyKeyHeader} header cannot be empty"
+            });
+            return;
+        }
+
+        // Get services from DI
+        var unitOfWork = context.HttpContext.RequestServices.GetRequiredService<IUnitOfWork>();
+        var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<IdempotencyAttribute>>();
+        var businessRules = context.HttpContext.RequestServices.GetRequiredService<IOptions<BusinessRulesSettings>>().Value;
+
+        // Get user ID from claims
+        var userId = context.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            context.Result = new UnauthorizedResult();
+            return;
+        }
+
+        try
+        {
+            // Check if key exists and is not expired
+            var existingKey = await unitOfWork.IdempotencyKeyRepository.GetByKeyAsync(idempotencyKey);
+
+            if (existingKey != null)
+            {
+                // Key exists - return cached response
+                logger.LogInformation(
+                    "Idempotency key {Key} found for user {UserId}. Returning cached response (status {StatusCode})",
+                    idempotencyKey, userId, existingKey.StatusCode);
+
+                context.HttpContext.Response.StatusCode = existingKey.StatusCode;
+                context.HttpContext.Response.Headers.Add("X-Idempotency-Replay", "true");
+
+                if (!string.IsNullOrEmpty(existingKey.ResponseBody))
+                {
+                    context.Result = new ContentResult
+                    {
+                        Content = existingKey.ResponseBody,
+                        ContentType = "application/json",
+                        StatusCode = existingKey.StatusCode
+                    };
+                }
+                else
+                {
+                    context.Result = new StatusCodeResult(existingKey.StatusCode);
+                }
+
+                return;
+            }
+
+            // Key doesn't exist - execute action
+            var executedContext = await next();
+
+            // Store the result if the action succeeded
+            if (executedContext.Result is ObjectResult objectResult)
+            {
+                var statusCode = objectResult.StatusCode ?? 200;
+                var responseBody = JsonSerializer.Serialize(objectResult.Value);
+
+                var newKey = new IdempotencyKey
+                {
+                    Key = idempotencyKey,
+                    OperationType = _operationType,
+                    UserId = userId,
+                    StatusCode = statusCode,
+                    ResponseBody = responseBody,
+                    ProcessedAt = DateTime.UtcNow,
+                    ExpiresAt = DateTime.UtcNow.AddHours(businessRules.IdempotencyKeyExpirationHours)
+                };
+
+                await unitOfWork.IdempotencyKeyRepository.AddAsync(newKey);
+                await unitOfWork.Complete();
+
+                logger.LogInformation(
+                    "Idempotency key {Key} stored for user {UserId} (operation: {OperationType}, status: {StatusCode})",
+                    idempotencyKey, userId, _operationType, statusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Error processing idempotency key {Key} for user {UserId}",
+                idempotencyKey, userId);
+
+            // Continue with normal execution if idempotency check fails
+            await next();
+        }
+    }
+}

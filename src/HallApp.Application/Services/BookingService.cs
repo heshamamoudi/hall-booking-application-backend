@@ -1,9 +1,11 @@
 using AutoMapper;
+using HallApp.Application.Configuration;
 using HallApp.Core.Interfaces;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Core.Entities.BookingEntities;
 using HallApp.Application.DTOs.Booking;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace HallApp.Application.Services;
 
@@ -12,18 +14,24 @@ public class BookingService : IBookingService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly IInvoiceService _invoiceService;
+    private readonly IHallAvailabilityService _availabilityService;
     private readonly ILogger<BookingService> _logger;
+    private readonly InvoiceSettings _invoiceSettings;
 
     public BookingService(
         IUnitOfWork unitOfWork,
         IMapper mapper,
         IInvoiceService invoiceService,
-        ILogger<BookingService> logger)
+        IHallAvailabilityService availabilityService,
+        ILogger<BookingService> logger,
+        IOptions<InvoiceSettings> invoiceSettings)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _invoiceService = invoiceService;
+        _availabilityService = availabilityService;
         _logger = logger;
+        _invoiceSettings = invoiceSettings.Value;
     }
 
     public async Task<Booking> CreateBookingAsync(Booking booking)
@@ -31,6 +39,57 @@ public class BookingService : IBookingService
         await _unitOfWork.BookingRepository.AddAsync(booking);
         await _unitOfWork.Complete();
         return booking;
+    }
+
+    /// <summary>
+    /// Creates a booking with database-level locking to prevent race conditions
+    /// Uses serializable transaction isolation to prevent double bookings
+    /// </summary>
+    public async Task<(bool Success, Booking? Booking, string ErrorMessage)> CreateBookingWithLockingAsync(Booking booking)
+    {
+        // Use serializable isolation level to prevent race conditions
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+        try
+        {
+            // Re-check availability with locking inside the transaction
+            var isAvailable = await _availabilityService.IsAvailableAsync(
+                booking.HallId,
+                booking.EventDate,
+                booking.StartTime,
+                booking.EndTime,
+                useLocking: true);
+
+            if (!isAvailable)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogWarning(
+                    "Booking creation failed: Hall {HallId} not available on {EventDate} from {StartTime} to {EndTime}",
+                    booking.HallId, booking.EventDate.Date, booking.StartTime, booking.EndTime);
+                return (false, null, "Hall is not available for the selected date and time. Another booking may have just been created.");
+            }
+
+            // Create the booking within the transaction
+            await _unitOfWork.BookingRepository.AddAsync(booking);
+            await _unitOfWork.Complete();
+
+            // Commit the transaction
+            await transaction.CommitAsync();
+
+            _logger.LogInformation(
+                "Booking {BookingId} created successfully for hall {HallId} on {EventDate}",
+                booking.Id, booking.HallId, booking.EventDate.Date);
+
+            return (true, booking, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex,
+                "Error creating booking for hall {HallId} on {EventDate}. Transaction rolled back.",
+                booking.HallId, booking.EventDate.Date);
+            return (false, null, "An error occurred while creating the booking. Please try again.");
+        }
     }
 
     public async Task<Booking> GetBookingByIdAsync(int bookingId)
@@ -108,8 +167,7 @@ public class BookingService : IBookingService
         existingBooking.PaymentStatus = booking.PaymentStatus ?? existingBooking.PaymentStatus;
         existingBooking.PaidAt = booking.PaidAt;
         
-        // Update timestamps
-        existingBooking.Updated = DateTime.UtcNow;
+        // Update timestamps (CRIT-004: using only CreatedAt/UpdatedAt)
         existingBooking.UpdatedAt = DateTime.UtcNow;
         
         // Update PackageDetails if provided
@@ -270,19 +328,40 @@ public class BookingService : IBookingService
         _unitOfWork.BookingRepository.Update(booking);
         await _unitOfWork.Complete();
 
-        // Generate invoice when booking is confirmed
-        if (status == "Confirmed" && previousStatus != "Confirmed")
+        // Enhancement 3: Auto-generate invoice when booking status changes to a trigger status
+        // Controlled by InvoiceSettings.AutoGenerateOnConfirmation flag
+        if (_invoiceSettings.AutoGenerateOnConfirmation
+            && _invoiceSettings.AutoGenerateTriggerStatuses.Contains(status, StringComparer.OrdinalIgnoreCase)
+            && !string.Equals(previousStatus, status, StringComparison.OrdinalIgnoreCase))
         {
             try
             {
-                _logger.LogInformation("Booking {BookingId} confirmed - generating invoice", bookingId);
-                var invoice = await _invoiceService.GenerateInvoiceForBookingAsync(bookingId, "System");
-                _logger.LogInformation("Invoice {InvoiceNumber} generated for booking {BookingId}", invoice.InvoiceNumber, bookingId);
+                // Check if invoice already exists before generating
+                var existingInvoice = await _invoiceService.GetInvoiceByBookingIdAsync(bookingId);
+                if (existingInvoice != null)
+                {
+                    _logger.LogInformation(
+                        "Invoice {InvoiceNumber} already exists for booking {BookingId} - skipping auto-generation on status change to {Status}",
+                        existingInvoice.InvoiceNumber, bookingId, status);
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "Booking {BookingId} status changed to {Status} - auto-generating invoice",
+                        bookingId, status);
+                    var invoice = await _invoiceService.GenerateInvoiceForBookingAsync(bookingId, "System-AutoGenerate");
+                    _logger.LogInformation(
+                        "Invoice {InvoiceNumber} auto-generated for booking {BookingId} on status change to {Status}",
+                        invoice.InvoiceNumber, bookingId, status);
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to generate invoice for booking {BookingId}", bookingId);
-                // Don't fail the status update even if invoice generation fails
+                // Handle errors gracefully - don't block booking status update if invoice generation fails
+                _logger.LogError(ex,
+                    "Failed to auto-generate invoice for booking {BookingId} on status change to {Status}. " +
+                    "The booking status update was successful. Invoice can be generated manually.",
+                    bookingId, status);
             }
         }
 
@@ -323,7 +402,7 @@ public class BookingService : IBookingService
             CancelledBookings = bookingsList.Count(b => b.Status == "Cancelled"),
             TotalRevenue = (decimal)bookingsList.Sum(b => b.TotalAmount),
             ThisMonthRevenue = (decimal)bookingsList
-                .Where(b => b.Created.Month == thisMonth && b.Created.Year == thisYear)
+                .Where(b => b.CreatedAt.Month == thisMonth && b.CreatedAt.Year == thisYear)
                 .Sum(b => b.TotalAmount)
         };
     }

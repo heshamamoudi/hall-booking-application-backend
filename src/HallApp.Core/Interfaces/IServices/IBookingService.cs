@@ -24,6 +24,7 @@ namespace HallApp.Core.Interfaces.IServices
     public interface IBookingService
     {
         Task<Booking> CreateBookingAsync(Booking booking);
+        Task<(bool Success, Booking? Booking, string ErrorMessage)> CreateBookingWithLockingAsync(Booking booking);
         Task<Booking> GetBookingByIdAsync(int bookingId);
         Task<IEnumerable<Booking>> GetBookingsByCustomerIdAsync(string customerId);
         Task<IEnumerable<Booking>> GetCustomerBookingsAsync(string customerId);

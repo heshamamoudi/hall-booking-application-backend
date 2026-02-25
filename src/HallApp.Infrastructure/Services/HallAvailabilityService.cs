@@ -1,7 +1,10 @@
+using HallApp.Application.Configuration;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Npgsql;
 
 namespace HallApp.Infrastructure.Services;
 
@@ -9,17 +12,31 @@ public class HallAvailabilityService : IHallAvailabilityService
 {
     private readonly DataContext _context;
     private readonly ILogger<HallAvailabilityService> _logger;
+    private readonly BusinessRulesSettings _businessRules;
 
-    public HallAvailabilityService(DataContext context, ILogger<HallAvailabilityService> logger)
+    public HallAvailabilityService(
+        DataContext context,
+        ILogger<HallAvailabilityService> logger,
+        IOptions<BusinessRulesSettings> businessRules)
     {
         _context = context;
         _logger = logger;
+        _businessRules = businessRules.Value;
     }
 
     /// <summary>
     /// Check if a hall is available for the specified date and time range
     /// </summary>
     public async Task<bool> IsAvailableAsync(int hallId, DateTime eventDate, TimeSpan startTime, TimeSpan endTime)
+    {
+        return await IsAvailableAsync(hallId, eventDate, startTime, endTime, useLocking: false);
+    }
+
+    /// <summary>
+    /// Check if a hall is available for the specified date and time range with optional pessimistic locking
+    /// </summary>
+    /// <param name="useLocking">If true, uses SELECT FOR UPDATE to lock conflicting rows (must be in a transaction)</param>
+    public async Task<bool> IsAvailableAsync(int hallId, DateTime eventDate, TimeSpan startTime, TimeSpan endTime, bool useLocking)
     {
         try
         {
@@ -31,25 +48,58 @@ public class HallAvailabilityService : IHallAvailabilityService
                 return false;
             }
 
-            // Check for overlapping bookings
-            var hasConflict = await _context.Bookings
-                .Where(b => b.HallId == hallId &&
-                           b.EventDate.Date == eventDate.Date &&
-                           b.Status != "Cancelled" &&
-                           b.Status != "Rejected" &&
-                           // Check for time overlap
-                           ((b.StartTime < endTime && b.EndTime > startTime)))
-                .AnyAsync();
-
-            if (hasConflict)
+            if (useLocking)
             {
-                _logger.LogInformation(
-                    "Hall {HallId} has conflicting booking on {EventDate} from {StartTime} to {EndTime}",
-                    hallId, eventDate.Date, startTime, endTime);
-                return false;
-            }
+                // Use raw SQL with FOR UPDATE to lock rows and prevent race conditions
+                // This MUST be called within an active transaction
+                var sql = @"
+                    SELECT * FROM ""Bookings""
+                    WHERE ""HallId"" = {0}
+                        AND DATE(""EventDate"") = DATE({1})
+                        AND ""Status"" NOT IN ('Cancelled', 'Rejected', 'HallRejected', 'VendorRejected')
+                        AND (""StartTime"" < {2} AND ""EndTime"" > {3})
+                    FOR UPDATE";
 
-            return true;
+                var conflictingBookings = await _context.Bookings
+                    .FromSqlRaw(sql, hallId, eventDate.Date, endTime, startTime)
+                    .ToListAsync();
+
+                var hasConflict = conflictingBookings.Any();
+
+                if (hasConflict)
+                {
+                    _logger.LogInformation(
+                        "Hall {HallId} has {Count} conflicting booking(s) on {EventDate} from {StartTime} to {EndTime} (with locking)",
+                        hallId, conflictingBookings.Count, eventDate.Date, startTime, endTime);
+                    return false;
+                }
+
+                return true;
+            }
+            else
+            {
+                // Normal check without locking
+                var hasConflict = await _context.Bookings
+                    .Where(b => b.HallId == hallId &&
+                               b.EventDate.Date == eventDate.Date &&
+                               b.Status != "Cancelled" &&
+                               b.Status != "Rejected" &&
+                               b.Status != "HallRejected" &&
+                               b.Status != "VendorRejected" &&
+                               // Check for time overlap
+                               ((b.StartTime < endTime && b.EndTime > startTime)))
+                    .AnyAsync();
+
+                if (hasConflict)
+                {
+                    _logger.LogInformation(
+                        "Hall {HallId} has conflicting booking on {EventDate} from {StartTime} to {EndTime}",
+                        hallId, eventDate.Date, startTime, endTime);
+                    return false;
+                }
+
+                return true;
+            }
         }
         catch (Exception ex)
         {
@@ -67,9 +117,9 @@ public class HallAvailabilityService : IHallAvailabilityService
         {
             var availableSlots = new List<TimeSlot>();
 
-            // Hall operating hours (typically 8 AM to 11 PM in Saudi Arabia)
-            var openingTime = new TimeSpan(8, 0, 0);
-            var closingTime = new TimeSpan(23, 0, 0);
+            // Hall operating hours from configuration
+            var openingTime = _businessRules.HallOpeningTime;
+            var closingTime = _businessRules.HallClosingTime;
 
             // Get all bookings for this hall on the specified date
             var existingBookings = await _context.Bookings
@@ -229,10 +279,10 @@ public class HallAvailabilityService : IHallAvailabilityService
             return (false, "Event date cannot be in the past");
         }
 
-        // Check if event date is too far in the future (e.g., 1 year)
-        if (eventDate.Date > DateTime.UtcNow.Date.AddYears(1))
+        // Check if event date is too far in the future (configured booking window)
+        if (eventDate.Date > DateTime.UtcNow.Date.AddDays(_businessRules.MaxBookingWindowDays))
         {
-            return (false, "Event date cannot be more than 1 year in advance");
+            return (false, $"Event date cannot be more than {_businessRules.MaxBookingWindowDays} days in advance");
         }
 
         // Check if start time is before end time
@@ -241,22 +291,22 @@ public class HallAvailabilityService : IHallAvailabilityService
             return (false, "Start time must be before end time");
         }
 
-        // Minimum booking duration (e.g., 2 hours)
+        // Minimum booking duration (from configuration)
         var duration = endTime - startTime;
-        if (duration.TotalHours < 2)
+        if (duration.TotalHours < _businessRules.MinBookingDurationHours)
         {
-            return (false, "Minimum booking duration is 2 hours");
+            return (false, $"Minimum booking duration is {_businessRules.MinBookingDurationHours} hours");
         }
 
-        // Maximum booking duration (e.g., 16 hours)
-        if (duration.TotalHours > 16)
+        // Maximum booking duration (from configuration)
+        if (duration.TotalHours > _businessRules.MaxBookingDurationHours)
         {
-            return (false, "Maximum booking duration is 16 hours");
+            return (false, $"Maximum booking duration is {_businessRules.MaxBookingDurationHours} hours");
         }
 
-        // Check operating hours
-        var openingTime = new TimeSpan(8, 0, 0);
-        var closingTime = new TimeSpan(23, 0, 0);
+        // Check operating hours (from configuration)
+        var openingTime = _businessRules.HallOpeningTime;
+        var closingTime = _businessRules.HallClosingTime;
 
         if (startTime < openingTime || endTime > closingTime)
         {

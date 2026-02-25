@@ -31,4 +31,15 @@ public class VendorApprovalStatusDto
     public int PendingCount { get; set; }
     public bool AllApproved { get; set; }
     public bool CanProceedToPayment { get; set; }
+
+    /// <summary>
+    /// True when some vendors approved and some rejected (not all-approved, not all-rejected).
+    /// The customer can proceed with approved vendors or replace rejected ones.
+    /// </summary>
+    public bool IsPartialApproval { get; set; }
+
+    /// <summary>
+    /// Names of vendors that rejected. Empty when no rejections.
+    /// </summary>
+    public List<string> RejectedVendorNames { get; set; } = [];
 }

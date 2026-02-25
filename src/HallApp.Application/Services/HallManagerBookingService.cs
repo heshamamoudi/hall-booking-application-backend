@@ -177,4 +177,91 @@ public class HallManagerBookingService : IHallManagerBookingService
 
         return (pagedBookings, totalCount);
     }
+
+    /// <inheritdoc />
+    public async Task<BookingDashboardStatsDto> GetHallManagerDashboardStatsAsync(
+        int appUserId,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "Fetching dashboard stats for HallManager with AppUserId {AppUserId}", appUserId);
+
+        var hallManager = await _unitOfWork.HallManagerRepository.GetByAppUserIdWithHallsAsync(appUserId);
+
+        if (hallManager?.Halls == null || !hallManager.Halls.Any())
+        {
+            _logger.LogWarning(
+                "HallManager with AppUserId {AppUserId} not found or has no assigned halls", appUserId);
+            return new BookingDashboardStatsDto();
+        }
+
+        var hallIds = hallManager.Halls.Select(h => h.ID).ToList();
+        var bookings = (await _unitOfWork.BookingRepository.GetBookingsByHallIdsAsync(hallIds)).ToList();
+
+        var stats = ComputeDashboardStats(bookings);
+
+        _logger.LogInformation(
+            "Computed dashboard stats for HallManager {AppUserId}: Today={TodayCount}, Upcoming={UpcomingCount}, Pending={PendingCount}, ThisMonth={ThisMonthCount}, Revenue={Revenue}",
+            appUserId, stats.TodayCount, stats.UpcomingCount, stats.PendingApprovalCount, stats.ThisMonthCount, stats.TotalPaidRevenue);
+
+        return stats;
+    }
+
+    /// <inheritdoc />
+    public async Task<BookingDashboardStatsDto> GetOrgManagerDashboardStatsAsync(
+        int appUserId,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "Fetching dashboard stats for OrgManager with AppUserId {AppUserId}", appUserId);
+
+        var organization = await _organizationService.GetOrganizationByOwnerId(appUserId);
+
+        if (organization == null)
+        {
+            _logger.LogWarning(
+                "No organization found for user {AppUserId}", appUserId);
+            return new BookingDashboardStatsDto();
+        }
+
+        var orgHalls = await _unitOfWork.HallRepository.GetHallsByOrganizationIdAsync(organization.Id);
+
+        if (orgHalls == null || orgHalls.Count == 0)
+        {
+            _logger.LogWarning(
+                "Organization {OrgId} for user {AppUserId} has no halls", organization.Id, appUserId);
+            return new BookingDashboardStatsDto();
+        }
+
+        var hallIds = orgHalls.Select(h => h.ID).ToList();
+        var bookings = (await _unitOfWork.BookingRepository.GetBookingsByHallIdsAsync(hallIds)).ToList();
+
+        var stats = ComputeDashboardStats(bookings);
+
+        _logger.LogInformation(
+            "Computed dashboard stats for OrgManager {AppUserId} (Org {OrgId}): Today={TodayCount}, Upcoming={UpcomingCount}, Pending={PendingCount}, ThisMonth={ThisMonthCount}, Revenue={Revenue}",
+            appUserId, organization.Id, stats.TodayCount, stats.UpcomingCount, stats.PendingApprovalCount, stats.ThisMonthCount, stats.TotalPaidRevenue);
+
+        return stats;
+    }
+
+    /// <summary>
+    /// Computes dashboard statistics from a list of bookings.
+    /// Counts filter to future bookings (EventDate >= today). Revenue is all-time paid.
+    /// </summary>
+    private static BookingDashboardStatsDto ComputeDashboardStats(List<Booking> bookings)
+    {
+        var today = DateTime.UtcNow.Date;
+        var tomorrow = today.AddDays(1);
+        var startOfMonth = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        return new BookingDashboardStatsDto
+        {
+            TodayCount = bookings.Count(b => b.EventDate.Date == today),
+            UpcomingCount = bookings.Count(b => b.EventDate.Date >= tomorrow),
+            PendingApprovalCount = bookings.Count(b => b.Status == "Pending" && b.EventDate.Date >= today),
+            ThisMonthCount = bookings.Count(b => b.EventDate >= startOfMonth && b.EventDate.Date >= today),
+            TotalPaidRevenue = bookings.Where(b => b.PaymentStatus == "Paid").Sum(b => b.TotalAmount),
+        };
+    }
 }

@@ -42,16 +42,16 @@ public class HallManagerBookingsController : BaseApiController
     ///
     /// Supports pagination via pageNumber and pageSize query parameters.
     ///
-    /// Requires: HallManager or Admin role
+    /// Requires: HallOrganizationManager, HallManager, or Admin role
     /// </remarks>
     /// <param name="pageNumber">Page number (1-based, default: 1)</param>
     /// <param name="pageSize">Items per page (default: 20, max: 50)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <response code="200">Returns the paginated list of bookings for the manager's halls</response>
     /// <response code="401">User is not authenticated</response>
-    /// <response code="403">User does not have the HallManager or Admin role</response>
+    /// <response code="403">User does not have the required role</response>
     [HttpGet("my-hall-bookings")]
-    [Authorize(Roles = "HallManager,Admin")]
+    [Authorize(Roles = "HallOrganizationManager,HallManager,Admin")]
     [ProducesResponseType(typeof(PaginatedApiResponse<BookingDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
@@ -217,6 +217,144 @@ public class HallManagerBookingsController : BaseApiController
             {
                 StatusCode = 500,
                 Message = "An error occurred while retrieving bookings. Please try again.",
+                IsSuccess = false
+            });
+        }
+    }
+
+    /// <summary>
+    /// Returns dashboard statistics for the current HallManager.
+    /// Counts are future-only (EventDate >= today). Revenue is all-time.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <response code="200">Returns the dashboard statistics for the manager's halls</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User does not have the required role</response>
+    [HttpGet("my-hall-stats")]
+    [Authorize(Roles = "HallOrganizationManager,HallManager,Admin")]
+    [ProducesResponseType(typeof(ApiResponse<BookingDashboardStatsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiResponse<BookingDashboardStatsDto>>> GetMyHallStats(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (UserId == 0)
+            {
+                _logger.LogWarning("GetMyHallStats called with invalid user ID from token");
+                return StatusCode(401, new ApiResponse<BookingDashboardStatsDto>
+                {
+                    StatusCode = 401,
+                    Message = "User authentication failed",
+                    IsSuccess = false
+                });
+            }
+
+            _logger.LogInformation(
+                "HallManager {UserId} requesting dashboard stats", UserId);
+
+            var stats = await _hallManagerBookingService.GetHallManagerDashboardStatsAsync(
+                UserId, cancellationToken);
+
+            _logger.LogInformation(
+                "Returned dashboard stats for HallManager {UserId}", UserId);
+
+            return Ok(new ApiResponse<BookingDashboardStatsDto>
+            {
+                StatusCode = 200,
+                Message = "Dashboard statistics retrieved successfully",
+                IsSuccess = true,
+                Data = stats
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("GetMyHallStats request was cancelled for user {UserId}", UserId);
+            return StatusCode(499, new ApiResponse<BookingDashboardStatsDto>
+            {
+                StatusCode = 499,
+                Message = "Request cancelled",
+                IsSuccess = false
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error retrieving dashboard stats for HallManager {UserId}", UserId);
+            return StatusCode(500, new ApiResponse<BookingDashboardStatsDto>
+            {
+                StatusCode = 500,
+                Message = "An error occurred while retrieving dashboard statistics. Please try again.",
+                IsSuccess = false
+            });
+        }
+    }
+
+    /// <summary>
+    /// Returns dashboard statistics for the current HallOrganizationManager.
+    /// Counts are future-only (EventDate >= today). Revenue is all-time.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <response code="200">Returns the dashboard statistics for the organization's halls</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User does not have the HallOrganizationManager or Admin role</response>
+    [HttpGet("my-org-stats")]
+    [Authorize(Roles = "HallOrganizationManager,Admin")]
+    [ProducesResponseType(typeof(ApiResponse<BookingDashboardStatsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiResponse<BookingDashboardStatsDto>>> GetMyOrgStats(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (UserId == 0)
+            {
+                _logger.LogWarning("GetMyOrgStats called with invalid user ID from token");
+                return StatusCode(401, new ApiResponse<BookingDashboardStatsDto>
+                {
+                    StatusCode = 401,
+                    Message = "User authentication failed",
+                    IsSuccess = false
+                });
+            }
+
+            _logger.LogInformation(
+                "HallOrganizationManager {UserId} requesting dashboard stats", UserId);
+
+            var stats = await _hallManagerBookingService.GetOrgManagerDashboardStatsAsync(
+                UserId, cancellationToken);
+
+            _logger.LogInformation(
+                "Returned dashboard stats for HallOrganizationManager {UserId}", UserId);
+
+            return Ok(new ApiResponse<BookingDashboardStatsDto>
+            {
+                StatusCode = 200,
+                Message = "Dashboard statistics retrieved successfully",
+                IsSuccess = true,
+                Data = stats
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("GetMyOrgStats request was cancelled for user {UserId}", UserId);
+            return StatusCode(499, new ApiResponse<BookingDashboardStatsDto>
+            {
+                StatusCode = 499,
+                Message = "Request cancelled",
+                IsSuccess = false
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error retrieving dashboard stats for HallOrganizationManager {UserId}", UserId);
+            return StatusCode(500, new ApiResponse<BookingDashboardStatsDto>
+            {
+                StatusCode = 500,
+                Message = "An error occurred while retrieving dashboard statistics. Please try again.",
                 IsSuccess = false
             });
         }

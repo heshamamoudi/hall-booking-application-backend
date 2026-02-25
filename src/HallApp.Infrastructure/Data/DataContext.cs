@@ -1,6 +1,7 @@
 using HallApp.Core.Entities;
 using HallApp.Core.Entities.CustomerEntities;
 using HallApp.Core.Entities.BookingEntities;
+using HallApp.Core.Entities.GdprEntities;
 using HallApp.Core.Entities.NotificationEntities;
 using HallApp.Core.Entities.ReviewEntities;
 using HallApp.Core.Entities.VendorEntities;
@@ -62,6 +63,13 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
     // Payment Entities
     public DbSet<Payment> Payments { get; set; }
     public DbSet<PaymentRefund> PaymentRefunds { get; set; }
+    public DbSet<IdempotencyKey> IdempotencyKeys { get; set; }
+
+    // HIGH-006: Financial Audit Log
+    public DbSet<FinancialAuditLog> FinancialAuditLogs { get; set; }
+
+    // HIGH-012: GDPR Data Retention
+    public DbSet<DataRetentionRequest> DataRetentionRequests { get; set; }
 
     // Chat Entities
     public DbSet<ChatConversation> ChatConversations { get; set; }
@@ -81,6 +89,11 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        // CRIT-001 FIX: Database sequence for atomic invoice number generation
+        builder.HasSequence<int>("invoice_number_seq")
+            .StartsAt(1)
+            .IncrementsBy(1);
 
         // Identity configurations
         builder.Entity<AppUser>().ToTable("Users");
@@ -325,6 +338,16 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
                 .WithOne(vb => vb.Booking)
                 .HasForeignKey(vb => vb.BookingId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // BONUS: Optimistic concurrency via RowVersion
+            entity.Property(b => b.RowVersion).IsRowVersion();
+        });
+
+        // CRIT-003 FIX: BookingPackage decimal precision for financial values
+        builder.Entity<BookingPackage>(entity =>
+        {
+            entity.Property(bp => bp.Price)
+                .HasColumnType("decimal(18,2)");
         });
 
         // VendorBooking relationships
@@ -412,6 +435,15 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
             // ZATCA UUID index for quick lookup
             entity.HasIndex(i => i.ZATCA_UUID);
 
+            // Invoice page redesign: indexes for filtered queries and statistics
+            entity.HasIndex(i => i.HallId);
+            entity.HasIndex(i => i.CustomerId);
+            entity.HasIndex(i => i.InvoiceDate);
+            entity.HasIndex(i => i.PaymentStatus);
+            entity.HasIndex(i => i.IsCancelled);
+            entity.HasIndex(i => new { i.HallId, i.PaymentStatus });
+            entity.HasIndex(i => new { i.HallId, i.InvoiceDate });
+
             // Decimal precision for monetary values
             entity.Property(i => i.SubtotalBeforeTax)
                 .HasColumnType("decimal(18,2)");
@@ -425,6 +457,11 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
                 .HasColumnType("decimal(18,2)");
             entity.Property(i => i.TotalAmountWithTax)
                 .HasColumnType("decimal(18,2)");
+            entity.Property(i => i.RefundAmount)
+                .HasColumnType("decimal(18,2)");
+
+            // BONUS: Optimistic concurrency via RowVersion
+            entity.Property(i => i.RowVersion).IsRowVersion();
         });
 
         // InvoiceLineItem configuration
@@ -817,6 +854,136 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
 
             entity.HasIndex(v => v.OrganizationId);
             entity.HasIndex(v => v.AssignedToVendorManagerId);
+        });
+
+        // HIGH-006: FinancialAuditLog configuration for financial operation audit trails
+        builder.Entity<FinancialAuditLog>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+
+            entity.Property(a => a.OperationType)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(a => a.EntityType)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(a => a.EntityId)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(a => a.IpAddress)
+                .HasMaxLength(50);
+
+            entity.Property(a => a.UserAgent)
+                .HasMaxLength(500);
+
+            entity.Property(a => a.CorrelationId)
+                .HasMaxLength(100);
+
+            entity.Property(a => a.Description)
+                .HasMaxLength(1000);
+
+            entity.HasOne(a => a.User)
+                .WithMany()
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Indexes for querying
+            entity.HasIndex(a => new { a.EntityType, a.EntityId });
+            entity.HasIndex(a => a.CorrelationId);
+            entity.HasIndex(a => a.UserId);
+            entity.HasIndex(a => a.Timestamp);
+            entity.HasIndex(a => a.OperationType);
+        });
+
+        // HIGH-012: AppUser GDPR fields
+        builder.Entity<AppUser>(entity =>
+        {
+            entity.Property(u => u.DataRetentionPolicy)
+                .HasDefaultValue(DataRetentionPolicy.Standard);
+
+            entity.Property(u => u.IsAnonymized)
+                .HasDefaultValue(false);
+
+            entity.HasIndex(u => u.IsAnonymized);
+            entity.HasIndex(u => u.DataRetentionPolicy);
+            entity.HasIndex(u => u.LastActivityAt);
+        });
+
+        // HIGH-012: DataRetentionRequest configuration for GDPR data retention requests
+        builder.Entity<DataRetentionRequest>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+
+            entity.Property(r => r.RequestType)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(r => r.Status)
+                .IsRequired()
+                .HasMaxLength(30);
+
+            entity.Property(r => r.Reason)
+                .HasMaxLength(1000);
+
+            entity.Property(r => r.RejectionReason)
+                .HasMaxLength(1000);
+
+            entity.HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(r => r.RequestedByUser)
+                .WithMany()
+                .HasForeignKey(r => r.RequestedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(r => r.ProcessedByUser)
+                .WithMany()
+                .HasForeignKey(r => r.ProcessedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Indexes for querying
+            entity.HasIndex(r => r.UserId);
+            entity.HasIndex(r => r.Status);
+            entity.HasIndex(r => r.RequestedAt);
+            entity.HasIndex(r => new { r.UserId, r.Status });
+        });
+
+        // HIGH-003 FIX: IdempotencyKey configuration for preventing duplicate payment processing
+        builder.Entity<IdempotencyKey>(entity =>
+        {
+            entity.HasKey(ik => ik.Id);
+
+            entity.Property(ik => ik.Key)
+                .IsRequired()
+                .HasMaxLength(255);
+
+            entity.Property(ik => ik.OperationType)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(ik => ik.UserId)
+                .IsRequired();
+
+            entity.Property(ik => ik.ProcessedAt)
+                .IsRequired();
+
+            entity.Property(ik => ik.ExpiresAt)
+                .IsRequired();
+
+            // Unique index on Key to enforce uniqueness and fast lookups
+            entity.HasIndex(ik => ik.Key)
+                .IsUnique();
+
+            // Index for cleanup queries (delete expired keys)
+            entity.HasIndex(ik => ik.ExpiresAt);
+
+            // Composite index for operation type and user queries
+            entity.HasIndex(ik => new { ik.UserId, ik.OperationType });
         });
     }
 }

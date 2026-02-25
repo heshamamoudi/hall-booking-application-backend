@@ -173,7 +173,7 @@ public class HallManagerDashboardService : IHallManagerDashboardService
                 HallName = b.Hall?.Name ?? "Unknown",
                 EventDate = b.EventDate,
                 Amount = b.TotalAmount,
-                RequestedAt = b.Created
+                RequestedAt = b.CreatedAt
             })
             .ToList();
     }
@@ -181,7 +181,7 @@ public class HallManagerDashboardService : IHallManagerDashboardService
     private static IEnumerable<HallManagerRecentBookingDto> GetRecentBookings(List<Booking> bookings)
     {
         return bookings
-            .OrderByDescending(b => b.Created)
+            .OrderByDescending(b => b.CreatedAt)
             .Take(10)
             .Select(b => new HallManagerRecentBookingDto
             {

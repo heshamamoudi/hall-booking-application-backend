@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 using HallApp.Core.Entities.ChamperEntities;
+using HallApp.Core.Entities.GdprEntities;
 using HallApp.Core.Entities.NotificationEntities;
 
 namespace HallApp.Core.Entities;
@@ -42,4 +43,26 @@ public class AppUser : IdentityUser<int>
     public string? InvitationToken { get; set; }
 #nullable restore
     public DateTime? InvitationTokenExpiry { get; set; }
+
+    // HIGH-012: GDPR data retention fields
+    /// <summary>
+    /// The data retention policy applied to this user's personal data.
+    /// </summary>
+    public DataRetentionPolicy DataRetentionPolicy { get; set; } = DataRetentionPolicy.Standard;
+
+    /// <summary>
+    /// Whether this user's personal data has been anonymized.
+    /// </summary>
+    public bool IsAnonymized { get; set; }
+
+    /// <summary>
+    /// When the user's data was anonymized. Null if not anonymized.
+    /// </summary>
+    public DateTime? AnonymizedAt { get; set; }
+
+    /// <summary>
+    /// The last time the user had significant activity (login, booking, payment).
+    /// Used by the data retention background service to determine when to anonymize.
+    /// </summary>
+    public DateTime? LastActivityAt { get; set; }
 }

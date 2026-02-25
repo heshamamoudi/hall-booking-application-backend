@@ -6,6 +6,7 @@ using HallApp.Core.Exceptions;
 using HallApp.Core.Interfaces;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Web.Controllers.Common;
+using HallApp.Web.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -23,19 +24,25 @@ public class PaymentsController : BaseApiController
     private readonly PaymentSettings _paymentSettings;
     private readonly IEnumerable<IPaymentProviderService> _paymentProviders;
     private readonly IInvoiceService _invoiceService;
+    private readonly IFinancialAuditService _auditService;
+    private readonly INotificationService _notificationService;
 
     public PaymentsController(
         IUnitOfWork unitOfWork,
         ILogger<PaymentsController> logger,
         IOptions<PaymentSettings> paymentSettings,
         IEnumerable<IPaymentProviderService> paymentProviders,
-        IInvoiceService invoiceService)
+        IInvoiceService invoiceService,
+        IFinancialAuditService auditService,
+        INotificationService notificationService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _paymentSettings = paymentSettings.Value;
         _paymentProviders = paymentProviders;
         _invoiceService = invoiceService;
+        _auditService = auditService;
+        _notificationService = notificationService;
     }
 
     /// <summary>
@@ -68,12 +75,16 @@ public class PaymentsController : BaseApiController
 
     /// <summary>
     /// Initialize payment checkout - Creates a checkout session with the specified provider
+    /// Requires X-Idempotency-Key header to prevent duplicate payment sessions
     /// </summary>
     [HttpPost("checkout")]
     [Authorize]
+    [Idempotency("payment_checkout")]
     public async Task<ActionResult<ApiResponse<PaymentCheckoutResponseDto>>> InitiateCheckout(
         [FromBody] PaymentCheckoutRequestDto request)
     {
+        var correlationId = Guid.NewGuid().ToString("N")[..12];
+
         try
         {
             // Validate booking exists and is in correct status
@@ -86,6 +97,10 @@ public class PaymentsController : BaseApiController
 
             if (booking.Status == "Cancelled")
             {
+                _logger.LogWarning(
+                    "HIGH-011: Payment checkout rejected - booking cancelled. " +
+                    "BookingId: {BookingId}, UserId: {UserId}, CorrelationId: {CorrelationId}",
+                    request.BookingId, UserId, correlationId);
                 return Error<PaymentCheckoutResponseDto>("Cannot process payment for cancelled booking");
             }
 
@@ -114,8 +129,10 @@ public class PaymentsController : BaseApiController
 
             if (!result.Success)
             {
-                _logger.LogError("Payment checkout failed for booking {BookingId} with provider {Provider}: {Error}",
-                    request.BookingId, request.Provider, result.ErrorMessage);
+                _logger.LogError(
+                    "HIGH-011: Payment checkout failed. BookingId: {BookingId}, Provider: {Provider}, " +
+                    "ErrorCode: {ErrorCode}, Error: {Error}, CorrelationId: {CorrelationId}",
+                    request.BookingId, request.Provider, result.ErrorCode, result.ErrorMessage, correlationId);
 
                 return Error<PaymentCheckoutResponseDto>(result.ErrorMessage ?? "Payment checkout failed");
             }
@@ -140,12 +157,23 @@ public class PaymentsController : BaseApiController
             await _unitOfWork.PaymentRepository.AddAsync(payment);
             await _unitOfWork.Complete();
 
+            // HIGH-011: Enhanced structured logging for checkout creation
             _logger.LogInformation(
-                "Payment checkout created for booking {BookingId} with provider {Provider}, CheckoutId: {CheckoutId}",
-                booking.Id,
-                provider.Provider.ToString(),
-                result.CheckoutId
-            );
+                "HIGH-011: Payment checkout created. UserId: {UserId}, BookingId: {BookingId}, " +
+                "Amount: {Amount} {Currency}, Provider: {Provider}, CheckoutId: {CheckoutId}, " +
+                "CorrelationId: {CorrelationId}",
+                UserId, booking.Id, booking.TotalAmount, _paymentSettings.DefaultCurrency,
+                provider.Provider.ToString(), result.CheckoutId, correlationId);
+
+            // HIGH-006: Audit trail for checkout creation
+            await _auditService.LogAsync(
+                UserId, FinancialOperationType.PaymentCheckoutCreated,
+                "Payment", payment.Id.ToString(),
+                afterState: new { payment.BookingId, payment.Amount, payment.Currency, payment.CheckoutId, payment.PaymentGateway },
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString() ?? "",
+                userAgent: Request.Headers.UserAgent.FirstOrDefault() ?? "",
+                correlationId: correlationId,
+                description: $"Checkout created for booking {booking.Id} via {provider.Provider}");
 
             return Success(new PaymentCheckoutResponseDto
             {
@@ -160,7 +188,9 @@ public class PaymentsController : BaseApiController
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error initiating payment checkout for booking {BookingId}", request.BookingId);
+            _logger.LogError(ex,
+                "HIGH-011: Error initiating payment checkout. BookingId: {BookingId}, CorrelationId: {CorrelationId}",
+                request.BookingId, correlationId);
             return Error<PaymentCheckoutResponseDto>("An error occurred while processing your request", 500);
         }
     }
@@ -172,6 +202,8 @@ public class PaymentsController : BaseApiController
     [Authorize]
     public async Task<ActionResult<ApiResponse<PaymentStatusResponseDto>>> GetPaymentStatus(string checkoutId)
     {
+        var correlationId = Guid.NewGuid().ToString("N")[..12];
+
         try
         {
             // Get payment from database
@@ -196,8 +228,10 @@ public class PaymentsController : BaseApiController
 
             if (!statusResult.Success && statusResult.Status != "Pending")
             {
-                _logger.LogError("Failed to get payment status for checkout {CheckoutId} from {Provider}",
-                    checkoutId, payment.PaymentGateway);
+                _logger.LogError(
+                    "HIGH-011: Failed to get payment status from provider. CheckoutId: {CheckoutId}, " +
+                    "Provider: {Provider}, CorrelationId: {CorrelationId}",
+                    checkoutId, payment.PaymentGateway, correlationId);
             }
 
             // Update payment record based on provider response
@@ -213,33 +247,112 @@ public class PaymentsController : BaseApiController
                 payment.Booking.PaidAt = DateTime.UtcNow;
                 payment.Booking.UpdatedAt = DateTime.UtcNow;
 
+                // HIGH-011: Enhanced structured logging for payment success
                 _logger.LogInformation(
-                    "Payment successful for booking {BookingId}, TransactionId: {TransactionId}",
-                    payment.BookingId,
-                    payment.TransactionId
-                );
+                    "HIGH-011: Payment successful. PaymentId: {PaymentId}, BookingId: {BookingId}, " +
+                    "PreviousStatus: {PreviousStatus}, NewStatus: Success, " +
+                    "TransactionId: {TransactionId}, Amount: {Amount} {Currency}, " +
+                    "CorrelationId: {CorrelationId}",
+                    payment.Id, payment.BookingId, previousStatus,
+                    payment.TransactionId, payment.Amount, payment.Currency, correlationId);
+
+                // HIGH-006: Audit trail for payment status change
+                await _auditService.LogAsync(
+                    null, FinancialOperationType.PaymentStatusChanged,
+                    "Payment", payment.Id.ToString(),
+                    beforeState: new { Status = previousStatus },
+                    afterState: new { payment.Status, payment.TransactionId, payment.CompletedAt },
+                    correlationId: correlationId,
+                    description: $"Payment succeeded for booking {payment.BookingId}");
 
                 // Auto-generate invoice for the paid booking
                 try
                 {
                     await _invoiceService.GenerateInvoiceForBookingAsync(
                         payment.BookingId, "system-payment");
+
                     _logger.LogInformation(
-                        "Invoice auto-generated for booking {BookingId}", payment.BookingId);
+                        "HIGH-011: Invoice auto-generated. BookingId: {BookingId}, CorrelationId: {CorrelationId}",
+                        payment.BookingId, correlationId);
                 }
                 catch (Exception invoiceEx)
                 {
+                    // HIGH-007: If invoice generation fails, log but do not revert payment
                     _logger.LogError(invoiceEx,
-                        "Failed to auto-generate invoice for booking {BookingId}", payment.BookingId);
+                        "HIGH-007: Failed to auto-generate invoice for booking {BookingId}. " +
+                        "Payment remains successful. Manual invoice generation required. " +
+                        "CorrelationId: {CorrelationId}",
+                        payment.BookingId, correlationId);
                 }
             }
             else if (payment.Status == "Failed" && previousStatus != "Failed")
             {
+                // HIGH-011: Enhanced logging for payment failure
                 _logger.LogWarning(
-                    "Payment failed for booking {BookingId}, Reason: {Reason}",
-                    payment.BookingId,
-                    payment.FailureReason
-                );
+                    "HIGH-011: Payment failed. PaymentId: {PaymentId}, BookingId: {BookingId}, " +
+                    "PreviousStatus: {PreviousStatus}, FailureReason: {Reason}, " +
+                    "CorrelationId: {CorrelationId}",
+                    payment.Id, payment.BookingId, previousStatus,
+                    payment.FailureReason, correlationId);
+
+                // HIGH-007: Compensation logic - revert booking status on payment failure
+                if (payment.Booking.Status == "Confirmed" || payment.Booking.PaymentStatus == "Paid")
+                {
+                    var bookingBeforeState = new
+                    {
+                        payment.Booking.Status,
+                        payment.Booking.PaymentStatus,
+                        payment.Booking.PaidAt
+                    };
+
+                    payment.Booking.Status = "ReadyForPayment";
+                    payment.Booking.PaymentStatus = "Pending";
+                    payment.Booking.PaidAt = null;
+                    payment.Booking.UpdatedAt = DateTime.UtcNow;
+
+                    _logger.LogWarning(
+                        "HIGH-007: Booking status reverted due to payment failure. " +
+                        "BookingId: {BookingId}, From: {FromStatus} to ReadyForPayment, " +
+                        "CorrelationId: {CorrelationId}",
+                        payment.BookingId, bookingBeforeState.Status, correlationId);
+
+                    // HIGH-006: Audit trail for compensation
+                    await _auditService.LogAsync(
+                        null, FinancialOperationType.BookingStatusReverted,
+                        "Booking", payment.BookingId.ToString(),
+                        beforeState: bookingBeforeState,
+                        afterState: new { Status = "ReadyForPayment", PaymentStatus = "Pending", PaidAt = (DateTime?)null },
+                        correlationId: correlationId,
+                        description: $"Booking reverted from {bookingBeforeState.Status} to ReadyForPayment due to payment failure");
+
+                    // HIGH-007: Notify customer about failed payment
+                    try
+                    {
+                        if (payment.Booking.Customer?.AppUser != null)
+                        {
+                            await _notificationService.CreateNotificationAsync(
+                                payment.Booking.Customer.AppUser.Id,
+                                "Payment Failed",
+                                $"Your payment for booking #{payment.BookingId} was not successful. Please try again.",
+                                "Payment");
+                        }
+                    }
+                    catch (Exception notifyEx)
+                    {
+                        _logger.LogError(notifyEx,
+                            "HIGH-007: Failed to send payment failure notification for booking {BookingId}",
+                            payment.BookingId);
+                    }
+                }
+
+                // HIGH-006: Audit trail for payment failure
+                await _auditService.LogAsync(
+                    null, FinancialOperationType.PaymentCompensation,
+                    "Payment", payment.Id.ToString(),
+                    beforeState: new { Status = previousStatus },
+                    afterState: new { payment.Status, payment.FailureReason },
+                    correlationId: correlationId,
+                    description: $"Payment failed for booking {payment.BookingId}: {payment.FailureReason}");
             }
 
             await _unitOfWork.Complete();
@@ -260,7 +373,9 @@ public class PaymentsController : BaseApiController
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting payment status for checkout {CheckoutId}", checkoutId);
+            _logger.LogError(ex,
+                "HIGH-011: Error getting payment status. CheckoutId: {CheckoutId}, CorrelationId: {CorrelationId}",
+                checkoutId, correlationId);
             return Error<PaymentStatusResponseDto>("An error occurred while checking payment status", 500);
         }
     }
@@ -335,13 +450,17 @@ public class PaymentsController : BaseApiController
 
     /// <summary>
     /// Initiate refund for a payment
+    /// Requires X-Idempotency-Key header to prevent duplicate refund processing
     /// </summary>
     [HttpPost("{paymentId}/refund")]
     [Authorize(Roles = "Admin")]
+    [Idempotency("payment_refund")]
     public async Task<ActionResult<ApiResponse<PaymentRefundResponseDto>>> RefundPayment(
         int paymentId,
         [FromBody] PaymentRefundRequestDto request)
     {
+        var correlationId = Guid.NewGuid().ToString("N")[..12];
+
         try
         {
             var payment = await _unitOfWork.PaymentRepository.GetPaymentWithBookingAsync(paymentId);
@@ -361,6 +480,12 @@ public class PaymentsController : BaseApiController
                 return Error<PaymentRefundResponseDto>("Payment already refunded");
             }
 
+            // Capture before state for audit
+            var beforeState = new
+            {
+                payment.Status, payment.IsRefunded, payment.RefundAmount, payment.RefundedAt
+            };
+
             // Get the provider that was used for this payment
             var providerType = Enum.TryParse<PaymentProvider>(payment.PaymentGateway, out var pt) ? pt : PaymentProvider.HyperPay;
             var provider = _paymentProviders.FirstOrDefault(p => p.Provider == providerType);
@@ -375,7 +500,10 @@ public class PaymentsController : BaseApiController
 
             if (!refundResult.Success)
             {
-                _logger.LogError("Refund failed for payment {PaymentId}: {Error}", paymentId, refundResult.ErrorMessage);
+                _logger.LogError(
+                    "HIGH-011: Refund failed. PaymentId: {PaymentId}, Amount: {Amount}, " +
+                    "Provider: {Provider}, Error: {Error}, CorrelationId: {CorrelationId}",
+                    paymentId, request.Amount, payment.PaymentGateway, refundResult.ErrorMessage, correlationId);
                 return Error<PaymentRefundResponseDto>(refundResult.ErrorMessage ?? "Refund failed");
             }
 
@@ -409,11 +537,24 @@ public class PaymentsController : BaseApiController
 
             await _unitOfWork.Complete();
 
+            // HIGH-011: Enhanced structured logging for refund
             _logger.LogInformation(
-                "Refund processed for payment {PaymentId}, Amount: {Amount}",
-                paymentId,
-                request.Amount
-            );
+                "HIGH-011: Refund processed. PaymentId: {PaymentId}, RefundAmount: {RefundAmount}, " +
+                "Reason: {Reason}, RefundTransactionId: {RefundTransactionId}, " +
+                "IsFullRefund: {IsFullRefund}, UserId: {UserId}, CorrelationId: {CorrelationId}",
+                paymentId, request.Amount, request.Reason, refundResult.RefundId,
+                request.Amount >= payment.Amount, UserId, correlationId);
+
+            // HIGH-006: Audit trail for refund
+            await _auditService.LogAsync(
+                UserId, FinancialOperationType.PaymentRefundProcessed,
+                "Payment", payment.Id.ToString(),
+                beforeState: beforeState,
+                afterState: new { payment.IsRefunded, payment.RefundAmount, payment.RefundedAt, RefundTransactionId = refundResult.RefundId },
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString() ?? "",
+                userAgent: Request.Headers.UserAgent.FirstOrDefault() ?? "",
+                correlationId: correlationId,
+                description: $"Refund of {request.Amount} {payment.Currency} for payment {paymentId}. Reason: {request.Reason}");
 
             return Success(new PaymentRefundResponseDto
             {
@@ -426,7 +567,9 @@ public class PaymentsController : BaseApiController
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing refund for payment {PaymentId}", paymentId);
+            _logger.LogError(ex,
+                "HIGH-011: Error processing refund. PaymentId: {PaymentId}, CorrelationId: {CorrelationId}",
+                paymentId, correlationId);
             return Error<PaymentRefundResponseDto>("An error occurred while processing refund", 500);
         }
     }
@@ -547,9 +690,13 @@ public class PaymentsController : BaseApiController
 
     private async Task<IActionResult> ProcessWebhook(PaymentProvider providerType, string checkoutId, PaymentWebhookData? webhookData = null)
     {
+        var correlationId = Guid.NewGuid().ToString("N")[..12];
+
         try
         {
-            _logger.LogInformation("Webhook received for {Provider}, CheckoutId: {CheckoutId}", providerType, checkoutId);
+            _logger.LogInformation(
+                "HIGH-011: Webhook received. Provider: {Provider}, CheckoutId: {CheckoutId}, CorrelationId: {CorrelationId}",
+                providerType, checkoutId, correlationId);
 
             var payment = await _unitOfWork.PaymentRepository.GetPaymentWithBookingByCheckoutIdAsync(checkoutId);
 
@@ -593,6 +740,16 @@ public class PaymentsController : BaseApiController
                 }
             }
 
+            // HIGH-011: Log status change
+            if (payment.Status != previousStatus)
+            {
+                _logger.LogInformation(
+                    "HIGH-011: Payment status changed via webhook. PaymentId: {PaymentId}, " +
+                    "BookingId: {BookingId}, PreviousStatus: {PreviousStatus}, NewStatus: {NewStatus}, " +
+                    "CorrelationId: {CorrelationId}",
+                    payment.Id, payment.BookingId, previousStatus, payment.Status, correlationId);
+            }
+
             // Update booking if payment successful
             if (payment.Status == "Success" && previousStatus != "Success")
             {
@@ -601,6 +758,22 @@ public class PaymentsController : BaseApiController
                 payment.Booking.PaymentMethod = payment.PaymentBrand;
                 payment.Booking.PaidAt = DateTime.UtcNow;
                 payment.Booking.UpdatedAt = DateTime.UtcNow;
+            }
+            // HIGH-007: Compensation on webhook failure
+            else if (payment.Status == "Failed" && previousStatus != "Failed")
+            {
+                if (payment.Booking.Status == "Confirmed" || payment.Booking.PaymentStatus == "Paid")
+                {
+                    payment.Booking.Status = "ReadyForPayment";
+                    payment.Booking.PaymentStatus = "Pending";
+                    payment.Booking.PaidAt = null;
+                    payment.Booking.UpdatedAt = DateTime.UtcNow;
+
+                    _logger.LogWarning(
+                        "HIGH-007: Booking status reverted via webhook. BookingId: {BookingId}, " +
+                        "CorrelationId: {CorrelationId}",
+                        payment.BookingId, correlationId);
+                }
             }
 
             await _unitOfWork.Complete();
@@ -613,12 +786,14 @@ public class PaymentsController : BaseApiController
                     await _invoiceService.GenerateInvoiceForBookingAsync(
                         payment.BookingId, "system-webhook");
                     _logger.LogInformation(
-                        "Invoice auto-generated via webhook for booking {BookingId}", payment.BookingId);
+                        "HIGH-011: Invoice auto-generated via webhook. BookingId: {BookingId}, CorrelationId: {CorrelationId}",
+                        payment.BookingId, correlationId);
                 }
                 catch (Exception invoiceEx)
                 {
                     _logger.LogError(invoiceEx,
-                        "Failed to auto-generate invoice via webhook for booking {BookingId}", payment.BookingId);
+                        "HIGH-007: Failed to auto-generate invoice via webhook for booking {BookingId}. CorrelationId: {CorrelationId}",
+                        payment.BookingId, correlationId);
                 }
             }
 
@@ -626,7 +801,9 @@ public class PaymentsController : BaseApiController
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing webhook for {Provider}, CheckoutId: {CheckoutId}", providerType, checkoutId);
+            _logger.LogError(ex,
+                "HIGH-011: Error processing webhook. Provider: {Provider}, CheckoutId: {CheckoutId}, CorrelationId: {CorrelationId}",
+                providerType, checkoutId, correlationId);
             return StatusCode(500);
         }
     }

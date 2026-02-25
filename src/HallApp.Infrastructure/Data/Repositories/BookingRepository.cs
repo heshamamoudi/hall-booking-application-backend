@@ -23,7 +23,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
                 .ThenInclude(vb => vb.Services)
                     .ThenInclude(s => s.ServiceItem)
             .AsSplitQuery()
-            .OrderByDescending(b => b.Created)
+            .OrderByDescending(b => b.CreatedAt)
             .ToListAsync();
     }
 
@@ -42,7 +42,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
                 .ThenInclude(vb => vb.Services)
                     .ThenInclude(s => s.ServiceItem)
             .AsSplitQuery()
-            .OrderByDescending(b => b.Created)
+            .OrderByDescending(b => b.CreatedAt)
             .ToListAsync();
     }
 
@@ -61,7 +61,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
                 .ThenInclude(vb => vb.Services)
                     .ThenInclude(s => s.ServiceItem)
             .AsSplitQuery()
-            .OrderByDescending(b => b.Created)
+            .OrderByDescending(b => b.CreatedAt)
             .ToListAsync();
     }
 
@@ -80,7 +80,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
                 .ThenInclude(vb => vb.Services)
                     .ThenInclude(s => s.ServiceItem)
             .AsSplitQuery()
-            .OrderByDescending(b => b.Created)
+            .OrderByDescending(b => b.CreatedAt)
             .ToListAsync();
     }
 
@@ -99,7 +99,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
                 .ThenInclude(vb => vb.Services)
                     .ThenInclude(s => s.ServiceItem)
             .AsSplitQuery()
-            .OrderByDescending(b => b.Created)
+            .OrderByDescending(b => b.CreatedAt)
             .ToListAsync();
     }
 
@@ -173,7 +173,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
                 .ThenInclude(vb => vb.Services)
                     .ThenInclude(s => s.ServiceItem)
             .AsSplitQuery()
-            .OrderByDescending(b => b.Created)
+            .OrderByDescending(b => b.CreatedAt)
             .ToListAsync();
     }
 

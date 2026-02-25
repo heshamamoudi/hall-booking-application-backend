@@ -25,6 +25,9 @@ public class BookingApprovalController_OwnershipTests
     private readonly Mock<IBookingRepository> _bookingRepository = new();
     private readonly Mock<IHallManagerService> _hallManagerService = new();
     private readonly Mock<IVendorManagerService> _vendorManagerService = new();
+    private readonly Mock<IOrganizationService> _organizationService = new();
+    private readonly Mock<IHallService> _hallService = new();
+    private readonly Mock<INotificationService> _notificationService = new();
     private readonly Mock<ILogger<BookingApprovalController>> _logger = new();
 
     private const int ManagerAUserId = 10;
@@ -43,6 +46,9 @@ public class BookingApprovalController_OwnershipTests
             _unitOfWork.Object,
             _hallManagerService.Object,
             _vendorManagerService.Object,
+            _organizationService.Object,
+            _hallService.Object,
+            _notificationService.Object,
             _logger.Object);
     }
 

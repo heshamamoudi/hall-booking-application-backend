@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using HallApp.Application.Configuration;
+using HallApp.Application.Resilience;
 using HallApp.Application.Services;
 using HallApp.Application.Services.Payment;
 using HallApp.Core.Interfaces.IServices;
@@ -14,6 +15,12 @@ public static class DependencyInjection
     {
         // Payment Settings Configuration
         services.Configure<PaymentSettings>(configuration.GetSection(PaymentSettings.SectionName));
+
+        // Invoice Settings Configuration
+        services.Configure<InvoiceSettings>(configuration.GetSection(InvoiceSettings.SectionName));
+
+        // Business Rules Configuration (HIGH-008 FIX)
+        services.Configure<BusinessRulesSettings>(configuration.GetSection("BusinessRules"));
 
         // AutoMapper
         services.AddAutoMapper(typeof(DependencyInjection));
@@ -46,6 +53,13 @@ public static class DependencyInjection
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<ICustomerProfileService, CustomerProfileService>();
 
+        // HIGH-006: Financial Audit Service
+        services.AddScoped<IFinancialAuditService, FinancialAuditService>();
+
+        // HIGH-012: GDPR Data Retention Service
+        services.AddScoped<IDataRetentionService, DataRetentionService>();
+        services.AddHostedService<DataRetentionBackgroundService>();
+
         // Invoice Service (must be registered BEFORE BookingService due to dependency)
         services.AddScoped<IInvoiceService, InvoiceService>();
 
@@ -63,10 +77,13 @@ public static class DependencyInjection
         services.AddScoped<IPaymentProviderService, TabbyPaymentService>();
         services.AddScoped<IPaymentProviderService, TamaraPaymentService>();
 
-        // HTTP Clients for Payment Providers
-        services.AddHttpClient("HyperPay");
-        services.AddHttpClient("Tabby");
-        services.AddHttpClient("Tamara");
+        // HIGH-004 + HIGH-010: HTTP Clients for Payment Providers with retry and circuit breaker policies
+        services.AddHttpClient("HyperPay")
+            .AddPaymentResiliencePolicies("HyperPay");
+        services.AddHttpClient("Tabby")
+            .AddPaymentResiliencePolicies("Tabby");
+        services.AddHttpClient("Tamara")
+            .AddPaymentResiliencePolicies("Tamara");
 
         return services;
     }

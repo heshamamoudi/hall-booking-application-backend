@@ -1,4 +1,6 @@
 using HallApp.Core.Interfaces.IRepositories;
+using Microsoft.EntityFrameworkCore.Storage;
+using System.Data;
 
 namespace HallApp.Core.Interfaces;
 
@@ -23,5 +25,9 @@ public interface IUnitOfWork : IDisposable
     IPaymentRepository PaymentRepository { get; }
     IPaymentRefundRepository PaymentRefundRepository { get; }
     IHallBlockedDateRepository HallBlockedDateRepository { get; }
+    IIdempotencyKeyRepository IdempotencyKeyRepository { get; }
+    IFinancialAuditLogRepository FinancialAuditLogRepository { get; }
+    IDataRetentionRequestRepository DataRetentionRequestRepository { get; }
     Task<int> Complete();
+    Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted);
 }

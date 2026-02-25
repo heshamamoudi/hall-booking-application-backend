@@ -149,3 +149,17 @@ public class UpdateMemberRoleDto
 {
     public string NewRole { get; set; } = string.Empty;
 }
+
+/// <summary>
+/// DTO for organization-level statistics including halls, bookings, revenue, and team members.
+/// </summary>
+public class OrganizationStatisticsDto
+{
+    public int TotalHalls { get; set; }
+    public int TotalBookings { get; set; }
+    public decimal TotalRevenue { get; set; }
+    public int PendingBookings { get; set; }
+    public int ConfirmedBookings { get; set; }
+    public int CompletedBookings { get; set; }
+    public int ActiveTeamMembers { get; set; }
+}

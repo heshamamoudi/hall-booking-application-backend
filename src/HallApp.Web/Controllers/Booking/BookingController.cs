@@ -37,6 +37,7 @@ namespace HallApp.Web.Controllers.Booking
         private readonly IHallService _hallService;
         private readonly IHallManagerService _hallManagerService;
         private readonly IVendorManagerService _vendorManagerService;
+        private readonly IOrganizationService _organizationService;
         private readonly ILogger<BookingController> _logger;
 
         public BookingController(
@@ -51,6 +52,7 @@ namespace HallApp.Web.Controllers.Booking
             IHallService hallService,
             IHallManagerService hallManagerService,
             IVendorManagerService vendorManagerService,
+            IOrganizationService organizationService,
             ILogger<BookingController> logger)
         {
             _bookingService = bookingService;
@@ -64,6 +66,7 @@ namespace HallApp.Web.Controllers.Booking
             _hallService = hallService;
             _hallManagerService = hallManagerService;
             _vendorManagerService = vendorManagerService;
+            _organizationService = organizationService;
             _logger = logger;
         }
 
@@ -155,8 +158,7 @@ namespace HallApp.Web.Controllers.Booking
                     Coupon = bookingDto.DiscountCode ?? string.Empty,
                     
                     IsBookingConfirmed = false,
-                    IsVisitCompleted = false,
-                    Created = DateTime.UtcNow
+                    IsVisitCompleted = false
                 };
 
                 // Create VendorBookings before saving the booking
@@ -215,10 +217,11 @@ namespace HallApp.Web.Controllers.Booking
                     }
                 }
 
-                var booking = await _bookingService.CreateBookingAsync(bookingEntity);
-                if (booking == null)
+                // Use transactional booking creation with pessimistic locking to prevent race conditions
+                var (success, booking, bookingError) = await _bookingService.CreateBookingWithLockingAsync(bookingEntity);
+                if (!success || booking == null)
                 {
-                    return Error<BookingDto>("Failed to create booking", 500);
+                    return Error<BookingDto>(bookingError, 409); // 409 Conflict for double booking
                 }
 
                 // Send notification to customer
@@ -732,11 +735,13 @@ namespace HallApp.Web.Controllers.Booking
                 bookingDto.CustomerId = createCustomer.Id;
 
                 var bookingEntity = _mapper.Map<HallApp.Core.Entities.BookingEntities.Booking>(bookingDto);
-                var booking = await _bookingService.CreateBookingAsync(bookingEntity);
 
-                if (booking == null)
+                // Use transactional booking creation with pessimistic locking to prevent race conditions
+                var (success, booking, errorMessage) = await _bookingService.CreateBookingWithLockingAsync(bookingEntity);
+
+                if (!success || booking == null)
                 {
-                    return Error<BookingDto>("Failed to create booking", 500);
+                    return Error<BookingDto>(errorMessage, 409); // 409 Conflict for double booking
                 }
 
                 // Send notification (async)
@@ -800,10 +805,22 @@ namespace HallApp.Web.Controllers.Booking
                     isAuthorized = customer != null && booking.CustomerId == customer.Id;
                 }
 
-                if (!isAuthorized && (User.IsInRole("HallOrganizationManager") || User.IsInRole("HallManager")))
+                // HallManager: check assigned halls
+                if (!isAuthorized && User.IsInRole("HallManager"))
                 {
                     var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(UserId);
                     isAuthorized = hallManager?.Halls.Any(h => h.ID == booking.HallId) ?? false;
+                }
+
+                // HallOrganizationManager: check org ownership of the hall
+                if (!isAuthorized && User.IsInRole("HallOrganizationManager"))
+                {
+                    var org = await _organizationService.GetOrganizationByOwnerId(UserId);
+                    if (org != null)
+                    {
+                        var orgHalls = await _hallService.GetOrganizationHallsAsync(org.Id);
+                        isAuthorized = orgHalls?.Any(h => h.ID == booking.HallId) ?? false;
+                    }
                 }
 
                 if (!isAuthorized && User.IsInRole("VendorManager"))
@@ -887,13 +904,34 @@ namespace HallApp.Web.Controllers.Booking
         {
             try
             {
-                // Authorization: Verify HallManager owns this hall
+                // Authorization: Verify HallManager or HallOrganizationManager owns this hall
                 if ((User.IsInRole("HallOrganizationManager") || User.IsInRole("HallManager")) && !IsAdmin)
                 {
-                    var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                    var managerHalls = await _hallService.GetHallsByManagerAsync(userId ?? string.Empty);
-                    if (!managerHalls.Any(h => h.ID == hallId))
+                    var hasAccess = false;
+
+                    // HallOrganizationManager: check organization halls
+                    if (User.IsInRole("HallOrganizationManager"))
                     {
+                        var org = await _organizationService.GetOrganizationByOwnerId(UserId);
+                        if (org != null)
+                        {
+                            var orgHalls = await _hallService.GetOrganizationHallsAsync(org.Id);
+                            hasAccess = orgHalls?.Any(h => h.ID == hallId) == true;
+                        }
+                    }
+
+                    // Also check direct hall assignments (HallManager link)
+                    if (!hasAccess)
+                    {
+                        var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(UserId);
+                        hasAccess = hallManager?.Halls?.Any(h => h.ID == hallId) == true;
+                    }
+
+                    if (!hasAccess)
+                    {
+                        _logger.LogWarning(
+                            "Access denied: User {UserId} attempted to access bookings for hall {HallId}",
+                            UserId, hallId);
                         return Error<IEnumerable<BookingDto>>("You do not have access to bookings for this hall", 403);
                     }
                 }
@@ -1022,6 +1060,41 @@ namespace HallApp.Web.Controllers.Booking
                     var updatedEntity = await _bookingService.UpdateCustomerBookingAsync(UserId.ToString(), entityToUpdate);
                     updatedBooking = _mapper.Map<BookingDto>(updatedEntity);
                 }
+                else if (User.IsInRole("HallOrganizationManager") || User.IsInRole("HallManager"))
+                {
+                    // HallOrganizationManager / HallManager can update bookings for halls they own
+                    var hasAccess = false;
+
+                    // HallOrganizationManager: check organization halls
+                    if (User.IsInRole("HallOrganizationManager"))
+                    {
+                        var org = await _organizationService.GetOrganizationByOwnerId(UserId);
+                        if (org != null)
+                        {
+                            var orgHalls = await _hallService.GetOrganizationHallsAsync(org.Id);
+                            hasAccess = orgHalls?.Any(h => h.ID == existingBooking.HallId) == true;
+                        }
+                    }
+
+                    // Also check direct hall assignments (HallManager link)
+                    if (!hasAccess)
+                    {
+                        var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(UserId);
+                        hasAccess = hallManager?.Halls?.Any(h => h.ID == existingBooking.HallId) == true;
+                    }
+
+                    if (!hasAccess)
+                    {
+                        _logger.LogWarning(
+                            "Access denied: User {UserId} attempted to update booking {BookingId} for hall {HallId}",
+                            UserId, id, existingBooking.HallId);
+                        return Error<BookingDto>("You do not have permission to update bookings for this hall", 403);
+                    }
+
+                    var entityToUpdate = _mapper.Map<HallApp.Core.Entities.BookingEntities.Booking>(updateDto);
+                    var updatedEntity = await _bookingService.UpdateBookingAsync(entityToUpdate);
+                    updatedBooking = _mapper.Map<BookingDto>(updatedEntity);
+                }
                 else
                 {
                     return Error<BookingDto>("You can only update your own bookings", 403);
@@ -1066,7 +1139,7 @@ namespace HallApp.Web.Controllers.Booking
         }
 
         /// <summary>
-        /// Cancel booking
+        /// Cancel booking. Rejects cancellation of past events or completed visits.
         /// </summary>
         /// <param name="id">Booking ID</param>
         /// <returns>Success response</returns>
@@ -1087,6 +1160,32 @@ namespace HallApp.Web.Controllers.Booking
                 if (!IsAdmin && (cancelCustomer == null || existingBooking.CustomerId != cancelCustomer.Id))
                 {
                     return Error<string>("You can only cancel your own bookings", 403);
+                }
+
+                // Business rule: Prevent cancelling bookings for events that have already occurred
+                if (existingBooking.EventDate < DateTime.UtcNow)
+                {
+                    _logger.LogWarning(
+                        "Cancellation rejected: Booking {BookingId} event date {EventDate} has already passed. Requested by user {UserId}",
+                        id, existingBooking.EventDate, UserId);
+                    return Error<string>(
+                        "Cannot cancel a booking for an event that has already occurred.", 400);
+                }
+
+                // Business rule: Prevent cancelling bookings that have been marked as visit completed
+                if (existingBooking.IsVisitCompleted)
+                {
+                    _logger.LogWarning(
+                        "Cancellation rejected: Booking {BookingId} has been marked as visit completed. Requested by user {UserId}",
+                        id, UserId);
+                    return Error<string>(
+                        "Cannot cancel a booking that has been marked as visit completed.", 400);
+                }
+
+                // Business rule: Prevent cancelling already cancelled bookings
+                if (existingBooking.Status == "Cancelled")
+                {
+                    return Error<string>("This booking has already been cancelled.", 400);
                 }
 
                 var result = await _bookingService.CancelBookingAsync(id);

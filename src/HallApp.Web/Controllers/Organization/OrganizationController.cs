@@ -1,4 +1,5 @@
 using HallApp.Application.DTOs.Organization;
+using HallApp.Application.DTOs.Common;
 using HallApp.Core.Entities;
 using HallApp.Core.Exceptions;
 using HallApp.Core.Interfaces.IServices;
@@ -113,6 +114,108 @@ public class OrganizationController : BaseApiController
     }
 
     /// <summary>
+    /// Get organization statistics including halls, bookings, revenue, and team members.
+    /// Only accessible by the organization owner (HallOrganizationManager) or Admin.
+    /// </summary>
+    [Authorize(Roles = "HallOrganizationManager,Admin")]
+    [HttpGet("{id:int}/statistics")]
+    public async Task<ActionResult<ApiResponse<OrganizationStatisticsDto>>> GetOrganizationStatistics(
+        int id,
+        [FromServices] IBookingService bookingService,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var org = await _organizationService.GetOrganizationById(id);
+            if (org == null)
+            {
+                return Error<OrganizationStatisticsDto>("Organization not found", 404);
+            }
+
+            // Authorization: only the owner or an admin can view statistics
+            if (org.OwnerId != UserId && !User.IsInRole("Admin"))
+            {
+                _logger.LogWarning(
+                    "Access denied: User {UserId} attempted to access statistics for organization {OrgId}",
+                    UserId, id);
+                return Error<OrganizationStatisticsDto>("You do not have access to this organization's statistics", 403);
+            }
+
+            _logger.LogInformation(
+                "Fetching statistics for organization {OrgId} requested by user {UserId}",
+                id, UserId);
+
+            // Get halls for this organization
+            var halls = await _hallService.GetOrganizationHallsAsync(id);
+            var totalHalls = halls.Count;
+
+            // Get aggregated booking and revenue stats from hall stats service
+            var hallIds = halls.Select(h => h.ID).ToList();
+            int totalBookings = 0;
+            decimal totalRevenue = 0m;
+            int pendingBookings = 0;
+            int confirmedBookings = 0;
+            int completedBookings = 0;
+
+            if (hallIds.Count > 0)
+            {
+                var statsMap = await _hallStatsService.GetStatsForHallsAsync(hallIds, cancellationToken);
+                totalBookings = statsMap.Values.Sum(s => s.TotalBookings);
+                totalRevenue = statsMap.Values.Sum(s => s.TotalRevenue);
+
+                // Get detailed booking status counts per hall
+                foreach (var hallId in hallIds)
+                {
+                    var bookings = await bookingService.GetBookingsByHallIdAsync(hallId);
+                    var bookingList = bookings.ToList();
+                    pendingBookings += bookingList.Count(b => b.Status == "Pending");
+                    confirmedBookings += bookingList.Count(b =>
+                        b.Status == "HallApproved" || b.Status == "Confirmed" || b.IsBookingConfirmed);
+                    completedBookings += bookingList.Count(b =>
+                        b.Status == "Completed" || b.IsVisitCompleted);
+                }
+            }
+
+            // Get active team members
+            var members = await _teamMemberService.GetTeamMembers(id);
+            var activeTeamMembers = members.Count;
+
+            var statisticsDto = new OrganizationStatisticsDto
+            {
+                TotalHalls = totalHalls,
+                TotalBookings = totalBookings,
+                TotalRevenue = totalRevenue,
+                PendingBookings = pendingBookings,
+                ConfirmedBookings = confirmedBookings,
+                CompletedBookings = completedBookings,
+                ActiveTeamMembers = activeTeamMembers
+            };
+
+            _logger.LogInformation(
+                "Statistics retrieved for organization {OrgId}: {TotalHalls} halls, {TotalBookings} bookings, {TotalRevenue} revenue",
+                id, totalHalls, totalBookings, totalRevenue);
+
+            return Success(statisticsDto, "Organization statistics retrieved successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Organization statistics request cancelled for organization {OrgId}", id);
+            return StatusCode(499, new ApiResponse<OrganizationStatisticsDto>
+            {
+                StatusCode = 499,
+                Message = "Request cancelled",
+                IsSuccess = false
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving statistics for organization {OrgId}", id);
+            return Error<OrganizationStatisticsDto>(
+                "An error occurred processing your request. Please try again.", 500);
+        }
+    }
+
+    /// <summary>
     /// Get all organizations (Admin only).
     /// </summary>
     [Authorize(Roles = "Admin")]
@@ -199,33 +302,50 @@ public class OrganizationController : BaseApiController
     }
 
     /// <summary>
-    /// Get team members for an organization.
+    /// Get team members for an organization with pagination support.
     /// </summary>
+    /// <param name="id">Organization ID</param>
+    /// <param name="page">Page number (default 1, minimum 1)</param>
+    /// <param name="pageSize">Items per page (default 20, range 1-100)</param>
     [Authorize(Roles = "HallOrganizationManager,VendorOrganizationManager,HallManager,VendorManager")]
     [HttpGet("{id:int}/members")]
-    public async Task<ActionResult<ApiResponse<List<TeamMemberDto>>>> GetMembers(int id)
+    public async Task<ActionResult<ApiResponse<PagedResultDto<TeamMemberDto>>>> GetMembers(
+        int id,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
         try
         {
+            // Clamp pagination parameters to valid ranges
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
             // Verify user belongs to this organization
             var org = await _organizationService.GetOrganizationById(id);
             if (org == null)
             {
-                return Error<List<TeamMemberDto>>("Organization not found", 404);
+                return Error<PagedResultDto<TeamMemberDto>>("Organization not found", 404);
             }
 
             if (!IsAdmin && org.OwnerId != UserId &&
                 (org.Members == null || !org.Members.Any(m => m.AppUserId == UserId)))
             {
-                return Error<List<TeamMemberDto>>("You do not have access to this organization", 403);
+                return Error<PagedResultDto<TeamMemberDto>>("You do not have access to this organization", 403);
             }
 
             var members = await _teamMemberService.GetTeamMembers(id);
+            var totalCount = members.Count;
+
+            // Apply pagination: Skip and Take on the full member list
+            var pagedMembers = members
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
 
             // HIGH-6 FIX: Load all organization resources ONCE before the loop
             // instead of making 2 database calls per member (N+1 query elimination).
             // This reduces queries from 2*N to a fixed 3 regardless of member count.
-            var memberAppUserIds = members.Select(m => m.AppUserId).ToList();
+            var memberAppUserIds = pagedMembers.Select(m => m.AppUserId).ToList();
 
             // Pre-load organization-scoped resources and manager ID mappings
             Dictionary<int, int>? appUserToManagerIdMap = null;
@@ -245,7 +365,7 @@ public class OrganizationController : BaseApiController
 
             // Build TeamMemberDto list with assigned resources using in-memory filtering
             var dtos = new List<TeamMemberDto>();
-            foreach (var member in members)
+            foreach (var member in pagedMembers)
             {
                 var memberDto = new TeamMemberDto
                 {
@@ -299,11 +419,24 @@ public class OrganizationController : BaseApiController
                 dtos.Add(memberDto);
             }
 
-            return Success(dtos, $"Found {dtos.Count} team members");
+            var pagedResult = new PagedResultDto<TeamMemberDto>
+            {
+                Items = dtos,
+                TotalCount = totalCount,
+                PageNumber = page,
+                PageSize = pageSize
+            };
+
+            _logger.LogInformation(
+                "Retrieved {Count} of {TotalCount} team members for organization {OrgId} (page {Page})",
+                dtos.Count, totalCount, id, page);
+
+            return Success(pagedResult, $"Found {totalCount} team members (page {page} of {pagedResult.TotalPages})");
         }
         catch (Exception ex)
         {
-            return Error<List<TeamMemberDto>>($"Failed to retrieve team members: {ex.Message}", 500);
+            _logger.LogError(ex, "Error retrieving team members for organization {OrgId}", id);
+            return Error<PagedResultDto<TeamMemberDto>>($"Failed to retrieve team members: {ex.Message}", 500);
         }
     }
 

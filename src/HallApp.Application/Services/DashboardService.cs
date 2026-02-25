@@ -233,7 +233,7 @@ public class DashboardService : IDashboardService
         var customersMap = customers.ToDictionary(c => c.Id, c => c);
         
         var recentBookings = bookings
-            .OrderByDescending(b => b.Created)
+            .OrderByDescending(b => b.CreatedAt)
             .Take(count)
             .Select(b => {
                 var amount = (decimal)b.TotalAmount;
@@ -260,7 +260,7 @@ public class DashboardService : IDashboardService
                     Action = b.Status ?? "Pending",
                     Description = $"Hall Booking #{b.Id}",
                     UserName = customerName,
-                    Timestamp = b.Created,
+                    Timestamp = b.CreatedAt,
                     Amount = amount
                 };
             })

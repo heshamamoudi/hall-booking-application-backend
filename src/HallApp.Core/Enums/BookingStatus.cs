@@ -17,7 +17,7 @@ public enum BookingStatus
     /// <summary>Vendors are reviewing in parallel</summary>
     VendorsApproving = 3,
     
-    /// <summary>All vendors approved OR all rejected - ready for payment</summary>
+    /// <summary>All vendors approved, or partial approval (some approved, some rejected) - ready for payment with approved vendors</summary>
     ReadyForPayment = 4,
     
     /// <summary>Payment completed</summary>
@@ -32,7 +32,7 @@ public enum BookingStatus
     /// <summary>Hall rejected the booking</summary>
     HallRejected = 8,
     
-    /// <summary>At least one vendor rejected</summary>
+    /// <summary>ALL vendors rejected the booking. Partial rejections (some approved, some rejected) proceed to ReadyForPayment instead.</summary>
     VendorRejected = 9
 }
 

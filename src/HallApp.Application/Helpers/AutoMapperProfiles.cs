@@ -455,10 +455,11 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.IsVisitCompleted, opt => opt.MapFrom(src => src.IsVisitCompleted))
             .ForMember(dest => dest.IsBookingConfirmed, opt => opt.MapFrom(src => src.IsBookingConfirmed))
             .ForMember(dest => dest.BookingDate, opt => opt.MapFrom(src => src.BookingDate))
-            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
-            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
-            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.Created))
-            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.Updated))
+            // CRIT-004 FIX: Map from CreatedAt/UpdatedAt (removed duplicate Created/Updated)
+            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.CreatedAt))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.UpdatedAt))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
             .ForMember(dest => dest.PaymentStatus, opt => opt.MapFrom(src => src.PaymentStatus ?? "Pending"))
             // Enhanced customer information
             .ForMember(dest => dest.EventDate, opt => opt.MapFrom(src => src.EventDate))
@@ -498,8 +499,9 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.IsBookingConfirmed, opt => opt.MapFrom(src => src.IsBookingConfirmed))
             .ForMember(dest => dest.BookingDate, opt => opt.MapFrom(src => src.BookingDate))
             .ForMember(dest => dest.VisitDate, opt => opt.MapFrom(src => src.VisitDate))
-            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
-            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
+            // CRIT-004 FIX: Map DTO Created/Updated to entity CreatedAt/UpdatedAt
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.Updated))
             .ForMember(dest => dest.VendorBookings, opt => opt.Ignore())
             .ForMember(dest => dest.PackageDetails, opt => opt.Ignore())
             .ForMember(dest => dest.EventDate, opt => opt.MapFrom(src => src.EventDate))
@@ -518,9 +520,7 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.TaxRate, opt => opt.MapFrom(src => src.TaxRate))
             .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount))
             .ForMember(dest => dest.Currency, opt => opt.MapFrom(src => src.Currency))
-            .ForMember(dest => dest.PaidAt, opt => opt.MapFrom(src => src.PaidAt))
-            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
+            .ForMember(dest => dest.PaidAt, opt => opt.MapFrom(src => src.PaidAt));
 
         // ✅ AUTOMAPPER-FIX: BookingUpdateDto → Booking mapping
         CreateMap<HallApp.Application.DTOs.Booking.Updaters.BookingUpdateDto, HallApp.Core.Entities.BookingEntities.Booking>()
@@ -535,8 +535,9 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.IsBookingConfirmed, opt => opt.MapFrom(src => src.IsBookingConfirmed))
             .ForMember(dest => dest.BookingDate, opt => opt.MapFrom(src => src.BookingDate))
             .ForMember(dest => dest.VisitDate, opt => opt.MapFrom(src => src.VisitDate))
-            .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
-            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
+            // CRIT-004 FIX: Map DTO Created/Updated to entity CreatedAt/UpdatedAt
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.Created))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.Updated))
             // Ignore navigation properties and complex objects
             .ForMember(dest => dest.Hall, opt => opt.Ignore())
             .ForMember(dest => dest.Customer, opt => opt.Ignore())
@@ -771,7 +772,10 @@ public class AutoMapperProfiles : Profile
                     ? $"{src.Customer.AppUser.FirstName} {src.Customer.AppUser.LastName}".Trim()
                     : src.BuyerName))
             .ForMember(dest => dest.HallName, opt => opt.MapFrom(src =>
-                src.Hall != null ? src.Hall.Name : ""));
+                src.Hall != null ? src.Hall.Name : ""))
+            .ForMember(dest => dest.IsCancelled, opt => opt.MapFrom(src => src.IsCancelled))
+            .ForMember(dest => dest.IsRegenerated, opt => opt.MapFrom(src => src.IsRegenerated))
+            .ForMember(dest => dest.RefundAmount, opt => opt.MapFrom(src => src.RefundAmount));
 
         CreateMap<HallApp.Application.DTOs.Invoice.CreateInvoiceDto, HallApp.Core.Entities.BookingEntities.Invoice>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
@@ -781,6 +785,23 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.Hall, opt => opt.Ignore())
             .ForMember(dest => dest.Booking, opt => opt.Ignore())
             .ForMember(dest => dest.LineItems, opt => opt.Ignore());
+
+        // Enhanced invoice list DTO for the redesigned invoice page
+        CreateMap<HallApp.Core.Entities.BookingEntities.Invoice, HallApp.Application.DTOs.Invoice.InvoiceListEnhancedDto>()
+            .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src =>
+                src.Customer != null && src.Customer.AppUser != null
+                    ? $"{src.Customer.AppUser.FirstName} {src.Customer.AppUser.LastName}".Trim()
+                    : src.BuyerName))
+            .ForMember(dest => dest.HallName, opt => opt.MapFrom(src =>
+                src.Hall != null ? src.Hall.Name : ""))
+            .ForMember(dest => dest.BookingId, opt => opt.MapFrom(src => src.BookingId))
+            .ForMember(dest => dest.CustomerId, opt => opt.MapFrom(src => src.CustomerId))
+            .ForMember(dest => dest.TaxAmount, opt => opt.MapFrom(src => src.TaxAmount))
+            .ForMember(dest => dest.PaymentMethod, opt => opt.MapFrom(src => src.PaymentMethod))
+            .ForMember(dest => dest.IsCancelled, opt => opt.MapFrom(src => src.IsCancelled))
+            .ForMember(dest => dest.IsRegenerated, opt => opt.MapFrom(src => src.IsRegenerated))
+            .ForMember(dest => dest.RefundAmount, opt => opt.MapFrom(src => src.RefundAmount))
+            .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy));
     }
 
     // Helper method to calculate financial summary for BookingDto

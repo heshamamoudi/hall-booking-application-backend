@@ -3,6 +3,7 @@ namespace HallApp.Core.Interfaces.IServices;
 public interface IHallAvailabilityService
 {
     Task<bool> IsAvailableAsync(int hallId, DateTime eventDate, TimeSpan startTime, TimeSpan endTime);
+    Task<bool> IsAvailableAsync(int hallId, DateTime eventDate, TimeSpan startTime, TimeSpan endTime, bool useLocking);
     Task<List<TimeSlot>> GetAvailableTimeSlotsAsync(int hallId, DateTime date);
     Task<List<DateTime>> GetAvailableDatesAsync(int hallId, DateTime startDate, DateTime endDate);
     Task<List<int>> GetAvailableHallsAsync(List<int> hallIds, DateTime eventDate, TimeSpan startTime, TimeSpan endTime);
