@@ -79,7 +79,7 @@ public class PaymentsController : BaseApiController
     /// </summary>
     [HttpPost("checkout")]
     [Authorize]
-    [Idempotency("payment_checkout")]
+    [Idempotency("payment_checkout", required: true)]
     public async Task<ActionResult<ApiResponse<PaymentCheckoutResponseDto>>> InitiateCheckout(
         [FromBody] PaymentCheckoutRequestDto request)
     {
@@ -93,6 +93,20 @@ public class PaymentsController : BaseApiController
             if (booking == null)
             {
                 return Error<PaymentCheckoutResponseDto>("Booking not found", 404);
+            }
+
+            // RBAC-002: Verify booking ownership - only the booking's customer or admin can initiate payment
+            if (!IsAdmin)
+            {
+                var customer = await _unitOfWork.CustomerRepository.GetCustomerByAppUserIdAsync(UserId);
+                if (customer == null || booking.CustomerId != customer.Id)
+                {
+                    _logger.LogWarning(
+                        "RBAC-002: User {UserId} attempted to initiate checkout for booking {BookingId} they do not own. " +
+                        "CorrelationId: {CorrelationId}",
+                        UserId, request.BookingId, correlationId);
+                    return Error<PaymentCheckoutResponseDto>("You can only initiate payment for your own bookings", 403);
+                }
             }
 
             if (booking.Status == "Cancelled")
@@ -212,6 +226,20 @@ public class PaymentsController : BaseApiController
             if (payment == null)
             {
                 return Error<PaymentStatusResponseDto>("Payment not found", 404);
+            }
+
+            // CRIT-SEC-004: Verify booking ownership - only the booking's customer or admin can view payment status
+            if (!IsAdmin)
+            {
+                var customer = await _unitOfWork.CustomerRepository.GetCustomerByAppUserIdAsync(UserId);
+                if (customer == null || payment.Booking?.CustomerId != customer.Id)
+                {
+                    _logger.LogWarning(
+                        "CRIT-SEC-004: User {UserId} attempted to view payment status for checkout {CheckoutId} " +
+                        "belonging to booking {BookingId} they do not own. CorrelationId: {CorrelationId}",
+                        UserId, checkoutId, payment.BookingId, correlationId);
+                    return Error<PaymentStatusResponseDto>("You can only view payment status for your own bookings", 403);
+                }
             }
 
             // Get the provider that was used for this payment
@@ -454,7 +482,7 @@ public class PaymentsController : BaseApiController
     /// </summary>
     [HttpPost("{paymentId}/refund")]
     [Authorize(Roles = "Admin")]
-    [Idempotency("payment_refund")]
+    [Idempotency("payment_refund", required: true)]
     public async Task<ActionResult<ApiResponse<PaymentRefundResponseDto>>> RefundPayment(
         int paymentId,
         [FromBody] PaymentRefundRequestDto request)

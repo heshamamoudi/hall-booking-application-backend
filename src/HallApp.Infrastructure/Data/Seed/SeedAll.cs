@@ -970,7 +970,7 @@ public class SeedAll
                     // Financials
                     SubtotalBeforeTax = subtotalBeforeTax,
                     TaxableAmount = subtotalBeforeTax,
-                    TaxRate = 15.00m,
+                    TaxRate = 0.15m,
                     TaxAmount = taxAmount,
                     DiscountAmount = booking.DiscountAmount,
                     TotalAmountWithTax = totalWithTax,
@@ -1019,7 +1019,7 @@ public class SeedAll
                     UnitPrice = booking.HallCost,
                     DiscountAmount = booking.DiscountAmount,
                     SubtotalBeforeTax = booking.HallCost - booking.DiscountAmount,
-                    TaxRate = 15.00m,
+                    TaxRate = 0.15m,
                     TaxAmount = (booking.HallCost - booking.DiscountAmount) * 0.15m,
                     TotalAmount = (booking.HallCost - booking.DiscountAmount) * 1.15m,
                     TaxCategory = "Standard"
@@ -1038,7 +1038,7 @@ public class SeedAll
                         UnitPrice = booking.VendorServicesCost,
                         DiscountAmount = 0,
                         SubtotalBeforeTax = booking.VendorServicesCost,
-                        TaxRate = 15.00m,
+                        TaxRate = 0.15m,
                         TaxAmount = booking.VendorServicesCost * 0.15m,
                         TotalAmount = booking.VendorServicesCost * 1.15m,
                         TaxCategory = "Standard"

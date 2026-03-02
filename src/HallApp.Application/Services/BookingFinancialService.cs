@@ -11,6 +11,7 @@ public class BookingFinancialService : IBookingFinancialService
     private readonly ILogger<BookingFinancialService> _logger;
 
     // Tax rates by region (Saudi Arabia VAT = 15%)
+    // CRIT-FIN-002: Use decimal fraction format (0.15 = 15%)
     private readonly Dictionary<string, decimal> _taxRates = new()
     {
         { "Riyadh", 0.15m },
@@ -53,13 +54,13 @@ public class BookingFinancialService : IBookingFinancialService
             if (services?.Any() == true)
             {
                 var servicesByVendor = services.GroupBy(s => s.VendorId);
-                
+
                 foreach (var vendorGroup in servicesByVendor)
                 {
                     var vendorId = vendorGroup.Key;
                     var vendor = await _vendorService.GetVendorByIdAsync(vendorId);
                     var vendorName = vendor?.Name ?? $"Vendor {vendorId}";
-                    
+
                     var vendorServices = new List<ServiceFinancialResult>();
                     decimal vendorTotal = 0;
 
@@ -68,7 +69,7 @@ public class BookingFinancialService : IBookingFinancialService
                         var serviceItem = await _serviceItemService.GetServiceItemByIdAsync(service.ServiceItemId);
                         var unitPrice = serviceItem?.Price ?? 0;
                         var totalPrice = unitPrice * service.Quantity;
-                        
+
                         vendorServices.Add(new ServiceFinancialResult
                         {
                             ServiceItemId = service.ServiceItemId,
@@ -96,18 +97,13 @@ public class BookingFinancialService : IBookingFinancialService
             // 3. Calculate subtotal
             var subtotal = hallCost + vendorServicesCost;
 
-            // 4. Apply discount (placeholder logic)
-            decimal discountAmount = 0;
-            if (!string.IsNullOrEmpty(discountCode))
-            {
-                // TODO: Implement discount logic based on coupon codes
-                _logger.LogInformation("Discount code {DiscountCode} applied", discountCode);
-            }
+            // 4. Apply discount (CRIT-FIN-001)
+            decimal discountAmount = CalculateDiscount(discountCode, subtotal);
 
-            // 5. Calculate tax
+            // 5. Calculate tax (CRIT-FIN-002: uses decimal fraction rate, e.g. 0.15 = 15%)
             var taxRate = _taxRates.TryGetValue(region, out var rate) ? rate : _taxRates["DEFAULT"];
             var taxableAmount = subtotal - discountAmount;
-            var taxAmount = taxableAmount * taxRate;
+            var taxAmount = Math.Round(taxableAmount * taxRate, 2, MidpointRounding.AwayFromZero);
 
             // 6. Calculate total
             var totalAmount = taxableAmount + taxAmount;
@@ -125,7 +121,10 @@ public class BookingFinancialService : IBookingFinancialService
                 VendorBreakdown = vendorBreakdown
             };
 
-            _logger.LogInformation("Financial calculation completed. Total: {TotalAmount} SAR", totalAmount);
+            _logger.LogInformation(
+                "Financial calculation completed. HallCost: {HallCost}, VendorCost: {VendorCost}, " +
+                "Discount: {Discount}, Tax: {Tax}, Total: {TotalAmount} SAR",
+                hallCost, vendorServicesCost, discountAmount, taxAmount, totalAmount);
             return result;
         }
         catch (Exception ex)
@@ -133,5 +132,35 @@ public class BookingFinancialService : IBookingFinancialService
             _logger.LogError(ex, "Error calculating booking financials");
             throw;
         }
+    }
+
+    /// <summary>
+    /// CRIT-FIN-001: Calculate discount amount from coupon code.
+    /// Currently the coupon system (CouponRepository, coupon validation, discount types)
+    /// is not yet implemented in the database layer. This method returns 0 and logs a warning
+    /// when a discount code is provided.
+    ///
+    /// TODO: When CouponRepository is implemented, replace this with:
+    ///   1. Look up the coupon by code via ICouponRepository.GetActiveCouponByCodeAsync(code)
+    ///   2. Validate: IsActive, not expired, minimum order amount, usage limits
+    ///   3. Calculate: Percentage (subtotal * rate / 100) or FixedAmount
+    ///   4. Apply MaxDiscountAmount cap if configured
+    ///   5. Return the computed discount amount
+    /// </summary>
+    private decimal CalculateDiscount(string discountCode, decimal subtotal)
+    {
+        if (string.IsNullOrWhiteSpace(discountCode))
+        {
+            return 0;
+        }
+
+        // TODO: Implement coupon validation when CouponRepository is available.
+        // The Coupon entity exists but has no discount fields, no DbSet, and no repository yet.
+        _logger.LogWarning(
+            "CRIT-FIN-001: Discount code '{DiscountCode}' was provided but the coupon system is not yet " +
+            "implemented. Discount amount returned as 0. Subtotal: {Subtotal} SAR",
+            discountCode, subtotal);
+
+        return 0;
     }
 }

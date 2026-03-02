@@ -1091,6 +1091,17 @@ namespace HallApp.Web.Controllers.Booking
                         return Error<BookingDto>("You do not have permission to update bookings for this hall", 403);
                     }
 
+                    // RBAC-004: Hall managers cannot modify financial fields - preserve original values
+                    updateDto.TotalPrice = existingBooking.TotalAmount > 0 ? (double)existingBooking.TotalAmount : 0;
+                    updateDto.Tax = existingBooking.TaxAmount > 0 ? (double)existingBooking.TaxAmount : 0;
+                    updateDto.Discount = existingBooking.DiscountAmount > 0 ? (double)existingBooking.DiscountAmount : 0;
+                    updateDto.Coupon = existingBooking.Coupon ?? string.Empty;
+                    updateDto.PaymentMethod = existingBooking.PaymentMethod ?? string.Empty;
+
+                    _logger.LogInformation(
+                        "RBAC-004: Hall manager {UserId} updating booking {BookingId} - financial fields preserved from original",
+                        UserId, id);
+
                     var entityToUpdate = _mapper.Map<HallApp.Core.Entities.BookingEntities.Booking>(updateDto);
                     var updatedEntity = await _bookingService.UpdateBookingAsync(entityToUpdate);
                     updatedBooking = _mapper.Map<BookingDto>(updatedEntity);
@@ -1140,10 +1151,11 @@ namespace HallApp.Web.Controllers.Booking
 
         /// <summary>
         /// Cancel booking. Rejects cancellation of past events or completed visits.
+        /// Authorization: Admin, booking customer, or hall manager/org manager for the hall.
         /// </summary>
         /// <param name="id">Booking ID</param>
         /// <returns>Success response</returns>
-        [Authorize(Roles = "Admin,Customer")]
+        [Authorize(Roles = "Admin,Customer,HallOrganizationManager,HallManager")]
         [HttpDelete("{id:int}")]
         public async Task<ActionResult<ApiResponse<string>>> CancelBooking(int id)
         {
@@ -1155,11 +1167,42 @@ namespace HallApp.Web.Controllers.Booking
                     return Error<string>($"Booking with ID {id} not found", 404);
                 }
 
-                // Check permissions (resolve Customer entity ID)
-                var cancelCustomer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
-                if (!IsAdmin && (cancelCustomer == null || existingBooking.CustomerId != cancelCustomer.Id))
+                // HIGH-RBAC: Comprehensive authorization check
+                var isCancelAuthorized = IsAdmin;
+
+                if (!isCancelAuthorized && User.IsInRole("Customer"))
                 {
-                    return Error<string>("You can only cancel your own bookings", 403);
+                    var cancelCustomer = await _customerService.GetCustomerByAppUserIdAsync(UserId);
+                    isCancelAuthorized = cancelCustomer != null && existingBooking.CustomerId == cancelCustomer.Id;
+                }
+
+                if (!isCancelAuthorized && (User.IsInRole("HallManager") || User.IsInRole("HallOrganizationManager")))
+                {
+                    // HallOrganizationManager: check organization halls
+                    if (User.IsInRole("HallOrganizationManager"))
+                    {
+                        var org = await _organizationService.GetOrganizationByOwnerId(UserId);
+                        if (org != null)
+                        {
+                            var orgHalls = await _hallService.GetOrganizationHallsAsync(org.Id);
+                            isCancelAuthorized = orgHalls?.Any(h => h.ID == existingBooking.HallId) == true;
+                        }
+                    }
+
+                    // Also check direct hall assignments (HallManager link)
+                    if (!isCancelAuthorized)
+                    {
+                        var hallManager = await _hallManagerService.GetHallManagerByAppUserIdAsync(UserId);
+                        isCancelAuthorized = hallManager?.Halls?.Any(h => h.ID == existingBooking.HallId) == true;
+                    }
+                }
+
+                if (!isCancelAuthorized)
+                {
+                    _logger.LogWarning(
+                        "HIGH-RBAC: User {UserId} unauthorized to cancel booking {BookingId}",
+                        UserId, id);
+                    return Error<string>("You do not have permission to cancel this booking", 403);
                 }
 
                 // Business rule: Prevent cancelling bookings for events that have already occurred

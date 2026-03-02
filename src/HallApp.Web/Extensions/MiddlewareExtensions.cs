@@ -31,6 +31,9 @@ namespace HallApp.Web.Extensions
             // Exception handling
             app.UseMiddleware<ExceptionMiddleware>();
 
+            // Webhook signature validation (must be before MVC to reject forged webhooks early)
+            app.UseMiddleware<HyperPayWebhookMiddleware>();
+
             // Enable working security middleware
             app.UseMiddleware<SecurityMonitoringMiddleware>();
             app.UseMiddleware<SecurityHeadersMiddleware>();

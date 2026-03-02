@@ -22,7 +22,9 @@ public class InvoiceService : IInvoiceService
     private readonly IOrganizationService _organizationService;
     private readonly ILogger<InvoiceService> _logger;
 
-    private const decimal TAX_RATE = 15.00m; // 15% VAT in Saudi Arabia
+    // CRIT-FIN-002: Standardized to decimal fraction format (0.15 = 15% VAT)
+    // Matches Booking.TaxRate, BusinessRulesSettings.TaxRate, and BookingFinancialService format
+    private const decimal TAX_RATE = 0.15m; // 15% VAT in Saudi Arabia
 
     public InvoiceService(
         IUnitOfWork unitOfWork,
@@ -798,7 +800,7 @@ public class InvoiceService : IInvoiceService
         if (booking.HallCost > 0)
         {
             var hallSubtotal = booking.HallCost;
-            var hallTax = Math.Round(hallSubtotal * (TAX_RATE / 100), 2);
+            var hallTax = Math.Round(hallSubtotal * TAX_RATE, 2);
 
             lineItems.Add(new InvoiceLineItem
             {
@@ -821,7 +823,7 @@ public class InvoiceService : IInvoiceService
         if (booking.PackageDetails != null && booking.PackageDetails.IsActive)
         {
             var packagePrice = booking.PackageDetails.Price;
-            var packageTax = Math.Round(packagePrice * (TAX_RATE / 100), 2);
+            var packageTax = Math.Round(packagePrice * TAX_RATE, 2);
 
             var packageDescription = booking.PackageDetails.Name;
             if (!string.IsNullOrWhiteSpace(booking.PackageDetails.Features))
@@ -873,7 +875,7 @@ public class InvoiceService : IInvoiceService
                     foreach (var service in vendorBooking.Services)
                     {
                         var serviceSubtotal = service.TotalPrice;
-                        var serviceTax = Math.Round(serviceSubtotal * (TAX_RATE / 100), 2);
+                        var serviceTax = Math.Round(serviceSubtotal * TAX_RATE, 2);
 
                         lineItems.Add(new InvoiceLineItem
                         {
@@ -896,7 +898,7 @@ public class InvoiceService : IInvoiceService
                 {
                     // No detailed services, add vendor total as single line item
                     var vendorSubtotal = vendorBooking.TotalAmount;
-                    var vendorTax = Math.Round(vendorSubtotal * (TAX_RATE / 100), 2);
+                    var vendorTax = Math.Round(vendorSubtotal * TAX_RATE, 2);
 
                     lineItems.Add(new InvoiceLineItem
                     {

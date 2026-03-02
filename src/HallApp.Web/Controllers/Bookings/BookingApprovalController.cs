@@ -290,7 +290,9 @@ public class BookingApprovalController : BaseApiController
     }
 
     /// <summary>
-    /// Get vendor approval status for a booking
+    /// Get vendor approval status for a booking.
+    /// Authorization: Admin, booking customer, hall manager/org manager for the hall,
+    /// or vendor manager/org manager for a vendor on the booking.
     /// </summary>
     [HttpGet("{bookingId}/vendor-approval-status")]
     [Authorize]
@@ -302,6 +304,50 @@ public class BookingApprovalController : BaseApiController
             if (booking == null)
             {
                 return Error<VendorApprovalStatusDto>("Booking not found", 404);
+            }
+
+            // RBAC-001: Authorization check - verify caller has access to this booking
+            var isAuthorized = IsAdmin;
+
+            if (!isAuthorized)
+            {
+                // Check if customer who owns the booking
+                var customer = await _unitOfWork.CustomerRepository.GetCustomerByAppUserIdAsync(UserId);
+                if (customer != null && booking.CustomerId == customer.Id)
+                {
+                    isAuthorized = true;
+                }
+            }
+
+            if (!isAuthorized)
+            {
+                // Check if hall manager or hall organization manager for this booking's hall
+                if (User.IsInRole("HallManager") || User.IsInRole("HallOrganizationManager"))
+                {
+                    isAuthorized = await CurrentUserOwnsBookingHall(booking.HallId);
+                }
+            }
+
+            if (!isAuthorized)
+            {
+                // Check if vendor manager or vendor organization manager for a vendor on this booking
+                if (User.IsInRole("VendorManager") || User.IsInRole("VendorOrganizationManager"))
+                {
+                    var vendorManager = await _vendorManagerService.GetVendorManagerByAppUserIdAsync(UserId);
+                    if (vendorManager?.Vendors != null && booking.VendorBookings != null)
+                    {
+                        isAuthorized = booking.VendorBookings
+                            .Any(vb => vendorManager.Vendors.Any(v => v.Id == vb.VendorId));
+                    }
+                }
+            }
+
+            if (!isAuthorized)
+            {
+                _logger.LogWarning(
+                    "RBAC-001: User {UserId} unauthorized to view vendor approval status for booking {BookingId}",
+                    UserId, bookingId);
+                return Error<VendorApprovalStatusDto>("You do not have permission to view this booking's approval status", 403);
             }
 
             var vendorBookings = booking.VendorBookings ?? new List<Core.Entities.VendorEntities.VendorBooking>();

@@ -110,8 +110,10 @@ public class Invoice
     [Column(TypeName = "decimal(18,2)")]
     public decimal TaxableAmount { get; set; }
 
-    [Column(TypeName = "decimal(5,2)")]
-    public decimal TaxRate { get; set; } = 15.00m; // 15% VAT in Saudi Arabia
+    // CRIT-FIN-002: Standardized to decimal fraction format (0.15 = 15% VAT)
+    // Matches Booking.TaxRate and BusinessRulesSettings.TaxRate format
+    [Column(TypeName = "decimal(5,4)")]
+    public decimal TaxRate { get; set; } = 0.15m; // 15% VAT in Saudi Arabia
 
     [Column(TypeName = "decimal(18,2)")]
     public decimal TaxAmount { get; set; }
@@ -258,8 +260,9 @@ public class InvoiceLineItem
     [Column(TypeName = "decimal(18,2)")]
     public decimal SubtotalBeforeTax { get; set; }
 
-    [Column(TypeName = "decimal(5,2)")]
-    public decimal TaxRate { get; set; } = 15.00m;
+    // CRIT-FIN-002: Standardized to decimal fraction format (0.15 = 15% VAT)
+    [Column(TypeName = "decimal(5,4)")]
+    public decimal TaxRate { get; set; } = 0.15m;
 
     [Column(TypeName = "decimal(18,2)")]
     public decimal TaxAmount { get; set; }

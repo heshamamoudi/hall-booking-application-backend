@@ -1,124 +1,107 @@
 using System.Security.Cryptography;
 using System.Text;
+using HallApp.Application.Configuration;
 using Microsoft.Extensions.Options;
 
 namespace HallApp.Web.Middleware;
 
 /// <summary>
-/// Middleware to validate HyperPay webhook signatures
-/// Ensures that webhook requests are authentic and come from HyperPay
+/// Middleware to validate HyperPay webhook signatures (CRIT-SEC-001).
+/// Ensures that webhook requests are authentic and come from HyperPay.
+/// Only applies to the /api/payments/webhook/hyperpay endpoint.
+/// Tabby and Tamara validate signatures in their own controller endpoints.
 /// </summary>
 public class HyperPayWebhookMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<HyperPayWebhookMiddleware> _logger;
-    private readonly HyperPaySettings _settings;
+    private readonly PaymentSettings _paymentSettings;
 
     public HyperPayWebhookMiddleware(
         RequestDelegate next,
         ILogger<HyperPayWebhookMiddleware> logger,
-        IOptions<HyperPaySettings> settings)
+        IOptions<PaymentSettings> paymentSettings)
     {
         _next = next;
         _logger = logger;
-        _settings = settings.Value;
+        _paymentSettings = paymentSettings.Value;
     }
 
     public async Task InvokeAsync(HttpContext context)
     {
-        // Only process webhook endpoints
-        if (context.Request.Path.StartsWithSegments("/api/payments/webhook"))
+        // Only validate signature on the HyperPay webhook endpoint
+        if (context.Request.Path.StartsWithSegments("/api/payments/webhook/hyperpay") &&
+            context.Request.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
         {
-            _logger.LogInformation("HyperPay webhook request received");
+            _logger.LogInformation("CRIT-SEC-001: HyperPay webhook request received from {RemoteIp}",
+                context.Connection.RemoteIpAddress);
 
-            // Read the request body
+            var webhookSecret = _paymentSettings.HyperPay.WebhookSecret;
+            if (string.IsNullOrEmpty(webhookSecret))
+            {
+                _logger.LogError("CRIT-SEC-001: HyperPay webhook secret is not configured. " +
+                    "Set Payment:HyperPay:WebhookSecret in configuration.");
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{\"message\":\"Webhook configuration error\"}");
+                return;
+            }
+
+            // Read the request body (enable buffering so the body can be re-read by the controller)
             context.Request.EnableBuffering();
             using var reader = new StreamReader(context.Request.Body, Encoding.UTF8, leaveOpen: true);
             var requestBody = await reader.ReadToEndAsync();
             context.Request.Body.Position = 0;
 
             // Get signature from headers
-            if (!context.Request.Headers.TryGetValue("X-HyperPay-Signature", out var signatureHeader))
+            if (!context.Request.Headers.TryGetValue("X-HyperPay-Signature", out var signatureHeader) ||
+                string.IsNullOrWhiteSpace(signatureHeader.ToString()))
             {
-                _logger.LogWarning("Webhook request missing signature header");
-                context.Response.StatusCode = 401;
-                await context.Response.WriteAsync("Missing signature");
+                _logger.LogWarning("CRIT-SEC-001: HyperPay webhook request missing X-HyperPay-Signature header. " +
+                    "RemoteIp: {RemoteIp}", context.Connection.RemoteIpAddress);
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{\"message\":\"Missing webhook signature\"}");
                 return;
             }
 
-            // Validate signature
-            var expectedSignature = ComputeSignature(requestBody, _settings.WebhookSecret);
-            if (!SignaturesMatch(signatureHeader.ToString(), expectedSignature))
+            // Validate signature using HMAC-SHA256
+            var expectedSignature = ComputeHmacSha256(requestBody, webhookSecret);
+            if (!ConstantTimeEquals(signatureHeader.ToString(), expectedSignature))
             {
-                _logger.LogWarning("Invalid webhook signature");
-                context.Response.StatusCode = 401;
-                await context.Response.WriteAsync("Invalid signature");
+                _logger.LogWarning("CRIT-SEC-001: HyperPay webhook signature mismatch. " +
+                    "RemoteIp: {RemoteIp}. Possible forged webhook attempt.",
+                    context.Connection.RemoteIpAddress);
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{\"message\":\"Invalid webhook signature\"}");
                 return;
             }
 
-            _logger.LogInformation("Webhook signature validated successfully");
+            _logger.LogInformation("CRIT-SEC-001: HyperPay webhook signature validated successfully");
         }
 
         await _next(context);
     }
 
-    private string ComputeSignature(string payload, string secret)
+    private static string ComputeHmacSha256(string payload, string secret)
     {
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
         return Convert.ToBase64String(hash);
     }
 
-    private bool SignaturesMatch(string signature1, string signature2)
+    /// <summary>
+    /// Constant-time string comparison to prevent timing attacks on signature validation.
+    /// </summary>
+    private static bool ConstantTimeEquals(string a, string b)
     {
-        if (string.IsNullOrEmpty(signature1) || string.IsNullOrEmpty(signature2))
-        {
+        if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b))
             return false;
-        }
 
-        // Use constant-time comparison to prevent timing attacks
-        var bytes1 = Encoding.UTF8.GetBytes(signature1);
-        var bytes2 = Encoding.UTF8.GetBytes(signature2);
+        var bytesA = Encoding.UTF8.GetBytes(a);
+        var bytesB = Encoding.UTF8.GetBytes(b);
 
-        if (bytes1.Length != bytes2.Length)
-        {
-            return false;
-        }
-
-        int result = 0;
-        for (int i = 0; i < bytes1.Length; i++)
-        {
-            result |= bytes1[i] ^ bytes2[i];
-        }
-
-        return result == 0;
+        return CryptographicOperations.FixedTimeEquals(bytesA, bytesB);
     }
-}
-
-/// <summary>
-/// HyperPay configuration settings
-/// Should be stored in appsettings.json or environment variables
-/// </summary>
-public class HyperPaySettings
-{
-    public string EntityId { get; set; } = string.Empty;
-    public string AccessToken { get; set; } = string.Empty;
-    public string BaseUrl { get; set; } = "https://eu-test.oppwa.com"; // Test environment
-    public string WebhookSecret { get; set; } = string.Empty;
-    public string Currency { get; set; } = "SAR";
-    public bool TestMode { get; set; } = true;
-
-    // Payment brands configuration
-    public List<string> EnabledPaymentBrands { get; set; } = new()
-    {
-        "VISA",
-        "MASTER",
-        "MADA",
-        "APPLEPAY",
-        "STC_PAY"
-    };
-
-    // Risk management settings
-    public bool Enable3DSecure { get; set; } = true;
-    public int PaymentTimeoutMinutes { get; set; } = 30;
 }

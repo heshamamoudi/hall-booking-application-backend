@@ -4,6 +4,13 @@ using HallApp.Core.Exceptions;
 
 namespace HallApp.Web.Middleware;
 
+/// <summary>
+/// Global exception handler middleware (CRIT-SEC-003).
+/// Catches all unhandled exceptions and converts them to safe JSON responses.
+/// Includes correlation IDs for tracing, hides internal details in production.
+/// This is the outermost catch-all -- the ApiExceptionFilter handles most
+/// controller-level exceptions before they reach here.
+/// </summary>
 public class ExceptionMiddleware
 {
     private readonly RequestDelegate _next;
@@ -21,42 +28,79 @@ public class ExceptionMiddleware
     {
         try
         {
-            // Pass the request to the next middleware in the pipeline
             await _next(context);
         }
         catch (Exception ex)
         {
-            // Log the exception with an error message
-            _logger.LogError(ex, "An exception occurred: {Message}", ex.Message);
-
-            // Handle the exception and generate a response
             await HandleExceptionAsync(context, ex);
         }
     }
 
     private async Task HandleExceptionAsync(HttpContext context, Exception ex)
     {
+        // Generate a correlation ID for tracing this error across logs and support requests
+        var correlationId = Guid.NewGuid().ToString("N")[..12];
+
+        // Log full exception details server-side with correlation ID, path, and method
+        _logger.LogError(ex,
+            "CRIT-SEC-003: Unhandled exception. CorrelationId: {CorrelationId}, " +
+            "Path: {Path}, Method: {Method}, RemoteIp: {RemoteIp}",
+            correlationId,
+            context.Request.Path,
+            context.Request.Method,
+            context.Connection.RemoteIpAddress);
+
         context.Response.ContentType = "application/json";
 
-        // Determine the status code based on the type of exception
+        // Determine status code based on exception type
         int statusCode = ex switch
         {
-            ApiException apiEx => apiEx.StatusCode, // Use the status code from ApiException
-            _ => (int)HttpStatusCode.InternalServerError // Default to 500 Internal Server Error for other exceptions
+            ApiException apiEx => apiEx.StatusCode,
+            UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
+            KeyNotFoundException => (int)HttpStatusCode.NotFound,
+            ArgumentException => (int)HttpStatusCode.BadRequest,
+            OperationCanceledException => 499, // Client closed request
+            _ => (int)HttpStatusCode.InternalServerError
         };
 
         context.Response.StatusCode = statusCode;
 
-        // Create the response based on the environment (development or production)
-        var response = _environment.IsDevelopment()
-            ? new ApiException(statusCode, ex.Message, ex.StackTrace?.ToString())
-            : new ApiException(statusCode, "A server error occurred.");
+        // Determine the user-facing message:
+        // - In Development: show exception details for debugging
+        // - In Production: return generic message to avoid leaking internals
+        string message;
+        string? details = null;
 
-        // Serialize the response to JSON
+        if (_environment.IsDevelopment())
+        {
+            message = ex.Message;
+            details = ex.StackTrace;
+        }
+        else
+        {
+            message = statusCode switch
+            {
+                401 => "You are not authorized to perform this action.",
+                404 => "The requested resource was not found.",
+                400 => "Invalid request data.",
+                499 => "Request was cancelled.",
+                _ => "An error occurred processing your request. Please contact support if the issue persists."
+            };
+        }
+
+        var response = new
+        {
+            statusCode,
+            message,
+            details = _environment.IsDevelopment() ? details : null,
+            correlationId,
+            isSuccess = false,
+            timestamp = DateTime.UtcNow
+        };
+
         var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
         var jsonResponse = JsonSerializer.Serialize(response, options);
 
-        // Write the JSON response to the context
         await context.Response.WriteAsync(jsonResponse);
     }
 }
