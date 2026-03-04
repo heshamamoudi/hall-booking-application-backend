@@ -139,7 +139,7 @@ public class TeamMemberService : ITeamMemberService
             {
                 OrganizationId = orgId,
                 AppUserId = newUser.Id,
-                Role = "Member",
+                Role = "Manager",
                 CanManageTeam = false,
                 CanCreateResources = true,
                 JoinedAt = DateTime.UtcNow,
@@ -265,7 +265,7 @@ public class TeamMemberService : ITeamMemberService
             {
                 OrganizationId = orgId,
                 AppUserId = user.Id,
-                Role = "Member",
+                Role = "Manager",
                 CanManageTeam = false,
                 CanCreateResources = true,
                 JoinedAt = DateTime.UtcNow,

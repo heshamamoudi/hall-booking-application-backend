@@ -55,10 +55,27 @@ public class VendorBookingRepository : GenericRepository<VendorBooking>, IVendor
     public async Task<IEnumerable<VendorBooking>> GetPendingBookingsAsync(int vendorId)
     {
         return await _context.VendorBookings
-            .Where(vb => vb.VendorId == vendorId && 
+            .Where(vb => vb.VendorId == vendorId &&
                         (vb.Status == "Pending" || vb.Status == "Confirmed"))
             .Include(vb => vb.Booking)
             .OrderBy(vb => vb.StartTime)
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<VendorBooking>> GetVendorBookingsByVendorIdsAsync(IEnumerable<int> vendorIds)
+    {
+        var vendorIdList = vendorIds.ToList();
+        return await _context.VendorBookings
+            .Where(vb => vendorIdList.Contains(vb.VendorId))
+            .Include(vb => vb.Vendor)
+            .Include(vb => vb.Booking)
+                .ThenInclude(b => b.Customer)
+                    .ThenInclude(c => c.AppUser)
+            .Include(vb => vb.Services)
+                .ThenInclude(s => s.ServiceItem)
+            .AsSplitQuery()
+            .OrderByDescending(vb => vb.CreatedAt)
             .ToListAsync();
     }
 }

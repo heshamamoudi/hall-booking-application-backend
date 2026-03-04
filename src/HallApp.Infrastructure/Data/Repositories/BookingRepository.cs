@@ -16,13 +16,13 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
             .Include(b => b.Customer)
                 .ThenInclude(c => c.AppUser)
             .Include(b => b.Hall)
+                .ThenInclude(h => h.Managers)
             .Include(b => b.PackageDetails)
             .Include(b => b.VendorBookings)
                 .ThenInclude(vb => vb.Vendor)
             .Include(b => b.VendorBookings)
                 .ThenInclude(vb => vb.Services)
                     .ThenInclude(s => s.ServiceItem)
-            .AsSplitQuery()
             .OrderByDescending(b => b.CreatedAt)
             .ToListAsync();
     }
@@ -109,13 +109,13 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
             .Include(b => b.Customer)
                 .ThenInclude(c => c.AppUser)
             .Include(b => b.Hall)
+                .ThenInclude(h => h.Managers)
             .Include(b => b.PackageDetails)
             .Include(b => b.VendorBookings)
                 .ThenInclude(vb => vb.Vendor)
             .Include(b => b.VendorBookings)
                 .ThenInclude(vb => vb.Services)
                     .ThenInclude(s => s.ServiceItem)
-            .AsSplitQuery()
             .FirstOrDefaultAsync(b => b.Id == bookingId);
     }
 

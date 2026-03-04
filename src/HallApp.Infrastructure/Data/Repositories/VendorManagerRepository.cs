@@ -31,6 +31,16 @@ public class VendorManagerRepository : GenericRepository<VendorManager>, IVendor
             .FirstOrDefaultAsync(vm => vm.Id == id) ?? new VendorManager();
     }
 
+    /// <inheritdoc />
+    public async Task<VendorManager?> GetByAppUserIdWithVendorsAsync(int appUserId)
+    {
+        return await _context.VendorManagers
+            .Include(vm => vm.AppUser)
+            .Include(vm => vm.Vendors)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(vm => vm.AppUserId == appUserId);
+    }
+
     public async Task<VendorManager> GetByUserIdAsync(string userId)
     {
         if (int.TryParse(userId, out int userIdInt))

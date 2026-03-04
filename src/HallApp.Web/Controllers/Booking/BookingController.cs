@@ -224,6 +224,9 @@ namespace HallApp.Web.Controllers.Booking
                     return Error<BookingDto>(bookingError, 409); // 409 Conflict for double booking
                 }
 
+                // Re-fetch with full navigation properties to ensure vendor data is populated
+                var fullBooking = await _bookingService.GetBookingByIdAsync(booking.Id);
+
                 // Send notification to customer
                 _ = Task.Run(async () =>
                 {
@@ -242,7 +245,7 @@ namespace HallApp.Web.Controllers.Booking
                     }
                 });
 
-                var bookingResponseDto = _mapper.Map<BookingDto>(booking);
+                var bookingResponseDto = _mapper.Map<BookingDto>(fullBooking ?? booking);
                 return Success(bookingResponseDto, "Booking created successfully - awaiting hall approval");
             }
             catch (Exception ex)
@@ -744,6 +747,9 @@ namespace HallApp.Web.Controllers.Booking
                     return Error<BookingDto>(errorMessage, 409); // 409 Conflict for double booking
                 }
 
+                // Re-fetch with full navigation properties to ensure vendor data is populated
+                var fullBooking = await _bookingService.GetBookingByIdAsync(booking.Id);
+
                 // Send notification (async)
                 _ = Task.Run(async () =>
                 {
@@ -763,7 +769,7 @@ namespace HallApp.Web.Controllers.Booking
                     }
                 });
 
-                var resultDto = _mapper.Map<BookingDto>(booking);
+                var resultDto = _mapper.Map<BookingDto>(fullBooking ?? booking);
                 return Success(resultDto, "Booking created successfully");
             }
             catch (Exception ex)
@@ -833,6 +839,19 @@ namespace HallApp.Web.Controllers.Booking
                 if (!isAuthorized)
                 {
                     return Error<BookingDto>("You do not have permission to view this booking", 403);
+                }
+
+                // Diagnostic logging for vendor data
+                if (booking.VendorBookings != null)
+                {
+                    _logger.LogInformation("Booking {BookingId}: {VendorCount} vendor bookings loaded", id, booking.VendorBookings.Count);
+                    foreach (var vb in booking.VendorBookings)
+                    {
+                        _logger.LogInformation("  VendorBooking {VbId}: Vendor={VendorName}, Services={ServiceCount}",
+                            vb.Id,
+                            vb.Vendor?.Name ?? "NULL",
+                            vb.Services?.Count ?? 0);
+                    }
                 }
 
                 var bookingDto = _mapper.Map<BookingDto>(booking);

@@ -582,7 +582,7 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.BookingId, opt => opt.MapFrom(src => src.BookingId))
             .ForMember(dest => dest.VendorId, opt => opt.MapFrom(src => src.VendorId))
-            .ForMember(dest => dest.VendorName, opt => opt.MapFrom(src => src.Vendor != null ? src.Vendor.Name : "Unknown Vendor"))
+            .ForMember(dest => dest.VendorName, opt => opt.MapFrom(src => src.Vendor != null && !string.IsNullOrWhiteSpace(src.Vendor.Name) ? src.Vendor.Name : $"Vendor #{src.VendorId}"))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
             .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => (double)src.TotalAmount))
             .ForMember(dest => dest.StartTime, opt => opt.MapFrom(src => src.StartTime))
@@ -608,7 +608,7 @@ public class AutoMapperProfiles : Profile
         // VendorBookingService to VendorBookingServiceDto mapping
         CreateMap<HallApp.Core.Entities.VendorEntities.VendorBookingService, HallApp.Application.DTOs.Vendors.VendorBookingServiceDto>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.ServiceItem != null ? src.ServiceItem.Id : src.ServiceItemId))
-            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.ServiceItem != null ? src.ServiceItem.Name : "Unknown Service"))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.ServiceItem != null && !string.IsNullOrWhiteSpace(src.ServiceItem.Name) ? src.ServiceItem.Name : $"Service #{src.ServiceItemId}"))
             .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.ServiceItem != null ? src.ServiceItem.Description : ""))
             .ForMember(dest => dest.Price, opt => opt.MapFrom(src => (double)src.UnitPrice))
             .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
