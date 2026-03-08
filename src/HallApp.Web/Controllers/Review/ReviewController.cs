@@ -292,7 +292,7 @@ namespace HallApp.Web.Controllers.Review
                     try
                     {
                         await _notificationService.CreateNotificationAsync(
-                            (int)review.CustomerId,
+                            review.CustomerId ?? 0,
                             "Review Deleted",
                             $"Your review for Hall ID {review.HallId} has been deleted.",
                             "Review"

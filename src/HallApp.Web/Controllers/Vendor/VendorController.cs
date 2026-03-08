@@ -474,6 +474,11 @@ namespace HallApp.Web.Controllers.Vendor
                 var vendorEntity = _mapper.Map<HallApp.Core.Entities.VendorEntities.Vendor>(updateDto);
                 var updatedVendor = await _vendorService.UpdateVendorAsync(id, vendorEntity);
 
+                if (updatedVendor == null)
+                {
+                    return Error<VendorDto>("Failed to update vendor", 500);
+                }
+
                 // Explicitly restore OrganizationId -- it must not be changed through updates.
                 // Organization linkage is set only during creation.
                 updatedVendor.OrganizationId = originalOrganizationId;
@@ -542,7 +547,7 @@ namespace HallApp.Web.Controllers.Vendor
                 }
                 return Error("Failed to delete vendor", 500);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Error("An error occurred while deleting the vendor", 500);
             }
@@ -582,7 +587,7 @@ namespace HallApp.Web.Controllers.Vendor
 
                 return Success(vendorDto, $"Vendor {(active ? "activated" : "deactivated")} successfully");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Error<VendorDto>("An error occurred while toggling vendor status", 500);
             }

@@ -146,6 +146,11 @@ namespace HallApp.Web.Controllers.Notification
                 // Get the notification to check if it belongs to the current user
                 var notification = await _notificationService.GetNotificationByIdAsync(notificationId);
 
+                if (notification == null)
+                {
+                    return Error("Notification not found", 404);
+                }
+
                 // Check if user owns this notification (unless admin)
                 if (!IsAdmin && notification.AppUserId != UserId)
                 {
@@ -196,6 +201,11 @@ namespace HallApp.Web.Controllers.Notification
 
                 // Get the notification to check permissions
                 var notification = await _notificationService.GetNotificationByIdAsync(id);
+
+                if (notification == null)
+                {
+                    return Error("Notification not found", 404);
+                }
 
                 // Check if user owns this notification (unless admin)
                 if (!IsAdmin && notification.AppUserId != UserId)
@@ -373,8 +383,8 @@ namespace HallApp.Web.Controllers.Notification
     /// </summary>
     public class TestNotificationRequest
     {
-        public string Title { get; set; }
-        public string Message { get; set; }
-        public string Type { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
     }
 }

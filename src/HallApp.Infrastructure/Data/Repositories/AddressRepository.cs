@@ -28,7 +28,7 @@ public class AddressRepository : GenericRepository<Address>, IAddressRepository
             .ToListAsync();
     }
 
-    public async Task<Address> GetMainAddressByCustomerIdAsync(int customerId)
+    public async Task<Address?> GetMainAddressByCustomerIdAsync(int customerId)
     {
         return await _context.Addresses
             .FirstOrDefaultAsync(a => a.CustomerId == customerId && a.IsMain);

@@ -25,13 +25,13 @@ namespace HallApp.Core.Interfaces.IServices
     {
         Task<Booking> CreateBookingAsync(Booking booking);
         Task<(bool Success, Booking? Booking, string ErrorMessage)> CreateBookingWithLockingAsync(Booking booking);
-        Task<Booking> GetBookingByIdAsync(int bookingId);
+        Task<Booking?> GetBookingByIdAsync(int bookingId);
         Task<IEnumerable<Booking>> GetBookingsByCustomerIdAsync(string customerId);
         Task<IEnumerable<Booking>> GetCustomerBookingsAsync(string customerId);
         Task<IEnumerable<Booking>> GetBookingsByVendorIdAsync(int vendorId);
         Task<IEnumerable<Booking>> GetAllBookingsAsync();
         Task<Booking> UpdateBookingAsync(Booking booking);
-        Task<Booking> UpdateCustomerBookingAsync(string customerId, Booking booking);
+        Task<Booking?> UpdateCustomerBookingAsync(string customerId, Booking booking);
         Task<bool> CancelBookingAsync(int bookingId);
         Task<IEnumerable<Booking>> GetBookingsByHallIdAsync(int hallId);
         Task<IEnumerable<Booking>> GetBookingsByStatusAsync(string status);
@@ -42,7 +42,7 @@ namespace HallApp.Core.Interfaces.IServices
         Task<IEnumerable<Booking>> GetUpcomingBookingsAsync(string customerId);
         Task<IEnumerable<Booking>> GetPastBookingsAsync(string customerId);
         Task<IEnumerable<Booking>> SearchBookingsAsync(string searchTerm);
-        Task<Booking> RescheduleBookingAsync(int bookingId, DateTime newStartDate, DateTime newEndDate);
+        Task<Booking?> RescheduleBookingAsync(int bookingId, DateTime newStartDate, DateTime newEndDate);
         Task<IEnumerable<Booking>> GetConflictingBookingsAsync(int hallId, DateTime startDate, DateTime endDate);
         Task<bool> ApproveBookingAsync(int bookingId);
         Task<bool> RejectBookingAsync(int bookingId, string reason);

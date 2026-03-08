@@ -43,4 +43,10 @@ public class FinancialAuditLogRepository : GenericRepository<FinancialAuditLog>,
             .Take(100)
             .ToListAsync();
     }
+
+    /// <inheritdoc />
+    public IQueryable<FinancialAuditLog> GetQueryable()
+    {
+        return _context.FinancialAuditLogs.AsQueryable();
+    }
 }

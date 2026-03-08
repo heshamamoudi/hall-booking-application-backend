@@ -10,9 +10,9 @@ public interface IHallCommandService
 {
     Task<Hall> CreateHallAsync(Hall hall);
     Task<Hall> UpdateHallAsync(Hall hall);
-    Task<Hall> ManagerUpdateHallAsync(Hall hall, string managerId);
+    Task<Hall?> ManagerUpdateHallAsync(Hall hall, string managerId);
     Task<bool> DeleteHallAsync(int hallId);
-    Task<Hall> ToggleHallStatusAsync(int hallId);
+    Task<Hall?> ToggleHallStatusAsync(int hallId);
     Task<bool> UpdateHallImagesAsync(int hallId, List<string> imageUrls);
     Task<bool> ApproveHallAsync(int hallId);
     Task<bool> RejectHallAsync(int hallId, string reason);

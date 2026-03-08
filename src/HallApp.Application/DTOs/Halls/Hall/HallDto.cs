@@ -10,7 +10,7 @@ namespace HallApp.Application.DTOs.Halls.Hall;
 public class HallDto
 {
     public int ID { get; set; }
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
     public long CommercialRegistration { get; set; }
 
     public long Vat { get; set; }
@@ -34,13 +34,13 @@ public class HallDto
     // Gender 1 = Male , 2 = Female , 3 = Both
     public int Gender { get; set; }
 
-    public string Description { get; set; }
+    public string Description { get; set; } = string.Empty;
     public double AverageRating { get; set; }
-    public string Media { get; set; }
+    public string Media { get; set; } = string.Empty;
     public List<HallMediaDto> MediaFiles { get; set; } = new List<HallMediaDto>();
     public List<HallManagerSimpleDto> Managers { get; set; } = new List<HallManagerSimpleDto>();
     public List<ContactDto> Contacts { get; set; } = new List<ContactDto>();
-    public LocationDto Location { get; set; }
+    public LocationDto? Location { get; set; }
     public List<PackageDto> Packages { get; set; } = new List<PackageDto>();
     public List<ServiceDto> Services { get; set; } = new List<ServiceDto>();
     public DateTime Created { get; set; }

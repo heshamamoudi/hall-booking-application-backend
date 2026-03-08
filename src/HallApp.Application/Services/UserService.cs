@@ -46,7 +46,7 @@ public class UserService : IUserService
         return managers.ToList();
     }
 
-    public async Task<AppUser> GetUserByIdAsync(string userId)
+    public async Task<AppUser?> GetUserByIdAsync(string userId)
     {
         return await _unitOfWork.UserRepository.FindByIdAsync(userId);
     }
@@ -103,10 +103,10 @@ public class UserService : IUserService
         return hallManager;
     }
 
-    public async Task<AppUser> UpdateHallManagerAsync(string userId, AppUser userData)
+    public async Task<AppUser?> UpdateHallManagerAsync(string userId, AppUser userData)
     {
         var existingUser = await _unitOfWork.UserRepository.FindByIdAsync(userId);
-        if (existingUser == null) return new AppUser();
+        if (existingUser == null) return null;
 
         // Update user properties
         existingUser.FirstName = userData.FirstName;
@@ -191,10 +191,10 @@ public class UserService : IUserService
         ).ToList();
     }
 
-    public async Task<AppUser> UpdateUserProfileAsync(string userId, AppUser profileData)
+    public async Task<AppUser?> UpdateUserProfileAsync(string userId, AppUser profileData)
     {
         var existingUser = await _unitOfWork.UserRepository.FindByIdAsync(userId);
-        if (existingUser == null) return new AppUser();
+        if (existingUser == null) return null;
 
         // Update profile properties
         existingUser.FirstName = profileData.FirstName;
@@ -208,7 +208,7 @@ public class UserService : IUserService
         return updatedUser;
     }
 
-    public async Task<AppUser> GetUserProfileAsync(string userId)
+    public async Task<AppUser?> GetUserProfileAsync(string userId)
     {
         return await _unitOfWork.UserRepository.FindByIdAsync(userId);
     }

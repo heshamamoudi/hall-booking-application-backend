@@ -22,7 +22,7 @@ public class CustomerRepository : GenericRepository<Customer>, ICustomerReposito
     }
 
     // Override to include AppUser navigation property
-    public override async Task<Customer> GetByIdAsync(int id)
+    public override async Task<Customer?> GetByIdAsync(int id)
     {
         return await _context.Customers
             .Include(c => c.AppUser)
@@ -32,7 +32,7 @@ public class CustomerRepository : GenericRepository<Customer>, ICustomerReposito
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 
-    public async Task<Customer> GetCustomerByAppUserIdAsync(int appUserId)
+    public async Task<Customer?> GetCustomerByAppUserIdAsync(int appUserId)
     {
         return await _context.Customers
             .Include(c => c.AppUser)
@@ -42,7 +42,7 @@ public class CustomerRepository : GenericRepository<Customer>, ICustomerReposito
             .FirstOrDefaultAsync(c => c.AppUserId == appUserId);
     }
 
-    public async Task<Customer> GetCustomerWithAddressesAsync(int customerId)
+    public async Task<Customer?> GetCustomerWithAddressesAsync(int customerId)
     {
         return await _context.Customers
             .Include(c => c.AppUser)
@@ -50,7 +50,7 @@ public class CustomerRepository : GenericRepository<Customer>, ICustomerReposito
             .FirstOrDefaultAsync(c => c.Id == customerId);
     }
 
-    public async Task<Customer> GetCustomerWithBookingsAsync(int customerId)
+    public async Task<Customer?> GetCustomerWithBookingsAsync(int customerId)
     {
         return await _context.Customers
             .Include(c => c.AppUser)

@@ -15,10 +15,10 @@ public interface IOrganizationService
     /// The businessInfo parameter is an <see cref="Organization"/> whose non-empty string fields
     /// are copied into the new entity.
     /// </summary>
-    Task<Organization> CreateOrganization(string name, string type, int ownerId, Organization businessInfo);
+    Task<Organization> CreateOrganization(string name, string type, int ownerId, Organization? businessInfo);
 
-    Task<Organization> GetOrganizationById(int id);
-    Task<Organization> GetOrganizationByOwnerId(int userId);
+    Task<Organization?> GetOrganizationById(int id);
+    Task<Organization?> GetOrganizationByOwnerId(int userId);
     Task<List<Organization>> GetAllOrganizations();
     Task<Organization> UpdateOrganization(int id, string name);
 

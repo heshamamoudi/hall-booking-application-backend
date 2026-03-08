@@ -6,7 +6,7 @@ namespace HallApp.Core.Interfaces.IRepositories
     {
         Task AddAsync(Notification notification);
         Task<List<Notification>> GetByUserIdAsync(int appUserId);
-        Task<Notification> GetByIdAsync(int notificationId);
+        Task<Notification?> GetByIdAsync(int notificationId);
         Task MarkAsReadAsync(int notificationId);
         Task MarkAllAsReadAsync(int appUserId);
         Task<int> GetUnreadCountAsync(int appUserId);

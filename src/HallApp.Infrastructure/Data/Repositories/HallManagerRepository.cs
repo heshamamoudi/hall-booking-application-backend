@@ -43,7 +43,7 @@ public class HallManagerRepository : GenericRepository<HallManager>, IHallManage
             .ToListAsync();
     }
 
-    public override async Task<HallManager> GetByIdAsync(int id)
+    public override async Task<HallManager?> GetByIdAsync(int id)
     {
         return await _context.HallManagers
             .Include(hm => hm.AppUser)

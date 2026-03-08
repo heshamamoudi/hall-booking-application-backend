@@ -66,7 +66,7 @@ public class NotificationHub : Hub
         }
 
         // Add user to their personal notification group (group name = userId as string)
-        await Groups.AddToGroupAsync(Context.ConnectionId, userId.ToString());
+        await Groups.AddToGroupAsync(Context.ConnectionId, userId.Value.ToString());
 
         _logger.LogInformation("NotificationHub: User {UserId} connected. ConnectionId: {ConnectionId}", userId, Context.ConnectionId);
 
@@ -102,7 +102,7 @@ public class NotificationHub : Hub
             return;
         }
 
-        await Groups.AddToGroupAsync(Context.ConnectionId, userId.ToString());
+        await Groups.AddToGroupAsync(Context.ConnectionId, userId.Value.ToString());
         _logger.LogDebug("NotificationHub: User {UserId} explicitly joined notification group", userId);
     }
 
@@ -115,7 +115,7 @@ public class NotificationHub : Hub
         if (userId == null) return;
 
         // Broadcast to all user's connections that this notification was read
-        await Clients.OthersInGroup(userId.ToString()).SendAsync("NotificationRead", new
+        await Clients.OthersInGroup(userId.Value.ToString()).SendAsync("NotificationRead", new
         {
             NotificationId = notificationId,
             Timestamp = DateTime.UtcNow
@@ -131,7 +131,7 @@ public class NotificationHub : Hub
         if (userId == null) return;
 
         // Broadcast to all user's connections
-        await Clients.OthersInGroup(userId.ToString()).SendAsync("AllNotificationsRead", new
+        await Clients.OthersInGroup(userId.Value.ToString()).SendAsync("AllNotificationsRead", new
         {
             Timestamp = DateTime.UtcNow
         });

@@ -34,7 +34,7 @@ public class DataRetentionRequestRepository : GenericRepository<DataRetentionReq
     }
 
     /// <inheritdoc />
-    public async Task<DataRetentionRequest> GetActiveRequestForUserAsync(int userId)
+    public async Task<DataRetentionRequest?> GetActiveRequestForUserAsync(int userId)
     {
         return await _context.DataRetentionRequests
             .Where(r => r.UserId == userId

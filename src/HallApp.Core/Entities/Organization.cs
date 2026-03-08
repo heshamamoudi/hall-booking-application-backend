@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using HallApp.Core.Entities.ChamperEntities;
 using HallApp.Core.Entities.VendorEntities;
 
@@ -128,6 +129,18 @@ public class Organization
     /// International Bank Account Number (IBAN). Saudi format: SA followed by 22 alphanumeric characters.
     /// </summary>
     public string BankIban { get; set; } = string.Empty;
+
+    // ---------------------------------------------------------------
+    // Commission Override
+    // ---------------------------------------------------------------
+
+    /// <summary>
+    /// Custom commission rate override for this organization.
+    /// Null means use platform default rates.
+    /// Stored as decimal fraction (0.05 = 5%).
+    /// </summary>
+    [Column(TypeName = "decimal(5,4)")]
+    public decimal? CommissionRate { get; set; }
 
     // ---------------------------------------------------------------
     // Metadata

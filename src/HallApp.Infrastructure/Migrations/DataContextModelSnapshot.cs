@@ -24,6 +24,8 @@ namespace HallApp.Infrastructure.Migrations
 
             modelBuilder.HasSequence<int>("invoice_number_seq");
 
+            modelBuilder.HasSequence<int>("purchase_order_number_seq");
+
             modelBuilder.Entity("HallApp.Core.Entities.AppRole", b =>
                 {
                     b.Property<int>("Id")
@@ -656,6 +658,127 @@ namespace HallApp.Infrastructure.Migrations
                     b.HasIndex("InvoiceId");
 
                     b.ToTable("InvoiceLineItems");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.BookingEntities.PurchaseOrder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BookingId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("CommissionAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CommissionRate")
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Currency")
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<decimal>("GrossAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("InvoiceId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("NetAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("PaymentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PaymentReference")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PurchaseOrderNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("Status")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("SupplierAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("SupplierBankIban")
+                        .HasMaxLength(34)
+                        .HasColumnType("character varying(34)");
+
+                    b.Property<string>("SupplierBankName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("SupplierCommercialRegistrationNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("SupplierId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SupplierName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("SupplierOrganizationId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SupplierType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("SupplierVatNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("PurchaseOrderNumber")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("SupplierOrganizationId");
+
+                    b.ToTable("PurchaseOrders");
                 });
 
             modelBuilder.Entity("HallApp.Core.Entities.ChamperEntities.ContactEntities.Contact", b =>
@@ -1741,6 +1864,9 @@ namespace HallApp.Infrastructure.Migrations
                         .HasColumnType("character varying(50)")
                         .HasDefaultValue("");
 
+                    b.Property<decimal?>("CommissionRate")
+                        .HasColumnType("decimal(5,4)");
+
                     b.Property<string>("CountryCode")
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(2)
@@ -2131,6 +2257,112 @@ namespace HallApp.Infrastructure.Migrations
                     b.HasIndex("RequestedBy");
 
                     b.ToTable("PaymentRefunds");
+                });
+
+            modelBuilder.Entity("HallApp.Core.Entities.PlatformSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BankAccountNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("BankIban")
+                        .HasMaxLength(34)
+                        .HasColumnType("character varying(34)");
+
+                    b.Property<string>("BankName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("BuildingNumber")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CommercialRegistrationNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("CompanyName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CountryCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("DefaultHallCommissionRate")
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<decimal>("DefaultVendorCommissionRate")
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<string>("District")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LegalName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("PostalCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("StreetName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("VatNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Website")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("WhatsApp")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.ToTable("PlatformSettings");
                 });
 
             modelBuilder.Entity("HallApp.Core.Entities.ReviewEntities.Review", b =>
@@ -2943,6 +3175,32 @@ namespace HallApp.Infrastructure.Migrations
                     b.Navigation("Invoice");
                 });
 
+            modelBuilder.Entity("HallApp.Core.Entities.BookingEntities.PurchaseOrder", b =>
+                {
+                    b.HasOne("HallApp.Core.Entities.BookingEntities.Booking", "Booking")
+                        .WithMany("PurchaseOrders")
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HallApp.Core.Entities.BookingEntities.Invoice", "Invoice")
+                        .WithMany("PurchaseOrders")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HallApp.Core.Entities.Organization", "SupplierOrganization")
+                        .WithMany()
+                        .HasForeignKey("SupplierOrganizationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("SupplierOrganization");
+                });
+
             modelBuilder.Entity("HallApp.Core.Entities.ChamperEntities.ContactEntities.Contact", b =>
                 {
                     b.HasOne("HallApp.Core.Entities.ChamperEntities.Hall", "Hall")
@@ -3617,12 +3875,16 @@ namespace HallApp.Infrastructure.Migrations
 
                     b.Navigation("PackageDetails");
 
+                    b.Navigation("PurchaseOrders");
+
                     b.Navigation("VendorBookings");
                 });
 
             modelBuilder.Entity("HallApp.Core.Entities.BookingEntities.Invoice", b =>
                 {
                     b.Navigation("LineItems");
+
+                    b.Navigation("PurchaseOrders");
                 });
 
             modelBuilder.Entity("HallApp.Core.Entities.ChamperEntities.Hall", b =>

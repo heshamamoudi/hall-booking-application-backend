@@ -80,6 +80,8 @@ public static class ApplicationServiceExtensions
             services.AddScoped<IHallReviewManagementService, HallReviewManagementService>();
 
             services.AddScoped<IChatService, ChatService>();
+            services.AddScoped<IPlatformSettingsService, PlatformSettingsService>();
+            services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
             // Register BookingFinancialService in the DI container
             services.AddScoped<IBookingFinancialService>(provider =>
                 new BookingFinancialService(

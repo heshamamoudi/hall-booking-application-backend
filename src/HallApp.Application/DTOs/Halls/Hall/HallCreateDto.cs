@@ -12,7 +12,7 @@ public class HallCreateDto
 {
     [Required]
     [StringLength(100)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
     
     /// <summary>
     /// Saudi Commercial Registration number (9 or 10 digits)
@@ -44,7 +44,7 @@ public class HallCreateDto
     // Gender 1 = Male , 2 = Female , 3 = Both
     public int Gender { get; set; }
 
-    public string Description { get; set; }
+    public string Description { get; set; } = string.Empty;
     
     // Direct contact information
     public string Email { get; set; } = string.Empty;
@@ -53,13 +53,13 @@ public class HallCreateDto
     public string Logo { get; set; } = string.Empty;
     
     // Related entities
-    public List<HallMediaDto> MediaFiles { get; set; }
-    public List<UserCreateDto> Managers { get; set; }
-    public List<ContactDto> Contacts { get; set; }
-    public LocationDto Location { get; set; }
-    public List<PackageDto> Packages { get; set; }
-    public List<ServiceDto> Services { get; set; }
-    public List<string> mediaBeforeUpload { get; set; }
+    public List<HallMediaDto> MediaFiles { get; set; } = [];
+    public List<UserCreateDto> Managers { get; set; } = [];
+    public List<ContactDto> Contacts { get; set; } = [];
+    public LocationDto? Location { get; set; }
+    public List<PackageDto> Packages { get; set; } = [];
+    public List<ServiceDto> Services { get; set; } = [];
+    public List<string> mediaBeforeUpload { get; set; } = [];
     
     // Flags for categorization
     public bool IsActive { get; set; } = true;

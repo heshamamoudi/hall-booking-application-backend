@@ -66,7 +66,7 @@ public class AuthV2ResponseDto
     public string AccessToken { get; set; } = string.Empty;
     public string RefreshToken { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }
-    public UserV2Dto User { get; set; } = null!;
+    public UserV2Dto? User { get; set; }
 }
 
 public class UserV2Dto

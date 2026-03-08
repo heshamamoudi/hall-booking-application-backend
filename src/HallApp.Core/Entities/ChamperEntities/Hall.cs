@@ -10,7 +10,7 @@ namespace HallApp.Core.Entities.ChamperEntities;
 public class Hall
 {
     public int ID { get; set; }
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     public long CommercialRegistration { get; set; }
 
@@ -40,24 +40,24 @@ public class Hall
     public string Phone { get; set; } = string.Empty;
     public string WhatsApp { get; set; } = string.Empty;
 
-    public string Logo { get; set; }
+    public string Logo { get; set; } = string.Empty;
     public List<HallMedia> MediaFiles { get; set; } = new List<HallMedia>();
-    public string Description { get; set; }
-    public List<HallManager> Managers { get; set; }
-    public List<Contact> Contacts { get; set; }
-    public List<Review> Reviews { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public List<HallManager> Managers { get; set; } = [];
+    public List<Contact> Contacts { get; set; } = [];
+    public List<Review> Reviews { get; set; } = [];
     public double AverageRating { get; set; }
-    public Location Location { get; set; }
-    public List<Package> Packages { get; set; }
-    public List<Service> Services { get; set; }
+    public Location Location { get; set; } = null!;
+    public List<Package> Packages { get; set; } = [];
+    public List<Service> Services { get; set; } = [];
     public DateTime Created { get; set; } = DateTime.UtcNow;
     public DateTime Updated { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
-    
+
     // Approval workflow
     public bool IsApproved { get; set; } = false;
     public DateTime? ApprovedAt { get; set; }
-    
+
     // Section flags for categorization
     public bool HasSpecialOffer { get; set; } = false;
     public bool IsFeatured { get; set; } = false;
@@ -65,9 +65,9 @@ public class Hall
 
     // Organization ownership - which organization this hall belongs to
     public int? OrganizationId { get; set; }
-    public Organization Organization { get; set; }
+    public Organization? Organization { get; set; }
 
     // Direct assignment - which HallManager is assigned to manage this hall
     public int? AssignedToHallManagerId { get; set; }
-    public HallManager AssignedToHallManager { get; set; }
+    public HallManager? AssignedToHallManager { get; set; }
 }

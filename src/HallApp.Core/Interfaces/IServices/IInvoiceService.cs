@@ -9,7 +9,7 @@ namespace HallApp.Core.Interfaces.IServices;
 public interface IInvoiceService
 {
     // Core CRUD
-    Task<Invoice> GetInvoiceByIdAsync(int invoiceId);
+    Task<Invoice?> GetInvoiceByIdAsync(int invoiceId);
     Task<Invoice?> GetInvoiceByBookingIdAsync(int bookingId);
     Task<Invoice?> GetInvoiceByNumberAsync(string invoiceNumber);
     Task<IEnumerable<Invoice>> GetAllInvoicesAsync();

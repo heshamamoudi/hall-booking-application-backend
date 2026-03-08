@@ -10,5 +10,5 @@ public interface IFavoriteRepository : IGenericRepository<Favorite>
     Task<List<Favorite>> GetFavoriteHallsAsync(int customerId);
     Task<IEnumerable<Favorite>> GetFavoritesByCustomerIdAsync(int customerId);
     Task<bool> IsFavoriteAsync(int customerId, int hallId);
-    Task<Favorite> GetFavoriteAsync(int customerId, int hallId);
+    Task<Favorite?> GetFavoriteAsync(int customerId, int hallId);
 }

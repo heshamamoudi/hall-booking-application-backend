@@ -21,7 +21,7 @@ namespace HallApp.Application.DTOs.Booking
         public TimeSpan EndTime { get; set; }
 
         [Required]
-        public string SelectedGender { get; set; } = null!;
+        public string SelectedGender { get; set; } = string.Empty;
 
         public string? DiscountCode { get; set; }
 

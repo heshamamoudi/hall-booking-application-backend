@@ -12,7 +12,7 @@ public class HallRepository : GenericRepository<Hall>, IHallRepository
     }
 
     // Override GetByIdAsync to include related entities using extension method
-    public override async Task<Hall> GetByIdAsync(int id)
+    public override async Task<Hall?> GetByIdAsync(int id)
     {
         return await _context.Halls
             .IncludeAllRelations()
@@ -46,7 +46,7 @@ public class HallRepository : GenericRepository<Hall>, IHallRepository
             .ToListAsync();
     }
 
-    public async Task<Hall> GetHallWithDetailsAsync(int hallId)
+    public async Task<Hall?> GetHallWithDetailsAsync(int hallId)
     {
         return await _context.Halls
             .IncludeAllRelations()

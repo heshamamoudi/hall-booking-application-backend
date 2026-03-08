@@ -11,7 +11,7 @@ public class UnitOfWork : IUnitOfWork
 {
     private readonly DataContext _context;
 
-    public UnitOfWork(DataContext context)
+    public UnitOfWork(DataContext context, IUserRepository userRepository)
     {
         _context = context;
         VendorRepository = new VendorRepository(_context);
@@ -35,7 +35,9 @@ public class UnitOfWork : IUnitOfWork
         IdempotencyKeyRepository = new IdempotencyKeyRepository(_context);
         FinancialAuditLogRepository = new FinancialAuditLogRepository(_context);
         DataRetentionRequestRepository = new DataRetentionRequestRepository(_context);
-        // UserRepository requires additional dependencies - should be injected via DI
+        PlatformSettingsRepository = new PlatformSettingsRepository(_context);
+        PurchaseOrderRepository = new PurchaseOrderRepository(_context);
+        UserRepository = userRepository;
     }
 
     public IVendorRepository VendorRepository { get; private set; }
@@ -60,6 +62,8 @@ public class UnitOfWork : IUnitOfWork
     public IIdempotencyKeyRepository IdempotencyKeyRepository { get; private set; }
     public IFinancialAuditLogRepository FinancialAuditLogRepository { get; private set; }
     public IDataRetentionRequestRepository DataRetentionRequestRepository { get; private set; }
+    public IPlatformSettingsRepository PlatformSettingsRepository { get; private set; }
+    public IPurchaseOrderRepository PurchaseOrderRepository { get; private set; }
 
     public async Task<int> Complete()
     {
@@ -80,7 +84,7 @@ public class UnitOfWork : IUnitOfWork
                 _ => "READ COMMITTED"
             };
 
-            await _context.Database.ExecuteSqlRawAsync($"SET TRANSACTION ISOLATION LEVEL {isolationLevelName}");
+            await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL " + isolationLevelName);
         }
 
         return await _context.Database.BeginTransactionAsync();

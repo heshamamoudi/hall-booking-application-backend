@@ -29,7 +29,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
             .ToListAsync();
     }
 
-    public async Task<Review> GetReviewWithDetailsAsync(int reviewId)
+    public async Task<Review?> GetReviewWithDetailsAsync(int reviewId)
     {
         return await _context.Reviews
             .Include(r => r.Customer)

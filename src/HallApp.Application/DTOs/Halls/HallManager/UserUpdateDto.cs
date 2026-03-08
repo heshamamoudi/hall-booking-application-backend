@@ -5,8 +5,8 @@ namespace HallApp.Application.DTOs.Halls.HallManager;
 public class UserUpdateDto
 {
     public int Id { get; set; }
-    public string Name { get; set; }
-    public string UserName { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string UserName { get; set; } = string.Empty;
     
     [Required]
     [StringLength(50)]
@@ -16,13 +16,13 @@ public class UserUpdateDto
     [StringLength(50)]
     public string LastName { get; set; } = string.Empty;
     
-    public string Email { get; set; }
-    public string PhoneNumber { get; set; }
-    public string Password { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string PhoneNumber { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
     public DateTime DOB { get; set; } 
     public DateTime Created { get; set; }
     public DateTime Updated { get; set; }
-    public List<string> Roles { get; set; }
+    public List<string> Roles { get; set; } = [];
     
     [Required]
     public string Role { get; set; } = string.Empty;

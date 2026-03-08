@@ -92,9 +92,9 @@ public class BookingService : IBookingService
         }
     }
 
-    public async Task<Booking> GetBookingByIdAsync(int bookingId)
+    public async Task<Booking?> GetBookingByIdAsync(int bookingId)
     {
-        return await _unitOfWork.BookingRepository.GetBookingWithDetailsAsync(bookingId) ?? new Booking();
+        return await _unitOfWork.BookingRepository.GetBookingWithDetailsAsync(bookingId);
     }
 
     public async Task<IEnumerable<Booking>> GetBookingsByCustomerIdAsync(string customerId)
@@ -188,10 +188,10 @@ public class BookingService : IBookingService
         return existingBooking;
     }
 
-    public async Task<Booking> UpdateCustomerBookingAsync(string customerId, Booking booking)
+    public async Task<Booking?> UpdateCustomerBookingAsync(string customerId, Booking booking)
     {
         var existingBooking = await _unitOfWork.BookingRepository.GetByIdAsync(booking.Id);
-        if (existingBooking?.CustomerId.ToString() != customerId) return new Booking();
+        if (existingBooking?.CustomerId.ToString() != customerId) return null;
         
         _unitOfWork.BookingRepository.Update(booking);
         await _unitOfWork.Complete();
@@ -275,10 +275,10 @@ public class BookingService : IBookingService
         ).ToList();
     }
 
-    public async Task<Booking> RescheduleBookingAsync(int bookingId, DateTime newStartDate, DateTime newEndDate)
+    public async Task<Booking?> RescheduleBookingAsync(int bookingId, DateTime newStartDate, DateTime newEndDate)
     {
         var booking = await _unitOfWork.BookingRepository.GetByIdAsync(bookingId);
-        if (booking == null) return new Booking();
+        if (booking == null) return null;
 
         booking.VisitDate = newStartDate;
         _unitOfWork.BookingRepository.Update(booking);

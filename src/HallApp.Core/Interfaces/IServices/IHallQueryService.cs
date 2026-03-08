@@ -8,7 +8,7 @@ namespace HallApp.Core.Interfaces.IServices;
 /// </summary>
 public interface IHallQueryService
 {
-    Task<Hall> GetHallByIdAsync(int hallId);
+    Task<Hall?> GetHallByIdAsync(int hallId);
     Task<List<Hall>> GetAllHallsAsync();
     Task<List<Hall>> GetHallsByManagerAsync(string managerId);
     Task<List<Hall>> GetHallsByVendorAsync(int vendorId);

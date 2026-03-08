@@ -64,9 +64,9 @@ public class Vendor
 
     // Organization ownership - which organization this vendor belongs to
     public int? OrganizationId { get; set; }
-    public Organization Organization { get; set; }
+    public Organization? Organization { get; set; }
 
     // Direct assignment - which VendorManager is assigned to manage this vendor
     public int? AssignedToVendorManagerId { get; set; }
-    public VendorManager AssignedToVendorManager { get; set; }
+    public VendorManager? AssignedToVendorManager { get; set; }
 }

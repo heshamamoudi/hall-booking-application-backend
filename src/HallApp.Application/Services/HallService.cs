@@ -17,7 +17,7 @@ public class HallService : IHallService
         _mapper = mapper;
     }
 
-    public async Task<Hall> GetHallByIdAsync(int hallId)
+    public async Task<Hall?> GetHallByIdAsync(int hallId)
     {
         return await _unitOfWork.HallRepository.GetByIdAsync(hallId);
     }
@@ -155,7 +155,7 @@ public class HallService : IHallService
         return hall;
     }
 
-    public async Task<Hall> ManagerUpdateHallAsync(Hall hall, string managerId)
+    public async Task<Hall?> ManagerUpdateHallAsync(Hall hall, string managerId)
     {
         // Verify manager has permission to update this hall
         if (int.TryParse(managerId, out int managerIdInt))
@@ -168,7 +168,7 @@ public class HallService : IHallService
                 return hall;
             }
         }
-        return new Hall();
+        return null;
     }
 
     public async Task<bool> DeleteHallAsync(int hallId)
@@ -240,10 +240,10 @@ public class HallService : IHallService
         return await GetPopularHallsAsync();
     }
 
-    public async Task<Hall> ToggleHallStatusAsync(int hallId)
+    public async Task<Hall?> ToggleHallStatusAsync(int hallId)
     {
         var hall = await _unitOfWork.HallRepository.GetByIdAsync(hallId);
-        if (hall == null) return new Hall();
+        if (hall == null) return null;
         
         hall.IsActive = !hall.IsActive;
         _unitOfWork.HallRepository.Update(hall);

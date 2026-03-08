@@ -30,18 +30,14 @@ public class AppUser : IdentityUser<int>
     public bool Active { get; set; } = true;
 
     // Refresh token properties
-    public string RefreshToken { get; set; } = string.Empty;
+    public string? RefreshToken { get; set; }
     public DateTime RefreshTokenExpiryTime { get; set; } = DateTime.UtcNow;
 
     // Profile photo URL (stored as relative path e.g. /uploads/avatars/guid.jpg)
-#nullable enable
     public string? PhotoUrl { get; set; }
-#nullable restore
 
     // Invitation token for team member invite flow
-#nullable enable
     public string? InvitationToken { get; set; }
-#nullable restore
     public DateTime? InvitationTokenExpiry { get; set; }
 
     // HIGH-012: GDPR data retention fields

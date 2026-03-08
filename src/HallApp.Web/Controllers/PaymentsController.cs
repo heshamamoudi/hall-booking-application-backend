@@ -267,7 +267,7 @@ public class PaymentsController : BaseApiController
             UpdatePaymentStatus(payment, statusResult);
 
             // Update booking status if payment was successful
-            if (payment.Status == "Success" && previousStatus != "Success")
+            if (payment.Status == "Success" && previousStatus != "Success" && payment.Booking != null)
             {
                 payment.Booking.Status = "Confirmed";
                 payment.Booking.PaymentStatus = "Paid";
@@ -324,7 +324,7 @@ public class PaymentsController : BaseApiController
                     payment.FailureReason, correlationId);
 
                 // HIGH-007: Compensation logic - revert booking status on payment failure
-                if (payment.Booking.Status == "Confirmed" || payment.Booking.PaymentStatus == "Paid")
+                if (payment.Booking != null && (payment.Booking.Status == "Confirmed" || payment.Booking.PaymentStatus == "Paid"))
                 {
                     var bookingBeforeState = new
                     {
@@ -779,7 +779,7 @@ public class PaymentsController : BaseApiController
             }
 
             // Update booking if payment successful
-            if (payment.Status == "Success" && previousStatus != "Success")
+            if (payment.Status == "Success" && previousStatus != "Success" && payment.Booking != null)
             {
                 payment.Booking.Status = "Confirmed";
                 payment.Booking.PaymentStatus = "Paid";
@@ -790,7 +790,7 @@ public class PaymentsController : BaseApiController
             // HIGH-007: Compensation on webhook failure
             else if (payment.Status == "Failed" && previousStatus != "Failed")
             {
-                if (payment.Booking.Status == "Confirmed" || payment.Booking.PaymentStatus == "Paid")
+                if (payment.Booking != null && (payment.Booking.Status == "Confirmed" || payment.Booking.PaymentStatus == "Paid"))
                 {
                     payment.Booking.Status = "ReadyForPayment";
                     payment.Booking.PaymentStatus = "Pending";

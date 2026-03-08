@@ -21,15 +21,15 @@ public class CustomerService : ICustomerService
     }
 
     // Core CRUD operations
-    public async Task<Customer> GetCustomerByIdAsync(int customerId)
+    public async Task<Customer?> GetCustomerByIdAsync(int customerId)
     {
-        return await _unitOfWork.CustomerRepository.GetByIdAsync(customerId) ?? new Customer();
+        return await _unitOfWork.CustomerRepository.GetByIdAsync(customerId);
     }
 
-    public async Task<Customer> GetCustomerByAppUserIdAsync(int appUserId)
+    public async Task<Customer?> GetCustomerByAppUserIdAsync(int appUserId)
     {
         var allCustomers = await _unitOfWork.CustomerRepository.GetAllAsync();
-        return allCustomers.FirstOrDefault(c => c.AppUserId == appUserId) ?? new Customer();
+        return allCustomers.FirstOrDefault(c => c.AppUserId == appUserId);
     }
 
     public async Task<Customer> CreateCustomerAsync(Customer customer)
@@ -219,10 +219,10 @@ public class CustomerService : ICustomerService
         return customersWithReviews;
     }
 
-    public async Task<Customer> GetCustomerWithRelationshipsAsync(int customerId)
+    public async Task<Customer?> GetCustomerWithRelationshipsAsync(int customerId)
     {
         var customer = await _unitOfWork.CustomerRepository.GetByIdAsync(customerId);
-        if (customer == null) return new Customer();
+        if (customer == null) return null;
         
         // Load all business relationships
         customer.Bookings = (await _unitOfWork.BookingRepository.GetBookingsByCustomerIdAsync(customerId)).ToList();

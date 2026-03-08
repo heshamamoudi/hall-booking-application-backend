@@ -92,12 +92,11 @@ namespace HallApp.Application.Services
             }
         }
 
-        public async Task<Notification> GetNotificationByIdAsync(int notificationId)
+        public async Task<Notification?> GetNotificationByIdAsync(int notificationId)
         {
             try
             {
-                var notification = await _unitOfWork.NotificationRepository.GetByIdAsync(notificationId);
-                return notification ?? throw new InvalidOperationException($"Notification with ID {notificationId} not found");
+                return await _unitOfWork.NotificationRepository.GetByIdAsync(notificationId);
             }
             catch (Exception ex)
             {

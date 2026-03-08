@@ -5,6 +5,6 @@ namespace HallApp.Application.DTOs.Auth
         public string AccessToken { get; set; } = string.Empty;
         public string RefreshToken { get; set; } = string.Empty;
         public DateTime ExpiresAt { get; set; }
-        public UserDto User { get; set; } = null!;
+        public UserDto? User { get; set; }
     }
 }

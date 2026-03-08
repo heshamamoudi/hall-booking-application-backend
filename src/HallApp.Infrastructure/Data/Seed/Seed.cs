@@ -1940,7 +1940,7 @@ public class Seed
         string ownerUsername,
         string orgName,
         string orgType,
-        Organization businessInfo = null)
+        Organization? businessInfo = null)
     {
         var owner = await userManager.FindByNameAsync(ownerUsername);
         if (owner == null)

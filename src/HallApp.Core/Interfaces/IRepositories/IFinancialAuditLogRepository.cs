@@ -21,4 +21,9 @@ public interface IFinancialAuditLogRepository : IGenericRepository<FinancialAudi
     /// Get audit logs for a specific user.
     /// </summary>
     Task<IEnumerable<FinancialAuditLog>> GetByUserIdAsync(int userId);
+
+    /// <summary>
+    /// Returns a queryable for building dynamic filtered queries (e.g., pagination, search, export).
+    /// </summary>
+    IQueryable<FinancialAuditLog> GetQueryable();
 }

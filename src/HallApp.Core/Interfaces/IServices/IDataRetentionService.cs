@@ -54,7 +54,7 @@ public interface IDataRetentionService
     /// <summary>
     /// Gets the data retention request by ID.
     /// </summary>
-    Task<DataRetentionRequest> GetRequestByIdAsync(int requestId);
+    Task<DataRetentionRequest?> GetRequestByIdAsync(int requestId);
 
     /// <summary>
     /// Gets all data retention requests for a specific user.

@@ -6,22 +6,22 @@ public class CreateVendorDto
 {
     [Required]
     [StringLength(100)]
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
     
-    public string Description { get; set; }
+    public string Description { get; set; } = string.Empty;
     
     [Required]
     [EmailAddress]
-    public string Email { get; set; }
+    public string Email { get; set; } = string.Empty;
     
     [Required]
     [Phone]
-    public string Phone { get; set; }
+    public string Phone { get; set; } = string.Empty;
     
     public string PhoneNumber { get; set; } = string.Empty;
     
     [Url]
-    public string Website { get; set; }
+    public string Website { get; set; } = string.Empty;
     
     public string WhatsApp { get; set; } = string.Empty;
     

@@ -216,13 +216,13 @@ public class BookingApprovalController : BaseApiController
 
             if (allVendorsResponded)
             {
-                var allApproved = booking.VendorBookings
+                var allApproved = booking.VendorBookings!
                     .All(vb => vb.Status == ApprovalStatusEnum.Approved.ToString());
 
-                var allRejected = booking.VendorBookings
+                var allRejected = booking.VendorBookings!
                     .All(vb => vb.Status == ApprovalStatusEnum.Rejected.ToString());
 
-                var hasApprovals = booking.VendorBookings
+                var hasApprovals = booking.VendorBookings!
                     .Any(vb => vb.Status == ApprovalStatusEnum.Approved.ToString());
 
                 if (allApproved)
@@ -241,12 +241,12 @@ public class BookingApprovalController : BaseApiController
                     // Allow customer to proceed with approved vendors only
                     booking.Status = BookingStatusEnum.ReadyForPayment.ToString();
 
-                    var rejectedVendors = booking.VendorBookings
+                    var rejectedVendors = booking.VendorBookings!
                         .Where(vb => vb.Status == ApprovalStatusEnum.Rejected.ToString())
                         .Select(vb => vb.Vendor?.Name ?? "Unknown")
                         .ToList();
 
-                    var approvedVendors = booking.VendorBookings
+                    var approvedVendors = booking.VendorBookings!
                         .Where(vb => vb.Status == ApprovalStatusEnum.Approved.ToString())
                         .Select(vb => vb.Vendor?.Name ?? "Unknown")
                         .ToList();

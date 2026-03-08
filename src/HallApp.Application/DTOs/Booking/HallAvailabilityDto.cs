@@ -3,7 +3,7 @@ namespace HallApp.Application.DTOs.Booking
     public class HallAvailabilityDto
     {
         public int HallId { get; set; }
-        public string HallName { get; set; }
+        public string HallName { get; set; } = string.Empty;
         public DateTime Date { get; set; }
         public bool IsAvailable { get; set; }
         public List<TimeSlot> AvailableSlots { get; set; } = new List<TimeSlot>();

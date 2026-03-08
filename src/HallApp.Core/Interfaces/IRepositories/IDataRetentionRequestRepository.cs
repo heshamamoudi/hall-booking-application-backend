@@ -20,5 +20,5 @@ public interface IDataRetentionRequestRepository : IGenericRepository<DataRetent
     /// <summary>
     /// Gets the most recent active request for a user (pending or processing).
     /// </summary>
-    Task<DataRetentionRequest> GetActiveRequestForUserAsync(int userId);
+    Task<DataRetentionRequest?> GetActiveRequestForUserAsync(int userId);
 }

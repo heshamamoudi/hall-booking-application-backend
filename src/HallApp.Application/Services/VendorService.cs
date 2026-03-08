@@ -20,7 +20,7 @@ public class VendorService : IVendorService
         return createdVendor;
     }
 
-    public async Task<Vendor> UpdateVendorAsync(int id, Vendor vendor)
+    public async Task<Vendor?> UpdateVendorAsync(int id, Vendor vendor)
     {
         var existingVendor = await _unitOfWork.VendorRepository.GetVendorByIdAsync(id);
         if (existingVendor == null) throw new ArgumentException($"Vendor with id {id} not found");
@@ -102,7 +102,7 @@ public class VendorService : IVendorService
         return existingVendor;
     }
 
-    public async Task<Vendor> ToggleVendorActiveAsync(int id, bool isActive)
+    public async Task<Vendor?> ToggleVendorActiveAsync(int id, bool isActive)
     {
         var existingVendor = await _unitOfWork.VendorRepository.GetVendorByIdAsync(id);
         if (existingVendor == null) return null;
@@ -121,12 +121,12 @@ public class VendorService : IVendorService
         return result;
     }
 
-    public async Task<Vendor> GetVendorByIdAsync(int id)
+    public async Task<Vendor?> GetVendorByIdAsync(int id)
     {
         return await _unitOfWork.VendorRepository.GetVendorByIdAsync(id);
     }
 
-    public async Task<IEnumerable<Vendor>> GetVendorsAsync(object vendorParams)
+    public async Task<IEnumerable<Vendor>> GetVendorsAsync(object? vendorParams)
     {
         return await _unitOfWork.VendorRepository.GetAllVendorsAsync();
     }
@@ -208,7 +208,7 @@ public class VendorService : IVendorService
         return await _unitOfWork.VendorRepository.GetVendorTypesAsync();
     }
 
-    public async Task<VendorType> GetVendorTypeByIdAsync(int id)
+    public async Task<VendorType?> GetVendorTypeByIdAsync(int id)
     {
         return await _unitOfWork.VendorRepository.GetVendorTypeByIdAsync(id);
     }

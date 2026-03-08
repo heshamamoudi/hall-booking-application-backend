@@ -30,7 +30,7 @@ public class VendorBookingRepository : GenericRepository<VendorBooking>, IVendor
             .ToListAsync();
     }
 
-    public async Task<VendorBooking> GetBookingWithDetailsAsync(int bookingId)
+    public async Task<VendorBooking?> GetBookingWithDetailsAsync(int bookingId)
     {
         return await _context.VendorBookings
             .Include(vb => vb.Booking)
@@ -70,8 +70,8 @@ public class VendorBookingRepository : GenericRepository<VendorBooking>, IVendor
             .Where(vb => vendorIdList.Contains(vb.VendorId))
             .Include(vb => vb.Vendor)
             .Include(vb => vb.Booking)
-                .ThenInclude(b => b.Customer)
-                    .ThenInclude(c => c.AppUser)
+                .ThenInclude(b => b!.Customer)
+                    .ThenInclude(c => c!.AppUser)
             .Include(vb => vb.Services)
                 .ThenInclude(s => s.ServiceItem)
             .AsSplitQuery()

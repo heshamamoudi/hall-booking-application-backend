@@ -5,7 +5,7 @@ namespace HallApp.Core.Interfaces.IServices
     public interface IChatService
     {
         // Conversation Management
-        Task<ChatConversation> GetConversationByIdAsync(int id);
+        Task<ChatConversation?> GetConversationByIdAsync(int id);
         Task<IEnumerable<ChatConversation>> GetAllConversationsAsync();
         Task<IEnumerable<ChatConversation>> GetCustomerConversationsAsync(int customerId);
         Task<IEnumerable<ChatConversation>> GetConversationsByCreatedByUserIdAsync(int userId);

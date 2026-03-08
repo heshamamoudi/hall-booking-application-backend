@@ -268,21 +268,21 @@ namespace HallApp.Web.Controllers.Customer
         {
             try
             {
-                var customer = await _customerService.GetCustomerByIdAsync(id);
-                
+                // Use direct SQL-like update to avoid EF Core tracking issues
+                // with collection navigation properties (Bookings, Addresses, etc.)
+                var customer = await _context.Customers.FindAsync(id);
+
                 if (customer == null)
                 {
                     return Error<CustomerDto>($"Customer with ID {id} not found", 404);
                 }
 
                 customer.Active = active;
-                var updatedCustomer = await _customerService.UpdateCustomerAsync(customer);
-                
-                if (updatedCustomer == null)
-                {
-                    return Error<CustomerDto>("Failed to update customer status", 500);
-                }
+                customer.Updated = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
 
+                // Re-fetch with full includes for DTO mapping
+                var updatedCustomer = await _customerService.GetCustomerByIdAsync(id);
                 var customerDto = _mapper.Map<CustomerDto>(updatedCustomer);
                 return Success(customerDto, $"Customer {(active ? "activated" : "deactivated")} successfully");
             }

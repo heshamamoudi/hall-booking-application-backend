@@ -32,7 +32,7 @@ namespace HallApp.Application.Services
 
         #region Conversation Management
 
-        public async Task<ChatConversation> GetConversationByIdAsync(int id)
+        public async Task<ChatConversation?> GetConversationByIdAsync(int id)
         {
             return await _unitOfWork.ChatRepository.GetConversationByIdAsync(id);
         }
@@ -316,7 +316,7 @@ namespace HallApp.Application.Services
             try
             {
                 // FIXED: Send message WITH Sender loaded for SenderName
-                await _chatHubService.SendMessageToConversationAsync(conversationId, messageWithSender);
+                await _chatHubService.SendMessageToConversationAsync(conversationId, messageWithSender!);
                 _logger.LogInformation("Real-time message sent to conversation {ConversationId}", conversationId);
             }
             catch (Exception ex)

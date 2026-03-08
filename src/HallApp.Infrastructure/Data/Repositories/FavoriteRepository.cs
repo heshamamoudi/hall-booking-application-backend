@@ -69,7 +69,7 @@ public class FavoriteRepository : GenericRepository<Favorite>, IFavoriteReposito
         return await FavoriteExistsAsync(customerId, hallId);
     }
 
-    public async Task<Favorite> GetFavoriteAsync(int customerId, int hallId)
+    public async Task<Favorite?> GetFavoriteAsync(int customerId, int hallId)
     {
         return await _context.Favorites
             .FirstOrDefaultAsync(f => f.CustomerId == customerId && f.HallId == hallId);

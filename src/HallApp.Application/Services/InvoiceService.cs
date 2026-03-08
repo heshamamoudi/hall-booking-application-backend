@@ -13,13 +13,16 @@ namespace HallApp.Application.Services;
 
 /// <summary>
 /// Invoice Service implementation - handles invoice generation, management and ZATCA compliance.
-/// Seller information is resolved dynamically from the Organization entity linked to each hall,
-/// ensuring each organization's own business registration data appears on its invoices.
+/// Seller information is resolved from PlatformSettings (Zawaji company info) as the deemed supplier,
+/// ensuring ZATCA marketplace compliance where the platform is the seller on all customer-facing invoices.
+/// Purchase orders are auto-generated for hall/vendor payouts with commission deductions.
 /// </summary>
 public class InvoiceService : IInvoiceService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IOrganizationService _organizationService;
+    private readonly IPlatformSettingsService _platformSettingsService;
+    private readonly IPurchaseOrderService _purchaseOrderService;
     private readonly ILogger<InvoiceService> _logger;
 
     // CRIT-FIN-002: Standardized to decimal fraction format (0.15 = 15% VAT)
@@ -29,18 +32,22 @@ public class InvoiceService : IInvoiceService
     public InvoiceService(
         IUnitOfWork unitOfWork,
         IOrganizationService organizationService,
+        IPlatformSettingsService platformSettingsService,
+        IPurchaseOrderService purchaseOrderService,
         ILogger<InvoiceService> logger)
     {
         _unitOfWork = unitOfWork;
         _organizationService = organizationService;
+        _platformSettingsService = platformSettingsService;
+        _purchaseOrderService = purchaseOrderService;
         _logger = logger;
     }
 
     #region Core CRUD
 
-    public async Task<Invoice> GetInvoiceByIdAsync(int invoiceId)
+    public async Task<Invoice?> GetInvoiceByIdAsync(int invoiceId)
     {
-        return await _unitOfWork.InvoiceRepository.GetByIdAsync(invoiceId) ?? new Invoice();
+        return await _unitOfWork.InvoiceRepository.GetByIdAsync(invoiceId);
     }
 
     public async Task<Invoice?> GetInvoiceByBookingIdAsync(int bookingId)
@@ -121,23 +128,18 @@ public class InvoiceService : IInvoiceService
         // Get hall details
         var hall = await _unitOfWork.HallRepository.GetByIdAsync(booking.HallId);
 
-        // Resolve organization for ZATCA-compliant seller info
-        var organization = await ResolveOrganizationAsync(hall, booking.HallId);
+        // Resolve PlatformSettings (Zawaji) as the seller — deemed supplier model
+        var platformSettings = await _platformSettingsService.GetSettingsAsync();
+        ValidatePlatformSettingsForZatca(platformSettings);
 
-        // Validate ZATCA-required fields on the organization
-        if (organization != null)
-        {
-            ValidateOrganizationForZatca(organization, hall?.ID ?? booking.HallId);
-        }
-
-        // Build the composite seller address from structured organization fields
-        var sellerAddress = BuildSellerAddress(organization, hall);
+        // Build the composite seller address from PlatformSettings
+        var sellerAddress = BuildPlatformSellerAddress(platformSettings);
 
         // Generate invoice number
         var invoiceNumber = await GenerateInvoiceNumberAsync();
 
-        // Create invoice
-        var invoice = BuildInvoiceFromBooking(booking, customer, hall, organization, sellerAddress, invoiceNumber, createdBy);
+        // Create invoice with Zawaji as seller
+        var invoice = BuildInvoiceFromBooking(booking, customer, hall, platformSettings, sellerAddress, invoiceNumber, createdBy);
 
         // Create line items (Enhancement 1: includes BookingPackage)
         invoice.LineItems = await BuildLineItemsForBookingAsync(booking, hall);
@@ -145,7 +147,7 @@ public class InvoiceService : IInvoiceService
         // CRIT-002 FIX: Calculate header totals FROM line items to prevent mismatches
         RecalculateHeaderTotalsFromLineItems(invoice);
 
-        // Generate ZATCA QR Code
+        // Generate ZATCA QR Code (now uses Zawaji's VAT number)
         invoice.QRCode = await GenerateZATCAQRCodeAsync(invoice);
 
         // Generate Invoice Hash
@@ -159,6 +161,23 @@ public class InvoiceService : IInvoiceService
         await _unitOfWork.Complete();
 
         _logger.LogInformation("Invoice {InvoiceNumber} generated successfully for booking {BookingId}", invoice.InvoiceNumber, bookingId);
+
+        // Auto-generate purchase orders for hall/vendor payouts (commission deducted)
+        try
+        {
+            var purchaseOrders = await _purchaseOrderService.GeneratePurchaseOrdersForInvoiceAsync(invoice.Id, createdBy);
+            _logger.LogInformation(
+                "Auto-generated {PoCount} purchase order(s) for invoice {InvoiceNumber}",
+                purchaseOrders.Count, invoice.InvoiceNumber);
+        }
+        catch (Exception ex)
+        {
+            // PO generation failure should not block invoice creation
+            _logger.LogError(ex,
+                "Failed to auto-generate purchase orders for invoice {InvoiceNumber} (booking {BookingId}). " +
+                "POs can be generated manually via the admin panel.",
+                invoice.InvoiceNumber, bookingId);
+        }
 
         return invoice;
     }
@@ -284,8 +303,8 @@ public class InvoiceService : IInvoiceService
         var customer = await _unitOfWork.CustomerRepository.GetByIdAsync(booking.CustomerId);
         var hall = await _unitOfWork.HallRepository.GetByIdAsync(booking.HallId);
 
-        // Resolve organization
-        var organization = await ResolveOrganizationAsync(hall, booking.HallId);
+        // Resolve PlatformSettings (Zawaji) as seller — deemed supplier model
+        var platformSettings = await _platformSettingsService.GetSettingsAsync();
 
         // Delete existing line items
         await _unitOfWork.InvoiceRepository.RemoveLineItemsByInvoiceIdAsync(invoiceId);
@@ -305,18 +324,22 @@ public class InvoiceService : IInvoiceService
             invoice.BuyerPostalCode = customer.Addresses?.FirstOrDefault()?.ZipCode ?? "";
         }
 
-        // Update seller information if organization changed
-        if (organization != null)
-        {
-            invoice.SellerName = organization.LegalName is { Length: > 0 }
-                ? organization.LegalName
-                : organization.Name is { Length: > 0 }
-                    ? organization.Name
-                    : hall?.Name ?? invoice.SellerName;
-            invoice.SellerVatNumber = organization.VatNumber ?? invoice.SellerVatNumber;
-            invoice.SellerCommercialRegistrationNumber = organization.CommercialRegistrationNumber ?? invoice.SellerCommercialRegistrationNumber;
-            invoice.SellerAddress = BuildSellerAddress(organization, hall);
-        }
+        // Update seller information from PlatformSettings (Zawaji)
+        invoice.SellerName = platformSettings.LegalName is { Length: > 0 }
+            ? platformSettings.LegalName
+            : platformSettings.CompanyName is { Length: > 0 }
+                ? platformSettings.CompanyName
+                : "Zawaji";
+        invoice.SellerVatNumber = platformSettings.VatNumber;
+        invoice.SellerCommercialRegistrationNumber = platformSettings.CommercialRegistrationNumber;
+        invoice.SellerAddress = BuildPlatformSellerAddress(platformSettings);
+        invoice.SellerBuildingNumber = platformSettings.BuildingNumber;
+        invoice.SellerStreetName = platformSettings.StreetName;
+        invoice.SellerDistrict = platformSettings.District;
+        invoice.SellerCity = platformSettings.City;
+        invoice.SellerPostalCode = platformSettings.PostalCode;
+        invoice.SellerCountryCode = platformSettings.CountryCode is { Length: > 0 }
+            ? platformSettings.CountryCode : "SA";
 
         // Regenerate line items from current booking data (includes BookingPackage)
         invoice.LineItems = await BuildLineItemsForBookingAsync(booking, hall);
@@ -588,7 +611,7 @@ public class InvoiceService : IInvoiceService
 
     private void AddTLV(List<byte> data, byte tag, string value)
     {
-        var valueBytes = Encoding.UTF8.GetBytes(value);
+        var valueBytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
         data.Add(tag);
         data.Add((byte)valueBytes.Length);
         data.AddRange(valueBytes);
@@ -673,50 +696,69 @@ public class InvoiceService : IInvoiceService
     }
 
     /// <summary>
-    /// Resolves the organization that owns a hall for ZATCA-compliant seller information.
+    /// Validates that PlatformSettings has all ZATCA-required fields populated.
+    /// Logs structured warnings for any missing fields to aid compliance monitoring.
     /// </summary>
-    private async Task<Organization?> ResolveOrganizationAsync(Hall? hall, int bookingHallId)
+    private void ValidatePlatformSettingsForZatca(PlatformSettings settings)
     {
-        Organization? organization = null;
+        if (string.IsNullOrWhiteSpace(settings.VatNumber))
+            _logger.LogWarning("PlatformSettings missing VAT number - invoices may fail ZATCA validation. " +
+                               "Configure via Admin > Settings > Platform.");
 
-        if (hall?.OrganizationId != null)
-        {
-            try
-            {
-                organization = await _organizationService.GetOrganizationById(hall.OrganizationId.Value);
-                if (organization == null)
-                {
-                    _logger.LogWarning(
-                        "Organization {OrganizationId} not found for hall {HallId} - invoice will use fallback seller info",
-                        hall.OrganizationId.Value, hall.ID);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex,
-                    "Failed to resolve organization {OrganizationId} for hall {HallId} - invoice will use fallback seller info",
-                    hall.OrganizationId.Value, hall.ID);
-            }
-        }
-        else
-        {
-            _logger.LogError(
-                "Hall {HallId} has no OrganizationId - invoice seller info will be incomplete. " +
-                "Ensure all halls are linked to an organization for ZATCA compliance",
-                hall?.ID ?? bookingHallId);
-        }
+        if (string.IsNullOrWhiteSpace(settings.CommercialRegistrationNumber))
+            _logger.LogWarning("PlatformSettings missing Commercial Registration number - invoices may fail ZATCA validation.");
 
-        return organization;
+        if (string.IsNullOrWhiteSpace(settings.LegalName) && string.IsNullOrWhiteSpace(settings.CompanyName))
+            _logger.LogWarning("PlatformSettings missing both LegalName and CompanyName - invoices will use 'Zawaji' as fallback.");
+
+        if (string.IsNullOrWhiteSpace(settings.City))
+            _logger.LogWarning("PlatformSettings missing City - invoices may fail ZATCA address validation.");
+
+        if (string.IsNullOrWhiteSpace(settings.PostalCode))
+            _logger.LogWarning("PlatformSettings missing PostalCode - invoices may fail ZATCA address validation.");
+
+        if (string.IsNullOrWhiteSpace(settings.StreetName))
+            _logger.LogWarning("PlatformSettings missing StreetName - invoices may fail ZATCA address validation.");
+
+        if (string.IsNullOrWhiteSpace(settings.BuildingNumber))
+            _logger.LogWarning("PlatformSettings missing BuildingNumber - invoices may fail ZATCA address validation.");
+
+        if (string.IsNullOrWhiteSpace(settings.District))
+            _logger.LogWarning("PlatformSettings missing District - invoices may fail ZATCA address validation.");
+    }
+
+    /// <summary>
+    /// Builds a composite seller address string from PlatformSettings fields.
+    /// </summary>
+    private static string BuildPlatformSellerAddress(PlatformSettings settings)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(settings.BuildingNumber))
+            parts.Add(settings.BuildingNumber);
+        if (!string.IsNullOrWhiteSpace(settings.StreetName))
+            parts.Add(settings.StreetName);
+        if (!string.IsNullOrWhiteSpace(settings.District))
+            parts.Add(settings.District);
+        if (!string.IsNullOrWhiteSpace(settings.City))
+            parts.Add(settings.City);
+        if (!string.IsNullOrWhiteSpace(settings.PostalCode))
+            parts.Add(settings.PostalCode);
+        if (!string.IsNullOrWhiteSpace(settings.CountryCode))
+            parts.Add(settings.CountryCode);
+
+        return parts.Count > 0 ? string.Join(", ", parts) : "Saudi Arabia";
     }
 
     /// <summary>
     /// Builds an Invoice entity from booking data. Does not include line items or ZATCA fields.
+    /// Seller info comes from PlatformSettings (Zawaji) as the deemed supplier.
     /// </summary>
     private static Invoice BuildInvoiceFromBooking(
         Booking booking,
         Core.Entities.CustomerEntities.Customer customer,
         Hall? hall,
-        Organization? organization,
+        PlatformSettings platformSettings,
         string sellerAddress,
         string invoiceNumber,
         string createdBy)
@@ -731,22 +773,22 @@ public class InvoiceService : IInvoiceService
             CustomerId = booking.CustomerId,
             HallId = booking.HallId,
 
-            // Seller Information
-            SellerName = organization?.LegalName is { Length: > 0 }
-                ? organization.LegalName
-                : organization?.Name is { Length: > 0 }
-                    ? organization.Name
-                    : hall?.Name ?? "Unknown",
-            SellerVatNumber = organization?.VatNumber ?? "",
-            SellerCommercialRegistrationNumber = organization?.CommercialRegistrationNumber ?? "",
+            // Seller Information — Zawaji (deemed supplier)
+            SellerName = platformSettings.LegalName is { Length: > 0 }
+                ? platformSettings.LegalName
+                : platformSettings.CompanyName is { Length: > 0 }
+                    ? platformSettings.CompanyName
+                    : "Zawaji",
+            SellerVatNumber = platformSettings.VatNumber,
+            SellerCommercialRegistrationNumber = platformSettings.CommercialRegistrationNumber,
             SellerAddress = sellerAddress,
-            SellerBuildingNumber = organization?.BuildingNumber ?? "",
-            SellerStreetName = organization?.StreetName ?? "",
-            SellerDistrict = organization?.District ?? "",
-            SellerCity = organization?.City ?? "",
-            SellerPostalCode = organization?.PostalCode ?? "",
-            SellerCountryCode = organization?.CountryCode is { Length: > 0 }
-                ? organization.CountryCode
+            SellerBuildingNumber = platformSettings.BuildingNumber,
+            SellerStreetName = platformSettings.StreetName,
+            SellerDistrict = platformSettings.District,
+            SellerCity = platformSettings.City,
+            SellerPostalCode = platformSettings.PostalCode,
+            SellerCountryCode = platformSettings.CountryCode is { Length: > 0 }
+                ? platformSettings.CountryCode
                 : "SA",
 
             // Buyer Information
@@ -943,104 +985,6 @@ public class InvoiceService : IInvoiceService
         }
 
         return lineItems;
-    }
-
-    #endregion
-
-    #region Organization Validation
-
-    /// <summary>
-    /// Validates that an organization has all ZATCA-required fields populated.
-    /// Logs structured warnings for any missing fields to aid compliance monitoring.
-    /// </summary>
-    private void ValidateOrganizationForZatca(Organization organization, int hallId)
-    {
-        if (string.IsNullOrWhiteSpace(organization.VatNumber))
-        {
-            _logger.LogWarning(
-                "Organization {OrgId} missing VAT number - invoice for hall {HallId} may fail ZATCA validation",
-                organization.Id, hallId);
-        }
-
-        if (string.IsNullOrWhiteSpace(organization.CommercialRegistrationNumber))
-        {
-            _logger.LogWarning(
-                "Organization {OrgId} missing Commercial Registration number - invoice for hall {HallId} may fail ZATCA validation",
-                organization.Id, hallId);
-        }
-
-        if (string.IsNullOrWhiteSpace(organization.LegalName) && string.IsNullOrWhiteSpace(organization.Name))
-        {
-            _logger.LogWarning(
-                "Organization {OrgId} missing both LegalName and Name - invoice for hall {HallId} will use fallback seller name",
-                organization.Id, hallId);
-        }
-
-        if (string.IsNullOrWhiteSpace(organization.City))
-        {
-            _logger.LogWarning(
-                "Organization {OrgId} missing City - invoice for hall {HallId} may fail ZATCA address validation",
-                organization.Id, hallId);
-        }
-
-        if (string.IsNullOrWhiteSpace(organization.PostalCode))
-        {
-            _logger.LogWarning(
-                "Organization {OrgId} missing PostalCode - invoice for hall {HallId} may fail ZATCA address validation",
-                organization.Id, hallId);
-        }
-
-        if (string.IsNullOrWhiteSpace(organization.StreetName))
-        {
-            _logger.LogWarning(
-                "Organization {OrgId} missing StreetName - invoice for hall {HallId} may fail ZATCA address validation",
-                organization.Id, hallId);
-        }
-
-        if (string.IsNullOrWhiteSpace(organization.BuildingNumber))
-        {
-            _logger.LogWarning(
-                "Organization {OrgId} missing BuildingNumber - invoice for hall {HallId} may fail ZATCA address validation",
-                organization.Id, hallId);
-        }
-
-        if (string.IsNullOrWhiteSpace(organization.District))
-        {
-            _logger.LogWarning(
-                "Organization {OrgId} missing District - invoice for hall {HallId} may fail ZATCA address validation",
-                organization.Id, hallId);
-        }
-    }
-
-    /// <summary>
-    /// Builds a composite seller address string from structured organization fields.
-    /// Falls back to hall location address if organization data is unavailable.
-    /// </summary>
-    private static string BuildSellerAddress(Organization? organization, Hall? hall)
-    {
-        if (organization != null)
-        {
-            var parts = new List<string>();
-
-            if (!string.IsNullOrWhiteSpace(organization.BuildingNumber))
-                parts.Add(organization.BuildingNumber);
-            if (!string.IsNullOrWhiteSpace(organization.StreetName))
-                parts.Add(organization.StreetName);
-            if (!string.IsNullOrWhiteSpace(organization.District))
-                parts.Add(organization.District);
-            if (!string.IsNullOrWhiteSpace(organization.City))
-                parts.Add(organization.City);
-            if (!string.IsNullOrWhiteSpace(organization.PostalCode))
-                parts.Add(organization.PostalCode);
-            if (!string.IsNullOrWhiteSpace(organization.CountryCode))
-                parts.Add(organization.CountryCode);
-
-            if (parts.Count > 0)
-                return string.Join(", ", parts);
-        }
-
-        // Fallback to hall location if available
-        return hall?.Location?.Address ?? "";
     }
 
     #endregion

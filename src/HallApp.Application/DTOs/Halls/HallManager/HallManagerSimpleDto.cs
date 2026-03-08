@@ -6,9 +6,9 @@ namespace HallApp.Application.DTOs.Halls.HallManager;
 public class HallManagerSimpleDto
 {
     public int Id { get; set; }
-    public string UserName { get; set; }
-    public string Email { get; set; }
-    public string PhoneNumber { get; set; }
-    public string CompanyName { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string PhoneNumber { get; set; } = string.Empty;
+    public string CompanyName { get; set; } = string.Empty;
     public bool IsApproved { get; set; }
 }

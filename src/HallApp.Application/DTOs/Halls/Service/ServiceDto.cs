@@ -5,8 +5,8 @@ namespace HallApp.Application.DTOs.Halls.Service;
 public class ServiceDto
 {
     public int ID { get; set; }
-    public string Name { get; set; }
-    public string ArabicName { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string ArabicName { get; set; } = string.Empty;
     public bool IsActive { get; set; }
     public int Gender { get; set; }
 

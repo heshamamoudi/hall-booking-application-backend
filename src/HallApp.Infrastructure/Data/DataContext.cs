@@ -83,6 +83,12 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
     public DbSet<Organization> Organizations { get; set; }
     public DbSet<OrganizationMember> OrganizationMembers { get; set; }
 
+    // Purchase Orders
+    public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
+
+    // Platform Settings
+    public DbSet<PlatformSettings> PlatformSettings { get; set; }
+
     // Data Protection Entities
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
@@ -94,6 +100,102 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
         builder.HasSequence<int>("invoice_number_seq")
             .StartsAt(1)
             .IncrementsBy(1);
+
+        // Database sequence for atomic purchase order number generation
+        builder.HasSequence<int>("purchase_order_number_seq")
+            .StartsAt(1)
+            .IncrementsBy(1);
+
+        // PlatformSettings configuration
+        builder.Entity<PlatformSettings>(entity =>
+        {
+            entity.HasKey(ps => ps.Id);
+
+            entity.Property(ps => ps.CompanyName).HasMaxLength(200);
+            entity.Property(ps => ps.LegalName).HasMaxLength(200);
+            entity.Property(ps => ps.VatNumber).HasMaxLength(50);
+            entity.Property(ps => ps.CommercialRegistrationNumber).HasMaxLength(50);
+            entity.Property(ps => ps.BuildingNumber).HasMaxLength(10);
+            entity.Property(ps => ps.StreetName).HasMaxLength(100);
+            entity.Property(ps => ps.District).HasMaxLength(100);
+            entity.Property(ps => ps.City).HasMaxLength(100);
+            entity.Property(ps => ps.PostalCode).HasMaxLength(10);
+            entity.Property(ps => ps.CountryCode).HasMaxLength(2);
+            entity.Property(ps => ps.Email).HasMaxLength(256);
+            entity.Property(ps => ps.Phone).HasMaxLength(20);
+            entity.Property(ps => ps.WhatsApp).HasMaxLength(20);
+            entity.Property(ps => ps.Website).HasMaxLength(500);
+            entity.Property(ps => ps.BankName).HasMaxLength(100);
+            entity.Property(ps => ps.BankAccountNumber).HasMaxLength(30);
+            entity.Property(ps => ps.BankIban).HasMaxLength(34);
+            entity.Property(ps => ps.LogoUrl).HasMaxLength(500);
+            entity.Property(ps => ps.UpdatedBy).HasMaxLength(100);
+
+            entity.Property(ps => ps.DefaultHallCommissionRate)
+                .HasColumnType("decimal(5,4)");
+            entity.Property(ps => ps.DefaultVendorCommissionRate)
+                .HasColumnType("decimal(5,4)");
+
+            entity.HasIndex(ps => ps.IsActive);
+        });
+
+        // PurchaseOrder configuration
+        builder.Entity<PurchaseOrder>(entity =>
+        {
+            entity.HasKey(po => po.Id);
+
+            entity.HasOne(po => po.Invoice)
+                .WithMany(i => i.PurchaseOrders)
+                .HasForeignKey(po => po.InvoiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(po => po.Booking)
+                .WithMany(b => b.PurchaseOrders)
+                .HasForeignKey(po => po.BookingId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(po => po.SupplierOrganization)
+                .WithMany()
+                .HasForeignKey(po => po.SupplierOrganizationId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Unique PO number
+            entity.HasIndex(po => po.PurchaseOrderNumber)
+                .IsUnique();
+
+            // Indexes for querying
+            entity.HasIndex(po => po.InvoiceId);
+            entity.HasIndex(po => po.BookingId);
+            entity.HasIndex(po => po.SupplierOrganizationId);
+            entity.HasIndex(po => po.Status);
+            entity.HasIndex(po => po.CreatedAt);
+
+            // String length constraints
+            entity.Property(po => po.PurchaseOrderNumber).HasMaxLength(50);
+            entity.Property(po => po.SupplierType).HasMaxLength(20);
+            entity.Property(po => po.SupplierName).HasMaxLength(200);
+            entity.Property(po => po.SupplierVatNumber).HasMaxLength(50);
+            entity.Property(po => po.SupplierCommercialRegistrationNumber).HasMaxLength(50);
+            entity.Property(po => po.SupplierAddress).HasMaxLength(500);
+            entity.Property(po => po.SupplierBankIban).HasMaxLength(34);
+            entity.Property(po => po.SupplierBankName).HasMaxLength(100);
+            entity.Property(po => po.Currency).HasMaxLength(3);
+            entity.Property(po => po.Status).HasMaxLength(30);
+            entity.Property(po => po.PaymentReference).HasMaxLength(200);
+            entity.Property(po => po.CreatedBy).HasMaxLength(100);
+
+            // Decimal precision for financial values
+            entity.Property(po => po.GrossAmount).HasColumnType("decimal(18,2)");
+            entity.Property(po => po.CommissionRate).HasColumnType("decimal(5,4)");
+            entity.Property(po => po.CommissionAmount).HasColumnType("decimal(18,2)");
+            entity.Property(po => po.NetAmount).HasColumnType("decimal(18,2)");
+            entity.Property(po => po.TaxRate).HasColumnType("decimal(5,4)");
+            entity.Property(po => po.TaxAmount).HasColumnType("decimal(18,2)");
+            entity.Property(po => po.TotalAmount).HasColumnType("decimal(18,2)");
+
+            // Optimistic concurrency
+            entity.Property(po => po.RowVersion).IsRowVersion();
+        });
 
         // Identity configurations
         builder.Entity<AppUser>().ToTable("Users");
@@ -791,6 +893,10 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
             entity.Property(o => o.BankIban)
                 .HasMaxLength(34)
                 .HasDefaultValue(string.Empty);
+
+            // Commission override
+            entity.Property(o => o.CommissionRate)
+                .HasColumnType("decimal(5,4)");
 
             // Metadata
             entity.Property(o => o.IsVerified)

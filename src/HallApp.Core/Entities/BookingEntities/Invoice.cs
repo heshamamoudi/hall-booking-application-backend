@@ -224,6 +224,9 @@ public class Invoice
     public string PdfPath { get; set; } = string.Empty;
 
     public bool IsPdfGenerated { get; set; } = false;
+
+    // Purchase Orders
+    public List<PurchaseOrder> PurchaseOrders { get; set; } = new();
 }
 
 /// <summary>

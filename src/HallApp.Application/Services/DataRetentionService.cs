@@ -450,7 +450,7 @@ public class DataRetentionService : IDataRetentionService
     }
 
     /// <inheritdoc />
-    public async Task<DataRetentionRequest> GetRequestByIdAsync(int requestId)
+    public async Task<DataRetentionRequest?> GetRequestByIdAsync(int requestId)
     {
         return await _unitOfWork.DataRetentionRequestRepository.GetByIdAsync(requestId);
     }

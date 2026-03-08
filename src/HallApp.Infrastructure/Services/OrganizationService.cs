@@ -27,7 +27,7 @@ public class OrganizationService : IOrganizationService
         return await CreateOrganization(name, type, ownerId, null);
     }
 
-    public async Task<Organization> CreateOrganization(string name, string type, int ownerId, Organization businessInfo)
+    public async Task<Organization> CreateOrganization(string name, string type, int ownerId, Organization? businessInfo)
     {
         // Validate type
         if (type != "HallManagement" && type != "VendorManagement")
@@ -119,7 +119,7 @@ public class OrganizationService : IOrganizationService
         return ex.InnerException is PostgresException pgEx && pgEx.SqlState == "23505";
     }
 
-    public async Task<Organization> GetOrganizationById(int id)
+    public async Task<Organization?> GetOrganizationById(int id)
     {
         return await _context.Organizations
             .Include(o => o.Owner)
@@ -128,7 +128,7 @@ public class OrganizationService : IOrganizationService
             .FirstOrDefaultAsync(o => o.Id == id);
     }
 
-    public async Task<Organization> GetOrganizationByOwnerId(int userId)
+    public async Task<Organization?> GetOrganizationByOwnerId(int userId)
     {
         // First check if user is an owner
         var org = await _context.Organizations
@@ -256,5 +256,8 @@ public class OrganizationService : IOrganizationService
             target.BankAccountNumber = source.BankAccountNumber;
         if (!string.IsNullOrWhiteSpace(source.BankIban))
             target.BankIban = source.BankIban;
+
+        // Always apply commission rate (null = use platform default)
+        target.CommissionRate = source.CommissionRate;
     }
 }

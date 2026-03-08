@@ -41,5 +41,5 @@ public class OrganizationMember
     /// The AppUserId of the user who invited this member. Null for the organization owner.
     /// </summary>
     public int? InvitedBy { get; set; }
-    public AppUser InvitedByUser { get; set; }
+    public AppUser? InvitedByUser { get; set; }
 }

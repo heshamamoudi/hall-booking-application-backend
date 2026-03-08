@@ -6,11 +6,11 @@ namespace HallApp.Application.DTOs.Common;
 public class Result<T>
 {
     public bool IsSuccess { get; private set; }
-    public T Value { get; private set; }
-    public string Error { get; private set; }
+    public T? Value { get; private set; }
+    public string? Error { get; private set; }
     public int StatusCode { get; private set; }
 
-    private Result(bool isSuccess, T value, string error, int statusCode)
+    private Result(bool isSuccess, T? value, string? error, int statusCode)
     {
         IsSuccess = isSuccess;
         Value = value;
@@ -32,10 +32,10 @@ public class Result<T>
 public class Result
 {
     public bool IsSuccess { get; private set; }
-    public string Error { get; private set; }
+    public string? Error { get; private set; }
     public int StatusCode { get; private set; }
 
-    private Result(bool isSuccess, string error, int statusCode)
+    private Result(bool isSuccess, string? error, int statusCode)
     {
         IsSuccess = isSuccess;
         Error = error;

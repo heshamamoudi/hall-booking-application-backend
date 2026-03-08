@@ -12,18 +12,18 @@ public class BookingDto
     public int HallId { get; set; }
     public int CustomerId { get; set; }
 
-    public HallBookingDto Hall {  get; set; }
-    public CustomerDto Customer { get; set; }
-    public BookingCustomerDto BookingCustomer { get; set; }
-    public string PaymentMethod { get; set; }
-    public string Coupon { get; set; }
-    public string Status { get; set; }
-    public string Comments { get; set; }
+    public HallBookingDto? Hall { get; set; }
+    public CustomerDto? Customer { get; set; }
+    public BookingCustomerDto? BookingCustomer { get; set; }
+    public string PaymentMethod { get; set; } = string.Empty;
+    public string Coupon { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string Comments { get; set; } = string.Empty;
     public DateTime VisitDate { get; set; }
     public bool IsVisitCompleted { get; set; }
     public bool IsBookingConfirmed { get; set; }
     public DateTime BookingDate { get; set; }
-    public BookingPackage PackageDetails { get; set; }
+    public BookingPackage? PackageDetails { get; set; }
     public DateTime Created { get; set; } = DateTime.UtcNow;
     public DateTime Updated { get; set; } = DateTime.UtcNow;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -34,7 +34,7 @@ public class BookingDto
     public DateTime EventDate { get; set; }
     public TimeSpan StartTime { get; set; }
     public TimeSpan EndTime { get; set; }
-    public string EventType { get; set; }
+    public string EventType { get; set; } = string.Empty;
     public int GuestCount { get; set; }
     public int GenderPreference { get; set; } // 0=Male, 1=Female, 2=Both
     
@@ -51,7 +51,7 @@ public class BookingDto
     
     // Enhanced booking information for comprehensive customer view
     public List<VendorBookingDto> VendorServices { get; set; } = new();
-    public BookingFinancialSummary FinancialSummary { get; set; }
+    public BookingFinancialSummary? FinancialSummary { get; set; }
 }
 
 public class BookingFinancialSummary

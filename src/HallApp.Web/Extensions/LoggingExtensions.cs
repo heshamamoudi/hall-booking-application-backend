@@ -86,7 +86,7 @@ namespace HallApp.Web.Extensions
                     return true;
                 }
                 
-                result = null;
+                result = default!;
                 return false;
             }
         }

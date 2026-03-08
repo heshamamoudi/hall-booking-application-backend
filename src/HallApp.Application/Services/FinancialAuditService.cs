@@ -38,8 +38,8 @@ public class FinancialAuditService : IFinancialAuditService
         string operationType,
         string entityType,
         string entityId,
-        object beforeState = null,
-        object afterState = null,
+        object? beforeState = null,
+        object? afterState = null,
         string ipAddress = "",
         string userAgent = "",
         string correlationId = "",
@@ -86,7 +86,7 @@ public class FinancialAuditService : IFinancialAuditService
     /// <summary>
     /// Safely serializes an object to JSON, handling null and circular references.
     /// </summary>
-    private static string SafeSerialize(object value)
+    private static string SafeSerialize(object? value)
     {
         if (value == null) return string.Empty;
 

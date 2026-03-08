@@ -95,6 +95,9 @@ public class OrganizationDto
     public string BankAccountNumber { get; set; } = string.Empty;
     public string BankIban { get; set; } = string.Empty;
 
+    // Commission
+    public decimal? CommissionRate { get; set; }
+
     // Metadata
     public DateTime? UpdatedAt { get; set; }
     public bool IsVerified { get; set; }
@@ -132,6 +135,10 @@ public class UpdateOrganizationDto
     public string BankName { get; set; } = string.Empty;
     public string BankAccountNumber { get; set; } = string.Empty;
     public string BankIban { get; set; } = string.Empty;
+
+    // Commission (Admin only - null means use platform default)
+    [Range(0, 1)]
+    public decimal? CommissionRate { get; set; }
 }
 
 /// <summary>

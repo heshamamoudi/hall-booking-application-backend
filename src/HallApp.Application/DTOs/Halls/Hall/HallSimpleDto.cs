@@ -6,8 +6,8 @@ namespace HallApp.Application.DTOs.Halls.Hall;
 public class HallSimpleDto
 {
     public int ID { get; set; }
-    public string Name { get; set; }
-    public string Description { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
     public double AverageRating { get; set; }
     public int Gender { get; set; }
     public bool IsActive { get; set; }

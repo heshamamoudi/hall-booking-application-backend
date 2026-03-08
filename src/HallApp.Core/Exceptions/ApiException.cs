@@ -15,12 +15,12 @@ public class ApiException : Exception
     /// <summary>
     /// Gets the collection of identity errors, if any.
     /// </summary>
-    public IEnumerable<IdentityError> Errors { get; }
+    public IEnumerable<IdentityError> Errors { get; } = [];
 
     /// <summary>
     /// Gets additional details about the exception, typically used in development environments.
     /// </summary>
-    public string Details { get; }
+    public string Details { get; } = string.Empty;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ApiException"/> class with a specified status code and error message.

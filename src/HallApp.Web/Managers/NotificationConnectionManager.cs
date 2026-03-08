@@ -9,7 +9,7 @@ public static class NotificationConnectionManager
         _connections[userId] = connectionId;
     }
 
-    public static string GetConnectionId(int userId)
+    public static string? GetConnectionId(int userId)
     {
         _connections.TryGetValue(userId, out var connectionId);
         return connectionId;

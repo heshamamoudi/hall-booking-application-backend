@@ -3,6 +3,7 @@ using HallApp.Core.Entities.BookingEntities;
 using HallApp.Core.Entities.ChamperEntities;
 using HallApp.Core.Enums;
 using HallApp.Core.Interfaces;
+using HallApp.Core.Interfaces.IServices;
 using Microsoft.Extensions.Logging;
 
 namespace HallApp.Application.Services;
@@ -29,13 +30,16 @@ public interface IHallManagerDashboardService
 public class HallManagerDashboardService : IHallManagerDashboardService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IOrganizationService _organizationService;
     private readonly ILogger<HallManagerDashboardService> _logger;
 
     public HallManagerDashboardService(
         IUnitOfWork unitOfWork,
+        IOrganizationService organizationService,
         ILogger<HallManagerDashboardService> logger)
     {
         _unitOfWork = unitOfWork;
+        _organizationService = organizationService;
         _logger = logger;
     }
 
@@ -47,17 +51,31 @@ public class HallManagerDashboardService : IHallManagerDashboardService
         _logger.LogInformation(
             "Building dashboard for HallManager with AppUserId {AppUserId}", appUserId);
 
-        // CRIT-001 FIX: Direct query instead of GetAllAsync().FirstOrDefault()
+        // First try direct hall assignment (for HallManager role)
         var hallManager = await _unitOfWork.HallManagerRepository.GetByAppUserIdWithHallsAsync(appUserId);
+        var halls = hallManager?.Halls ?? new List<Hall>();
 
-        if (hallManager?.Halls == null || !hallManager.Halls.Any())
+        // If no directly assigned halls, check organization ownership (for HallOrganizationManager role)
+        if (!halls.Any())
+        {
+            var organization = await _organizationService.GetOrganizationByOwnerId(appUserId);
+            if (organization != null)
+            {
+                halls = await _unitOfWork.HallRepository.GetHallsByOrganizationIdAsync(organization.Id);
+                _logger.LogInformation(
+                    "Organization {OrgId} ({OrgName}) has {HallCount} halls for user {AppUserId}",
+                    organization.Id, organization.Name, halls.Count, appUserId);
+            }
+        }
+
+        if (!halls.Any())
         {
             _logger.LogWarning(
                 "HallManager {AppUserId} has no halls - returning empty dashboard", appUserId);
             return new HallManagerDashboardDto();
         }
 
-        var hallIds = hallManager.Halls.Select(h => h.ID).ToList();
+        var hallIds = halls.Select(h => h.ID).ToList();
 
         // Get bookings for managed halls using the efficient repository method
         var managerBookings = (await _unitOfWork.BookingRepository.GetBookingsByHallIdsAsync(hallIds)).ToList();
@@ -67,7 +85,7 @@ public class HallManagerDashboardService : IHallManagerDashboardService
 
         var dashboard = new HallManagerDashboardDto
         {
-            Statistics = CalculateStatistics(hallManager, managerBookings, managerInvoices),
+            Statistics = CalculateStatistics(halls, managerBookings, managerInvoices),
             Revenue = CalculateRevenue(managerBookings, managerInvoices),
             PendingApprovals = GetPendingApprovals(managerBookings),
             RecentBookings = GetRecentBookings(managerBookings)
@@ -81,14 +99,13 @@ public class HallManagerDashboardService : IHallManagerDashboardService
     }
 
     private static HallManagerDashboardStatistics CalculateStatistics(
-        HallManager hallManager,
+        List<Hall> halls,
         List<Booking> bookings,
         List<Invoice> invoices)
     {
-        // DUP-005 FIX: Use centralized BookingStatusConstants instead of magic strings
         return new HallManagerDashboardStatistics
         {
-            TotalHalls = hallManager.Halls?.Count ?? 0,
+            TotalHalls = halls.Count,
             TotalRevenue = invoices
                 .Where(i => i.PaymentStatus == BookingStatusConstants.Paid)
                 .Sum(i => i.TotalAmountWithTax),

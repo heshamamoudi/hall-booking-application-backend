@@ -48,12 +48,12 @@ public class VendorManagerService : IVendorManagerService
         return true;
     }
 
-    public async Task<VendorManager> GetVendorManagerByIdAsync(int vendorManagerId)
+    public async Task<VendorManager?> GetVendorManagerByIdAsync(int vendorManagerId)
     {
         return await _unitOfWork.VendorManagerRepository.GetByIdAsync(vendorManagerId);
     }
 
-    public async Task<VendorManager> GetVendorManagerByAppUserIdAsync(int appUserId)
+    public async Task<VendorManager?> GetVendorManagerByAppUserIdAsync(int appUserId)
     {
         var allVendorManagers = await _unitOfWork.VendorManagerRepository.GetAllAsync();
         return allVendorManagers.FirstOrDefault(vm => vm.AppUserId == appUserId);

@@ -30,18 +30,18 @@ public class VendorProfileService : IVendorProfileService
     }
 
     // Profile operations (combines AppUser + VendorManager)
-    public async Task<(AppUser AppUser, VendorManager VendorManager)> GetVendorProfileAsync(string userId)
+    public async Task<(AppUser AppUser, VendorManager VendorManager)?> GetVendorProfileAsync(string userId)
     {
         if (!int.TryParse(userId, out int userIdInt))
-            throw new ArgumentException("Invalid user ID");
+            return null;
 
         // Get AppUser data
         var appUser = await _userService.GetUserByIdAsync(userId);
-        if (appUser == null) throw new ArgumentException("User not found");
+        if (appUser == null) return null;
 
         // Get VendorManager data
         var vendorManager = await _vendorManagerService.GetVendorManagerByAppUserIdAsync(userIdInt);
-        if (vendorManager == null) throw new ArgumentException("Vendor manager not found");
+        if (vendorManager == null) return null;
 
         return (appUser, vendorManager);
     }
@@ -108,7 +108,7 @@ public class VendorProfileService : IVendorProfileService
     }
 
     // Business profile operations
-    public async Task<(AppUser AppUser, VendorManager VendorManager)> GetVendorDashboardAsync(string userId)
+    public async Task<(AppUser AppUser, VendorManager VendorManager)?> GetVendorDashboardAsync(string userId)
     {
         var profile = await GetVendorProfileAsync(userId);
 

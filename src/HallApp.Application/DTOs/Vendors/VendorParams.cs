@@ -4,7 +4,7 @@ public class VendorParams
 {
     private const int MaxPageSize = 50;
     private int _pageSize = 10;
-    private string _searchTerm;
+    private string _searchTerm = string.Empty;
 
     public int PageNumber { get; set; } = 1;
     
@@ -17,7 +17,7 @@ public class VendorParams
     public string SearchTerm
     {
         get => _searchTerm;
-        set => _searchTerm = value?.Trim().ToLower();
+        set => _searchTerm = value?.Trim().ToLower() ?? string.Empty;
     }
 
     public int? VendorTypeId { get; set; }

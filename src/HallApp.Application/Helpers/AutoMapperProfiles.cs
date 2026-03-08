@@ -13,7 +13,6 @@ using HallApp.Application.DTOs.Customer;
 using HallApp.Application.DTOs.Auth;
 using HallApp.Application.DTOs.Halls.HallManager;
 using HallApp.Application.DTOs.Halls.Hall;
-using HallApp.Application.DTOs.Halls.HallManager;
 using HallApp.Application.DTOs.Halls.Contact;
 using HallApp.Application.DTOs.Halls.Location;
 using HallApp.Application.DTOs.Halls.Media;
@@ -121,13 +120,16 @@ public class AutoMapperProfiles : Profile
             .ForMember(dest => dest.SelectedAddressId, opt => opt.MapFrom(src => src.SelectedAddressId))
             .ForMember(dest => dest.Created, opt => opt.MapFrom(src => src.Created))
             .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Updated))
+            .ForMember(dest => dest.Active, opt => opt.MapFrom(src => src.Active))
+            .ForMember(dest => dest.Confirmed, opt => opt.MapFrom(src => src.Confirmed))
+            .ForMember(dest => dest.PhotoUrl, opt => opt.MapFrom(src => src.AppUser != null ? src.AppUser.PhotoUrl : null))
             .ForMember(dest => dest.Bookings, opt => opt.Ignore())
             .ForMember(dest => dest.Addresses, opt => opt.Ignore())
             .ForMember(dest => dest.Favorites, opt => opt.Ignore());
 
         CreateMap<CustomerDto, Customer>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
-            .ForMember(dest => dest.Active, opt => opt.MapFrom(src => true)) // Default to active
+            .ForMember(dest => dest.Active, opt => opt.MapFrom(src => src.Active))
             .ForMember(dest => dest.Confirmed, opt => opt.MapFrom(src => false)) // Default to unconfirmed
             .ForMember(dest => dest.AppUser, opt => opt.Ignore())
             .ForMember(dest => dest.Addresses, opt => opt.Ignore())
@@ -217,6 +219,7 @@ public class AutoMapperProfiles : Profile
                     PhoneNumber = src.PhoneNumber,
                     EmailConfirmed = src.EmailConfirmed,
                     Active = src.Active,
+                    PhotoUrl = src.PhotoUrl,
                     Created = src.UserCreated,
                     Updated = DateTime.UtcNow
                 };

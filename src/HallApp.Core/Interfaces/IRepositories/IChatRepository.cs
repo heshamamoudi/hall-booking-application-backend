@@ -8,7 +8,7 @@ namespace HallApp.Core.Interfaces.IRepositories
     public interface IChatRepository
     {
         // Conversation CRUD
-        Task<ChatConversation> GetConversationByIdAsync(int id);
+        Task<ChatConversation?> GetConversationByIdAsync(int id);
         Task<IEnumerable<ChatConversation>> GetAllConversationsAsync();
         Task<IEnumerable<ChatConversation>> GetConversationsByCustomerIdAsync(int customerId);
         Task<IEnumerable<ChatConversation>> GetConversationsByCreatedByUserIdAsync(int userId);
@@ -22,7 +22,7 @@ namespace HallApp.Core.Interfaces.IRepositories
         Task<bool> DeleteConversationAsync(int id);
 
         // Message Operations
-        Task<ChatMessage> GetMessageByIdAsync(int id);
+        Task<ChatMessage?> GetMessageByIdAsync(int id);
         Task<IEnumerable<ChatMessage>> GetMessagesByConversationIdAsync(int conversationId);
         Task<ChatMessage> AddMessageAsync(ChatMessage message);
         Task<bool> MarkMessageAsReadAsync(int messageId);

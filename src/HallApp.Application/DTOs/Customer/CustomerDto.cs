@@ -16,5 +16,8 @@ public class CustomerDto
     public DateTime Created { get; set; } 
     public DateTime Updated { get; set; }
     public int AppUserId { get; set; }
-    public UserDto AppUser { get; set; }
+    public UserDto? AppUser { get; set; }
+    public bool Active { get; set; }
+    public bool Confirmed { get; set; }
+    public string? PhotoUrl { get; set; }
 }

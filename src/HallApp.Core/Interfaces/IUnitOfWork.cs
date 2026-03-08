@@ -28,6 +28,8 @@ public interface IUnitOfWork : IDisposable
     IIdempotencyKeyRepository IdempotencyKeyRepository { get; }
     IFinancialAuditLogRepository FinancialAuditLogRepository { get; }
     IDataRetentionRequestRepository DataRetentionRequestRepository { get; }
+    IPlatformSettingsRepository PlatformSettingsRepository { get; }
+    IPurchaseOrderRepository PurchaseOrderRepository { get; }
     Task<int> Complete();
     Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted);
 }

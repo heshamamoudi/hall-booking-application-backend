@@ -18,11 +18,11 @@ namespace HallApp.Infrastructure.Data.Repositories
 
         #region Conversation CRUD
 
-        public async Task<ChatConversation> GetConversationByIdAsync(int id)
+        public async Task<ChatConversation?> GetConversationByIdAsync(int id)
         {
             return await _context.ChatConversations
                 .Include(c => c.Customer)
-                    .ThenInclude(cust => cust.AppUser)
+                    .ThenInclude(cust => cust!.AppUser)
                 .Include(c => c.CreatedBy)
                 .Include(c => c.Hall)
                 .Include(c => c.Vendor)
@@ -37,7 +37,7 @@ namespace HallApp.Infrastructure.Data.Repositories
         {
             return await _context.ChatConversations
                 .Include(c => c.Customer)
-                    .ThenInclude(cust => cust.AppUser)
+                    .ThenInclude(cust => cust!.AppUser)
                 .Include(c => c.CreatedBy)
                 .Include(c => c.Hall)
                 .Include(c => c.Vendor)
@@ -51,7 +51,7 @@ namespace HallApp.Infrastructure.Data.Repositories
         {
             return await _context.ChatConversations
                 .Include(c => c.Customer)
-                    .ThenInclude(cust => cust.AppUser)
+                    .ThenInclude(cust => cust!.AppUser)
                 .Include(c => c.CreatedBy)
                 .Include(c => c.Hall)
                 .Include(c => c.Vendor)
@@ -66,7 +66,7 @@ namespace HallApp.Infrastructure.Data.Repositories
         {
             return await _context.ChatConversations
                 .Include(c => c.Customer)
-                    .ThenInclude(cust => cust.AppUser)
+                    .ThenInclude(cust => cust!.AppUser)
                 .Include(c => c.CreatedBy)
                 .Include(c => c.Hall)
                 .Include(c => c.Vendor)
@@ -81,7 +81,7 @@ namespace HallApp.Infrastructure.Data.Repositories
         {
             return await _context.ChatConversations
                 .Include(c => c.Customer)
-                    .ThenInclude(cust => cust.AppUser)
+                    .ThenInclude(cust => cust!.AppUser)
                 .Include(c => c.CreatedBy)  // AppUser entity - loads FirstName, LastName from Users table
                 .Include(c => c.Hall)
                 .Include(c => c.Vendor)
@@ -97,7 +97,7 @@ namespace HallApp.Infrastructure.Data.Repositories
         {
             return await _context.ChatConversations
                 .Include(c => c.Customer)
-                    .ThenInclude(cust => cust.AppUser)
+                    .ThenInclude(cust => cust!.AppUser)
                 .Include(c => c.CreatedBy)
                 .Include(c => c.Hall)
                 .Include(c => c.Vendor)
@@ -112,7 +112,7 @@ namespace HallApp.Infrastructure.Data.Repositories
         {
             return await _context.ChatConversations
                 .Include(c => c.Customer)
-                    .ThenInclude(cust => cust.AppUser)
+                    .ThenInclude(cust => cust!.AppUser)
                 .Include(c => c.SupportAgent)
                 .Include(c => c.Messages.OrderByDescending(m => m.SentAt).Take(1))
                 .Where(c => c.Status == status)
@@ -124,7 +124,7 @@ namespace HallApp.Infrastructure.Data.Repositories
         {
             return await _context.ChatConversations
                 .Include(c => c.Customer)
-                    .ThenInclude(cust => cust.AppUser)
+                    .ThenInclude(cust => cust!.AppUser)
                 .Include(c => c.Messages.OrderByDescending(m => m.SentAt).Take(1))
                 .Where(c => c.SupportAgentId == null && c.Status == "Open")
                 .OrderByDescending(c => c.Priority == "Urgent" ? 4 : c.Priority == "High" ? 3 : c.Priority == "Normal" ? 2 : 1)
@@ -136,7 +136,7 @@ namespace HallApp.Infrastructure.Data.Repositories
         {
             return await _context.ChatConversations
                 .Include(c => c.Customer)
-                    .ThenInclude(cust => cust.AppUser)
+                    .ThenInclude(cust => cust!.AppUser)
                 .Include(c => c.SupportAgent)
                 .Include(c => c.Messages.OrderByDescending(m => m.SentAt).Take(1))
                 .Where(c => c.Priority == priority)
@@ -172,7 +172,7 @@ namespace HallApp.Infrastructure.Data.Repositories
 
         #region Message Operations
 
-        public async Task<ChatMessage> GetMessageByIdAsync(int id)
+        public async Task<ChatMessage?> GetMessageByIdAsync(int id)
         {
             return await _context.ChatMessages
                 .Include(m => m.Sender)
@@ -428,7 +428,7 @@ namespace HallApp.Infrastructure.Data.Repositories
 
             if (!conversations.Any()) return 0;
 
-            return conversations.Average(c => c.ResponseTime.Value.TotalMinutes);
+            return conversations.Average(c => c.ResponseTime!.Value.TotalMinutes);
         }
 
         public async Task<double> GetAverageResolutionTimeAsync(DateTime? from = null, DateTime? to = null)
@@ -446,7 +446,7 @@ namespace HallApp.Infrastructure.Data.Repositories
 
             if (!conversations.Any()) return 0;
 
-            return conversations.Average(c => c.ResolutionTime.Value.TotalMinutes);
+            return conversations.Average(c => c.ResolutionTime!.Value.TotalMinutes);
         }
 
         public async Task<double> GetCustomerSatisfactionScoreAsync(DateTime? from = null, DateTime? to = null)
@@ -460,7 +460,7 @@ namespace HallApp.Infrastructure.Data.Repositories
 
             var ratings = await query
                 .Where(c => c.CustomerRating != null)
-                .Select(c => c.CustomerRating.Value)
+                .Select(c => c.CustomerRating!.Value)
                 .ToListAsync();
 
             if (!ratings.Any()) return 0;
@@ -492,7 +492,7 @@ namespace HallApp.Infrastructure.Data.Repositories
         {
             var query = _context.ChatConversations
                 .Include(c => c.Customer)
-                    .ThenInclude(cust => cust.AppUser)
+                    .ThenInclude(cust => cust!.AppUser)
                 .Where(c => c.SupportAgentId == agentId);
 
             if (from.HasValue)
@@ -529,7 +529,7 @@ namespace HallApp.Infrastructure.Data.Repositories
                 query = query.Where(c => c.CreatedAt <= to.Value);
 
             var ratings = await query
-                .Select(c => c.CustomerRating.Value)
+                .Select(c => c.CustomerRating!.Value)
                 .ToListAsync();
 
             if (!ratings.Any()) return 0;

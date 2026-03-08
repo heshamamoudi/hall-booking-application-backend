@@ -11,10 +11,10 @@ namespace HallApp.Core.Interfaces.IServices
     {
         // Core CRUD operations
         Task<HallManager> CreateHallManagerAsync(HallManager hallManager);
-        Task<HallManager> UpdateHallManagerAsync(HallManager hallManager);
+        Task<HallManager?> UpdateHallManagerAsync(HallManager hallManager);
         Task<bool> DeleteHallManagerAsync(int hallManagerId);
-        Task<HallManager> GetHallManagerByIdAsync(int hallManagerId);
-        Task<HallManager> GetHallManagerByAppUserIdAsync(int appUserId);
+        Task<HallManager?> GetHallManagerByIdAsync(int hallManagerId);
+        Task<HallManager?> GetHallManagerByAppUserIdAsync(int appUserId);
         Task<List<HallManager>> GetAllHallManagersAsync();
         
         // Business relationships

@@ -93,7 +93,7 @@ namespace HallApp.Application.Services
         /// <summary>
         /// Log security-related events separately for audit purposes
         /// </summary>
-        public void LogSecurityEvent(string eventType, string description, string username = null, string ipAddress = null)
+        public void LogSecurityEvent(string eventType, string description, string? username = null, string? ipAddress = null)
         {
             var logMessage = $"SECURITY EVENT: {eventType} - {description}";
             

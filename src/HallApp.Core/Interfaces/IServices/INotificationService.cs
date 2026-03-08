@@ -7,7 +7,7 @@ namespace HallApp.Core.Interfaces.IServices
         // Core notification operations
         Task CreateNotificationAsync(int appUserId, string title, string message, string type = "General");
         Task<List<Notification>> GetUserNotificationsAsync(int appUserId);
-        Task<Notification> GetNotificationByIdAsync(int notificationId);
+        Task<Notification?> GetNotificationByIdAsync(int notificationId);
         
         // Read status management
         Task MarkAsReadAsync(int notificationId);

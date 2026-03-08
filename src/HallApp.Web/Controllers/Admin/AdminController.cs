@@ -5,7 +5,6 @@ using HallApp.Core.Exceptions;
 using HallApp.Application.DTOs.Admin;
 using HallApp.Application.DTOs.Halls.Hall;
 using HallApp.Application.DTOs.Halls.HallManager;
-using HallApp.Application.DTOs.Halls.HallManager;
 using HallApp.Application.DTOs.User;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Core.Entities;
@@ -86,16 +85,16 @@ namespace HallApp.Web.Controllers.Admin
                     .Select(u => new UsersDto
                     {
                         Id = u.Id,
-                        UserName = u.UserName,
+                        UserName = u.UserName ?? string.Empty,
                         FirstName = u.FirstName,
                         LastName = u.LastName,
-                        Email = u.Email,
+                        Email = u.Email ?? string.Empty,
                         EmailConfirmed = u.EmailConfirmed,
-                        PhoneNumber = u.PhoneNumber,
+                        PhoneNumber = u.PhoneNumber ?? string.Empty,
                         DOB = u.DOB,
                         Created = u.Created,
                         Updated = u.Updated,
-                        Roles = u.UserRoles.Select(r => r.Role.Name).ToList(),
+                        Roles = u.UserRoles.Select(r => r.Role.Name ?? string.Empty).ToList(),
                         Active = u.Active
                     }).ToListAsync();
 
@@ -219,12 +218,12 @@ namespace HallApp.Web.Controllers.Admin
                 var updatedUser = new UsersDto
                 {
                     Id = user.Id,
-                    UserName = user.UserName,
+                    UserName = user.UserName ?? string.Empty,
                     FirstName = user.FirstName,
                     LastName = user.LastName,
-                    Email = user.Email,
+                    Email = user.Email ?? string.Empty,
                     EmailConfirmed = user.EmailConfirmed,
-                    PhoneNumber = user.PhoneNumber,
+                    PhoneNumber = user.PhoneNumber ?? string.Empty,
                     DOB = user.DOB,
                     Created = user.Created,
                     Updated = user.Updated,

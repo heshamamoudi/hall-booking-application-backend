@@ -27,10 +27,10 @@ public class HallManagerService : IHallManagerService
         return hallManager;
     }
 
-    public async Task<HallManager> UpdateHallManagerAsync(HallManager hallManager)
+    public async Task<HallManager?> UpdateHallManagerAsync(HallManager hallManager)
     {
         var existingHallManager = await _unitOfWork.HallManagerRepository.GetByIdAsync(hallManager.Id);
-        // No duplicate check needed - HallManager is just a link entity
+        if (existingHallManager == null) return null;
 
         _unitOfWork.HallManagerRepository.Update(existingHallManager);
         await _unitOfWork.Complete();
@@ -47,15 +47,15 @@ public class HallManagerService : IHallManagerService
         return true;
     }
 
-    public async Task<HallManager> GetHallManagerByIdAsync(int hallManagerId)
+    public async Task<HallManager?> GetHallManagerByIdAsync(int hallManagerId)
     {
         return await _unitOfWork.HallManagerRepository.GetByIdAsync(hallManagerId);
     }
 
-    public async Task<HallManager> GetHallManagerByAppUserIdAsync(int appUserId)
+    public async Task<HallManager?> GetHallManagerByAppUserIdAsync(int appUserId)
     {
         var allHallManagers = await _unitOfWork.HallManagerRepository.GetAllAsync();
-        return allHallManagers.FirstOrDefault(hm => hm.AppUserId == appUserId) ?? new HallManager();
+        return allHallManagers.FirstOrDefault(hm => hm.AppUserId == appUserId);
     }
 
     public async Task<List<HallManager>> GetAllHallManagersAsync()

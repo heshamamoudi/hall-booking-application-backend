@@ -286,6 +286,10 @@ public class OrganizationController : BaseApiController
 
             // Reload with navigation properties for a complete DTO
             var reloaded = await _organizationService.GetOrganizationById(id);
+            if (reloaded == null)
+            {
+                return Error<OrganizationDto>("Organization not found after update", 500);
+            }
             int resourceCount = await GetResourceCount(reloaded);
             var result = MapToDto(reloaded, resourceCount);
 
@@ -722,6 +726,9 @@ public class OrganizationController : BaseApiController
             BankAccountNumber = org.BankAccountNumber,
             BankIban = org.BankIban,
 
+            // Commission
+            CommissionRate = org.CommissionRate,
+
             // Metadata
             UpdatedAt = org.UpdatedAt,
             IsVerified = org.IsVerified,
@@ -752,7 +759,8 @@ public class OrganizationController : BaseApiController
             Website = dto.Website,
             BankName = dto.BankName,
             BankAccountNumber = dto.BankAccountNumber,
-            BankIban = dto.BankIban
+            BankIban = dto.BankIban,
+            CommissionRate = dto.CommissionRate
         };
     }
 

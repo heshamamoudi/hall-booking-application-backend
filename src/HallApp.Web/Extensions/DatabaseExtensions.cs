@@ -85,7 +85,8 @@ namespace HallApp.Web.Extensions
                 try
                 {
                     var env = scopedServices.GetRequiredService<IHostEnvironment>();
-                    await SeedAll.SeedAllData(userManager, roleManager, context, env, logger);
+                    var seedLogger = logger ?? scopedServices.GetRequiredService<ILogger<Program>>();
+                    await SeedAll.SeedAllData(userManager, roleManager, context, env, seedLogger);
                     logger?.LogInformation("Database seeding completed successfully");
                 }
                 catch (Exception ex)

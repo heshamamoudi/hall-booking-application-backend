@@ -10,7 +10,7 @@ namespace HallApp.Web.DTOs
 
         [Required]
         [StringLength(100)]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
         /// Saudi Commercial Registration number (9 or 10 digits)
@@ -50,7 +50,7 @@ namespace HallApp.Web.DTOs
         public int FemaleMax { get; set; }
         public bool FemaleActive { get; set; }
         public int Gender { get; set; }
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
 
         // Direct contact information
         public string Email { get; set; } = string.Empty;
@@ -68,16 +68,16 @@ namespace HallApp.Web.DTOs
         // to prevent accidental overwrites when HallManager users save hall details.
 
         // Contacts as JSON string (for form data)
-        public string ContactsJson { get; set; }
+        public string ContactsJson { get; set; } = string.Empty;
 
         // Location as JSON string (for form data)
-        public string LocationJson { get; set; }
+        public string LocationJson { get; set; } = string.Empty;
 
         // Packages as JSON string (for form data)
-        public string PackagesJson { get; set; }
+        public string PackagesJson { get; set; } = string.Empty;
 
         // Services as JSON string (for form data)
-        public string ServicesJson { get; set; }
+        public string ServicesJson { get; set; } = string.Empty;
 
         // List of existing image URLs to keep (from database)
         public List<string> ExistingImageUrls { get; set; } = new List<string>();

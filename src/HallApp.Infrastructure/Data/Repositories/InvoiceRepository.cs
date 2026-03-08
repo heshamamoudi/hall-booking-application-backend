@@ -17,12 +17,12 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
     {
         return await _context.Invoices
             .Include(i => i.Booking)
-                .ThenInclude(b => b.Customer)
-                    .ThenInclude(c => c.AppUser)
+                .ThenInclude(b => b!.Customer)
+                    .ThenInclude(c => c!.AppUser)
             .Include(i => i.Booking)
-                .ThenInclude(b => b.Hall)
+                .ThenInclude(b => b!.Hall)
             .Include(i => i.Customer)
-                .ThenInclude(c => c.AppUser)
+                .ThenInclude(c => c!.AppUser)
             .Include(i => i.Hall)
             .Include(i => i.LineItems)
             .FirstOrDefaultAsync(i => i.BookingId == bookingId);
@@ -33,7 +33,7 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
         return await _context.Invoices
             .Include(i => i.Booking)
             .Include(i => i.Customer)
-                .ThenInclude(c => c.AppUser)
+                .ThenInclude(c => c!.AppUser)
             .Include(i => i.Hall)
             .Include(i => i.LineItems)
             .FirstOrDefaultAsync(i => i.InvoiceNumber == invoiceNumber);
@@ -44,7 +44,7 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
         return await _context.Invoices
             .Include(i => i.Booking)
             .Include(i => i.Customer)
-                .ThenInclude(c => c.AppUser)
+                .ThenInclude(c => c!.AppUser)
             .Include(i => i.Hall)
             .Include(i => i.LineItems)
             .Where(i => i.CustomerId == customerId)
@@ -57,7 +57,7 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
         return await _context.Invoices
             .Include(i => i.Booking)
             .Include(i => i.Customer)
-                .ThenInclude(c => c.AppUser)
+                .ThenInclude(c => c!.AppUser)
             .Include(i => i.Hall)
             .Include(i => i.LineItems)
             .Where(i => i.HallId == hallId)
@@ -76,7 +76,7 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
         return await _context.Invoices
             .Include(i => i.Booking)
             .Include(i => i.Customer)
-                .ThenInclude(c => c.AppUser)
+                .ThenInclude(c => c!.AppUser)
             .Include(i => i.Hall)
             .Include(i => i.LineItems)
             .Where(i => i.HallId.HasValue && hallIdsList.Contains(i.HallId.Value))
@@ -91,9 +91,9 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
         // or invoices where the booking includes vendor services from this vendor
         return await _context.Invoices
             .Include(i => i.Booking)
-                .ThenInclude(b => b.VendorBookings)
+                .ThenInclude(b => b!.VendorBookings)
             .Include(i => i.Customer)
-                .ThenInclude(c => c.AppUser)
+                .ThenInclude(c => c!.AppUser)
             .Include(i => i.Hall)
             .Include(i => i.LineItems)
             .Where(i => i.Booking != null &&
@@ -108,7 +108,7 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
         return await _context.Invoices
             .Include(i => i.Booking)
             .Include(i => i.Customer)
-                .ThenInclude(c => c.AppUser)
+                .ThenInclude(c => c!.AppUser)
             .Include(i => i.Hall)
             .Include(i => i.LineItems)
             .Where(i => i.PaymentStatus == paymentStatus)
@@ -121,7 +121,7 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
         return await _context.Invoices
             .Include(i => i.Booking)
             .Include(i => i.Customer)
-                .ThenInclude(c => c.AppUser)
+                .ThenInclude(c => c!.AppUser)
             .Include(i => i.Hall)
             .Include(i => i.LineItems)
             .Where(i => i.InvoiceDate >= startDate && i.InvoiceDate <= endDate)
@@ -164,19 +164,19 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
     {
         return await _context.Invoices
             .Include(i => i.Booking)
-                .ThenInclude(b => b.Customer)
-                    .ThenInclude(c => c.AppUser)
+                .ThenInclude(b => b!.Customer)
+                    .ThenInclude(c => c!.AppUser)
             .Include(i => i.Booking)
-                .ThenInclude(b => b.Hall)
+                .ThenInclude(b => b!.Hall)
             .Include(i => i.Booking)
-                .ThenInclude(b => b.VendorBookings)
-                    .ThenInclude(vb => vb.Vendor)
+                .ThenInclude(b => b!.VendorBookings)
+                    .ThenInclude(vb => vb!.Vendor)
             .Include(i => i.Booking)
-                .ThenInclude(b => b.VendorBookings)
-                    .ThenInclude(vb => vb.Services)
-                        .ThenInclude(s => s.ServiceItem)
+                .ThenInclude(b => b!.VendorBookings)
+                    .ThenInclude(vb => vb!.Services)
+                        .ThenInclude(s => s!.ServiceItem)
             .Include(i => i.Customer)
-                .ThenInclude(c => c.AppUser)
+                .ThenInclude(c => c!.AppUser)
             .Include(i => i.Hall)
             .Include(i => i.LineItems)
             .FirstOrDefaultAsync(i => i.Id == invoiceId);
@@ -186,7 +186,7 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
     {
         return await _context.Invoices
             .Include(i => i.Customer)
-                .ThenInclude(c => c.AppUser)
+                .ThenInclude(c => c!.AppUser)
             .Include(i => i.Hall)
             .Include(i => i.LineItems)
             .OrderByDescending(i => i.InvoiceDate)
@@ -274,7 +274,7 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
     {
         var query = _context.Invoices
             .Include(i => i.Customer)
-                .ThenInclude(c => c.AppUser)
+                .ThenInclude(c => c!.AppUser)
             .Include(i => i.Hall)
             .AsNoTracking()
             .AsQueryable();
@@ -426,7 +426,7 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
 
         return await _context.Invoices
             .Include(i => i.Customer)
-                .ThenInclude(c => c.AppUser)
+                .ThenInclude(c => c!.AppUser)
             .Include(i => i.Hall)
             .Include(i => i.LineItems)
             .AsNoTracking()

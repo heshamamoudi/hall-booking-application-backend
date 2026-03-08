@@ -73,4 +73,5 @@ public class Booking
     public Customer? Customer { get; set; }
     public List<VendorBooking> VendorBookings { get; set; } = new();
     public Invoice? Invoice { get; set; }
+    public List<PurchaseOrder> PurchaseOrders { get; set; } = new();
 }

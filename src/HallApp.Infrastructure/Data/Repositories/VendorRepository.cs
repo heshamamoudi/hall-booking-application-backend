@@ -27,7 +27,7 @@ public class VendorRepository : GenericRepository<Vendor>, IVendorRepository
             .ToListAsync();
     }
 
-    public async Task<Vendor> GetVendorByIdAsync(int id)
+    public async Task<Vendor?> GetVendorByIdAsync(int id)
     {
         return await _context.Vendors
             .IncludeAllRelations()
@@ -74,7 +74,7 @@ public class VendorRepository : GenericRepository<Vendor>, IVendorRepository
             .ToListAsync();
     }
 
-    public async Task<Vendor> UpdateVendorAsync(int id, Vendor updateVendor)
+    public async Task<Vendor?> UpdateVendorAsync(int id, Vendor updateVendor)
     {
         var vendor = await GetVendorByIdAsync(id);
         if (vendor == null)
@@ -93,7 +93,7 @@ public class VendorRepository : GenericRepository<Vendor>, IVendorRepository
         return vendor;
     }
 
-    public async Task<VendorLocation> UpdateVendorLocationAsync(int vendorId, VendorLocation updateLocation)
+    public async Task<VendorLocation?> UpdateVendorLocationAsync(int vendorId, VendorLocation updateLocation)
     {
         var vendor = await GetVendorByIdAsync(vendorId);
         if (vendor == null)
@@ -171,7 +171,7 @@ public class VendorRepository : GenericRepository<Vendor>, IVendorRepository
             .ToListAsync();
     }
 
-    public async Task<VendorType> GetVendorTypeByIdAsync(int id)
+    public async Task<VendorType?> GetVendorTypeByIdAsync(int id)
     {
         return await _context.VendorTypes.FindAsync(id);
     }

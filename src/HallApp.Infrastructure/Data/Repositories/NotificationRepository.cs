@@ -26,10 +26,9 @@ namespace HallApp.Infrastructure.Data.Repositories
                 .ToListAsync();
         }
 
-        public async Task<Notification> GetByIdAsync(int notificationId)
+        public async Task<Notification?> GetByIdAsync(int notificationId)
         {
-            var notification = await _context.Notifications.FindAsync(notificationId);
-            return notification ?? throw new InvalidOperationException($"Notification with ID {notificationId} not found");
+            return await _context.Notifications.FindAsync(notificationId);
         }
 
         public async Task MarkAsReadAsync(int notificationId)

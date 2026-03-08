@@ -27,13 +27,13 @@ public class UserRepository : IUserRepository
     public async Task<IEnumerable<AppUser>> GetUsersAsync()
         => await _context.Users.ToListAsync();
 
-    public async Task<AppUser> GetUserByPhoneAsync(string phoneNumber)
+    public async Task<AppUser?> GetUserByPhoneAsync(string phoneNumber)
         => await _context.Users.FirstOrDefaultAsync(x => x.PhoneNumber == phoneNumber);
 
-    public async Task<AppUser> FindByUsernameAsync(string username)
+    public async Task<AppUser?> FindByUsernameAsync(string username)
         => await _context.Users.FirstOrDefaultAsync(u => u.UserName == username);
 
-    public async Task<AppUser> FindByEmailAsync(string email)
+    public async Task<AppUser?> FindByEmailAsync(string email)
         => await _userManager.Users.SingleOrDefaultAsync(x => x.Email == email);
 
     public async Task<SignInResult> CheckPasswordSignInAsync(AppUser user, string password)
@@ -100,16 +100,16 @@ public class UserRepository : IUserRepository
         await _userManager.UpdateAsync(user);
     }
 
-    public async Task<ClaimsPrincipal> ValidateRefreshTokenAsync(string refreshToken)
+    public async Task<ClaimsPrincipal?> ValidateRefreshTokenAsync(string refreshToken)
         => await _tokenService.ValidateRefreshToken(refreshToken);
 
-    public async Task<AppUser> FindByIdAsync(string userId)
+    public async Task<AppUser?> FindByIdAsync(string userId)
         => await _userManager.FindByIdAsync(userId);
 
-    public async Task<AppUser> GetUserByEmailAsync(string email)
+    public async Task<AppUser?> GetUserByEmailAsync(string email)
         => await _context.Users.FirstOrDefaultAsync(x => x.Email == email);
 
-    public async Task<AppUser> GetUserByUsernameAsync(string username)
+    public async Task<AppUser?> GetUserByUsernameAsync(string username)
         => await _context.Users.FirstOrDefaultAsync(x => x.UserName == username);
 
     public async Task<AppUser> CreateCustomerUser(string userName, string phoneNumber, string email, 
@@ -147,7 +147,7 @@ public class UserRepository : IUserRepository
         {
             query = query.Where(u => u.Id != excludeId.Value);
         }
-        return !await query.AnyAsync(u => u.UserName.ToLower() == username.ToLower());
+        return !await query.AnyAsync(u => u.UserName!.ToLower() == username.ToLower());
     }
 
     public async Task<bool> IsEmailUniqueAsync(string email, int? excludeId = null)
@@ -157,7 +157,7 @@ public class UserRepository : IUserRepository
         {
             query = query.Where(u => u.Id != excludeId.Value);
         }
-        return !await query.AnyAsync(u => u.Email.ToLower() == email.ToLower());
+        return !await query.AnyAsync(u => u.Email!.ToLower() == email.ToLower());
     }
 
     public async Task<bool> IsPhoneUniqueAsync(string phone, int? excludeId = null)
@@ -173,7 +173,7 @@ public class UserRepository : IUserRepository
         return !await query.AnyAsync(u => u.PhoneNumber == phone);
     }
 
-    public async Task<AppUser> GetUserById(int userId)
+    public async Task<AppUser?> GetUserById(int userId)
     {
         return await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
     }
@@ -208,9 +208,9 @@ public class UserRepository : IUserRepository
         return await _userManager.GetUsersInRoleAsync("HallOrganizationManager");
     }
 
-    public async Task<AppUser> AuthenticateUser(string login, string password, bool isVendorManager)
+    public async Task<AppUser?> AuthenticateUser(string login, string password, bool isVendorManager)
     {
-        AppUser user = null;
+        AppUser? user = null;
         
         // Try to find user by email or username
         if (login.Contains("@"))

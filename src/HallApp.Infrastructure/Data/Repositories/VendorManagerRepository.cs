@@ -7,11 +7,8 @@ namespace HallApp.Infrastructure.Data.Repositories;
 
 public class VendorManagerRepository : GenericRepository<VendorManager>, IVendorManagerRepository
 {
-    private readonly DataContext _context;
-
     public VendorManagerRepository(DataContext context) : base(context)
     {
-        _context = context;
     }
 
     public new async Task<IEnumerable<VendorManager>> GetAllAsync()
@@ -23,12 +20,12 @@ public class VendorManagerRepository : GenericRepository<VendorManager>, IVendor
             .ToListAsync();
     }
 
-    public new async Task<VendorManager> GetByIdAsync(int id)
+    public new async Task<VendorManager?> GetByIdAsync(int id)
     {
         return await _context.VendorManagers
             .Include(vm => vm.AppUser)
             .Include(vm => vm.Vendors)  // CRITICAL: Load Vendors for filtering conversations
-            .FirstOrDefaultAsync(vm => vm.Id == id) ?? new VendorManager();
+            .FirstOrDefaultAsync(vm => vm.Id == id);
     }
 
     /// <inheritdoc />
@@ -41,15 +38,15 @@ public class VendorManagerRepository : GenericRepository<VendorManager>, IVendor
             .FirstOrDefaultAsync(vm => vm.AppUserId == appUserId);
     }
 
-    public async Task<VendorManager> GetByUserIdAsync(string userId)
+    public async Task<VendorManager?> GetByUserIdAsync(string userId)
     {
         if (int.TryParse(userId, out int userIdInt))
         {
             return await _context.VendorManagers
                 .Include(vm => vm.AppUser)
-                .FirstOrDefaultAsync(vm => vm.AppUserId == userIdInt) ?? new VendorManager();
+                .FirstOrDefaultAsync(vm => vm.AppUserId == userIdInt);
         }
-        return new VendorManager();
+        return null;
     }
 
     public async Task<bool> VendorManagerExistsAsync(string userId)

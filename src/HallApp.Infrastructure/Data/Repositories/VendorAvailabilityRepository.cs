@@ -28,10 +28,10 @@ public class VendorAvailabilityRepository : IVendorAvailabilityRepository
         return await GetBusinessHoursByVendorAsync(vendorId);
     }
 
-    public async Task<VendorBusinessHour> GetBusinessHourAsync(int vendorId, int dayOfWeek)
+    public async Task<VendorBusinessHour?> GetBusinessHourAsync(int vendorId, int dayOfWeek)
     {
         return await _context.VendorBusinessHours
-            .FirstOrDefaultAsync(h => h.VendorId == vendorId && (int)h.DayOfWeek == dayOfWeek) ?? new VendorBusinessHour();
+            .FirstOrDefaultAsync(h => h.VendorId == vendorId && (int)h.DayOfWeek == dayOfWeek);
     }
 
     public async Task AddBusinessHourAsync(VendorBusinessHour businessHour)
@@ -88,16 +88,16 @@ public class VendorAvailabilityRepository : IVendorAvailabilityRepository
             .ToListAsync();
     }
 
-    public async Task<VendorBlockedDate> GetBlockedDateAsync(int vendorId, DateTime date)
+    public async Task<VendorBlockedDate?> GetBlockedDateAsync(int vendorId, DateTime date)
     {
         return await _context.VendorBlockedDates
-            .FirstOrDefaultAsync(bd => bd.VendorId == vendorId && bd.StartDate <= date && bd.EndDate >= date) ?? new VendorBlockedDate();
+            .FirstOrDefaultAsync(bd => bd.VendorId == vendorId && bd.StartDate <= date && bd.EndDate >= date);
     }
 
-    public async Task<VendorBlockedDate> GetBlockedDateByIdAsync(int blockedDateId)
+    public async Task<VendorBlockedDate?> GetBlockedDateByIdAsync(int blockedDateId)
     {
         return await _context.VendorBlockedDates
-            .FirstOrDefaultAsync(bd => bd.Id == blockedDateId) ?? new VendorBlockedDate();
+            .FirstOrDefaultAsync(bd => bd.Id == blockedDateId);
     }
 
     public async Task AddBlockedDateAsync(VendorBlockedDate blockedDate)

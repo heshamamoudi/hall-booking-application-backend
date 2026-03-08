@@ -92,7 +92,7 @@ public class TokenService : ITokenService
     }
 
     // Method to validate a refresh token
-    public Task<ClaimsPrincipal> ValidateRefreshToken(string refreshToken)
+    public Task<ClaimsPrincipal?> ValidateRefreshToken(string refreshToken)
     {
         var tokenValidationParameters = new TokenValidationParameters
         {
@@ -123,7 +123,7 @@ public class TokenService : ITokenService
                 throw new SecurityTokenException("Not a refresh token");
             }
 
-            return Task.FromResult(principal);
+            return Task.FromResult<ClaimsPrincipal?>(principal);
         }
         catch (Exception ex)
         {

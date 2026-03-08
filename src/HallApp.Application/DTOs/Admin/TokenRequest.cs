@@ -2,5 +2,5 @@ namespace HallApp.Application.DTOs.Admin;
 
 public class TokenRequest
 {
-    public string AccessToken { get; set; }
+    public string AccessToken { get; set; } = string.Empty;
 }

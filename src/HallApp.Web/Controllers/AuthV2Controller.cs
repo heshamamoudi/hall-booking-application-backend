@@ -225,7 +225,7 @@ public class AuthV2Controller : ControllerBase
             if (string.IsNullOrEmpty(dto.RefreshToken))
                 return BadRequest(ErrorResponse("Refresh token is required"));
 
-            ClaimsPrincipal principal;
+            ClaimsPrincipal? principal;
             try
             {
                 principal = await _tokenService.ValidateRefreshToken(dto.RefreshToken);
@@ -233,6 +233,11 @@ public class AuthV2Controller : ControllerBase
             catch
             {
                 _logger.LogWarning("Invalid refresh token format or signature");
+                return Unauthorized(ErrorResponse("Invalid refresh token"));
+            }
+
+            if (principal == null)
+            {
                 return Unauthorized(ErrorResponse("Invalid refresh token"));
             }
 

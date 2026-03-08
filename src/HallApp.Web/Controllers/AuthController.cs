@@ -111,11 +111,11 @@ namespace HallApp.Web.Controllers
                     User = new UserDto
                     {
                         Id = user.Id,
-                        UserName = user.UserName,
-                        Email = user.Email,
+                        UserName = user.UserName ?? string.Empty,
+                        Email = user.Email ?? string.Empty,
                         FirstName = user.FirstName,
                         LastName = user.LastName,
-                        PhoneNumber = user.PhoneNumber,
+                        PhoneNumber = user.PhoneNumber ?? string.Empty,
                         EmailConfirmed = user.EmailConfirmed,
                         Created = user.Created,
                         Updated = user.Updated
@@ -196,11 +196,11 @@ namespace HallApp.Web.Controllers
                     User = new UserDto
                     {
                         Id = user.Id,
-                        UserName = user.UserName,
-                        Email = user.Email,
+                        UserName = user.UserName ?? string.Empty,
+                        Email = user.Email ?? string.Empty,
                         FirstName = user.FirstName,
                         LastName = user.LastName,
-                        PhoneNumber = user.PhoneNumber,
+                        PhoneNumber = user.PhoneNumber ?? string.Empty,
                         EmailConfirmed = user.EmailConfirmed,
                         Created = user.Created,
                         Updated = user.Updated
@@ -230,7 +230,7 @@ namespace HallApp.Web.Controllers
                     return BadRequest(new ApiResponse(400, "Invalid login data"));
                 }
 
-                AppUser user = null;
+                AppUser? user = null;
                 try
                 {
                     _logger.LogDebug("Finding user by email or username: {Login}", loginDto.Login);
@@ -303,11 +303,11 @@ namespace HallApp.Web.Controllers
                     User = new UserDto
                     {
                         Id = user.Id,
-                        UserName = user.UserName,
-                        Email = user.Email,
+                        UserName = user.UserName ?? string.Empty,
+                        Email = user.Email ?? string.Empty,
                         FirstName = user.FirstName,
                         LastName = user.LastName,
-                        PhoneNumber = user.PhoneNumber,
+                        PhoneNumber = user.PhoneNumber ?? string.Empty,
                         EmailConfirmed = user.EmailConfirmed,
                         Created = user.Created,
                         Updated = user.Updated
@@ -338,8 +338,8 @@ namespace HallApp.Web.Controllers
                     return BadRequest(new ApiResponse(400, "Invalid refresh token"));
                 }
 
-                ClaimsPrincipal principal;
-                try 
+                ClaimsPrincipal? principal;
+                try
                 {
                     principal = await _tokenService.ValidateRefreshToken(refreshTokenDto.RefreshToken);
                 }
@@ -348,7 +348,16 @@ namespace HallApp.Web.Controllers
                     return Unauthorized(new ApiResponse(401, "Invalid refresh token"));
                 }
 
+                if (principal == null)
+                {
+                    return Unauthorized(new ApiResponse(401, "Invalid refresh token"));
+                }
+
                 var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue(JwtRegisteredClaimNames.NameId);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new ApiResponse(401, "Invalid refresh token"));
+                }
                 var user = await _userManager.FindByIdAsync(userId);
 
                 if (user == null || user.RefreshToken != refreshTokenDto.RefreshToken)
@@ -368,11 +377,11 @@ namespace HallApp.Web.Controllers
                     User = new UserDto
                     {
                         Id = user.Id,
-                        UserName = user.UserName,
-                        Email = user.Email,
+                        UserName = user.UserName ?? string.Empty,
+                        Email = user.Email ?? string.Empty,
                         FirstName = user.FirstName,
                         LastName = user.LastName,
-                        PhoneNumber = user.PhoneNumber,
+                        PhoneNumber = user.PhoneNumber ?? string.Empty,
                         EmailConfirmed = user.EmailConfirmed,
                         Created = user.Created,
                         Updated = user.Updated
@@ -475,11 +484,11 @@ namespace HallApp.Web.Controllers
                     User = new UserDto
                     {
                         Id = user.Id,
-                        UserName = user.UserName,
-                        Email = user.Email,
+                        UserName = user.UserName ?? string.Empty,
+                        Email = user.Email ?? string.Empty,
                         FirstName = user.FirstName,
                         LastName = user.LastName,
-                        PhoneNumber = user.PhoneNumber,
+                        PhoneNumber = user.PhoneNumber ?? string.Empty,
                         EmailConfirmed = user.EmailConfirmed,
                         Created = user.Created,
                         Updated = user.Updated
@@ -517,11 +526,11 @@ namespace HallApp.Web.Controllers
                 var userDto = new UserDto
                 {
                     Id = user.Id,
-                    UserName = user.UserName,
-                    Email = user.Email,
+                    UserName = user.UserName ?? string.Empty,
+                    Email = user.Email ?? string.Empty,
                     FirstName = user.FirstName,
                     LastName = user.LastName,
-                    PhoneNumber = user.PhoneNumber,
+                    PhoneNumber = user.PhoneNumber ?? string.Empty,
                     EmailConfirmed = user.EmailConfirmed,
                     Created = user.Created,
                     Updated = user.Updated

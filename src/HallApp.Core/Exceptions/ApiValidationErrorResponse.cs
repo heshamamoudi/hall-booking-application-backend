@@ -6,5 +6,5 @@ public class ApiValidationErrorResponse : ApiResponse
     {
     }
 
-    public IEnumerable<string> Errors { get; set; }
+    public IEnumerable<string> Errors { get; set; } = [];
 }

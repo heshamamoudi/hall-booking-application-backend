@@ -14,7 +14,7 @@ namespace HallApp.Application.Services
     public class HtmlSanitizerService
     {
         private readonly HtmlSanitizer _sanitizer;
-        private readonly ILogger<HtmlSanitizerService> _logger;
+        private readonly ILogger<HtmlSanitizerService>? _logger;
         private readonly Regex _potentialXssRegex;
         private readonly string[] _dangerousAttributes = new[] { 
             "onmouseover", "onmouseout", "onclick", "onload", "onerror",
@@ -23,7 +23,7 @@ namespace HallApp.Application.Services
             "onreset", "onselect", "onsubmit", "onunload" 
         };
 
-        public HtmlSanitizerService(ILogger<HtmlSanitizerService> logger = null)
+        public HtmlSanitizerService(ILogger<HtmlSanitizerService>? logger = null)
         {
             _logger = logger;
             _sanitizer = new HtmlSanitizer();

@@ -14,7 +14,7 @@ public abstract class BaseEntityService<TEntity> where TEntity : class
 
     protected abstract IGenericRepository<TEntity> Repository { get; }
 
-    public virtual async Task<TEntity> GetByIdAsync(int id)
+    public virtual async Task<TEntity?> GetByIdAsync(int id)
     {
         return await Repository.GetByIdAsync(id);
     }

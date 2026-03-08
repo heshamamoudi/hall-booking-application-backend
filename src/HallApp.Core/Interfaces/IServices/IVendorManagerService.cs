@@ -13,8 +13,8 @@ public interface IVendorManagerService
     Task<VendorManager> CreateVendorManagerAsync(VendorManager vendorManager);
     Task<VendorManager> UpdateVendorManagerAsync(VendorManager vendorManager);
     Task<bool> DeleteVendorManagerAsync(int vendorManagerId);
-    Task<VendorManager> GetVendorManagerByIdAsync(int vendorManagerId);
-    Task<VendorManager> GetVendorManagerByAppUserIdAsync(int appUserId);
+    Task<VendorManager?> GetVendorManagerByIdAsync(int vendorManagerId);
+    Task<VendorManager?> GetVendorManagerByAppUserIdAsync(int appUserId);
     Task<List<VendorManager>> GetAllVendorManagersAsync();
     
     // Business relationships

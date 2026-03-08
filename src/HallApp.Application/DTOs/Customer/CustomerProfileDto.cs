@@ -14,6 +14,7 @@ public class CustomerProfileDto
     public string PhoneNumber { get; set; } = string.Empty;
     public bool EmailConfirmed { get; set; }
     public bool Active { get; set; }
+    public string? PhotoUrl { get; set; }
     public DateTime UserCreated { get; set; }
     
     // From Customer (Business Domain)

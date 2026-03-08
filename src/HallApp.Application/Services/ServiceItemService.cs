@@ -54,7 +54,7 @@ public class ServiceItemService : IServiceItemService
         return items.ToList();
     }
 
-    public async Task<ServiceItem> GetServiceItemByIdAsync(int id)
+    public async Task<ServiceItem?> GetServiceItemByIdAsync(int id)
     {
         return await _unitOfWork.ServiceItemRepository.GetByIdAsync(id);
     }

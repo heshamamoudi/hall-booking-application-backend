@@ -38,15 +38,65 @@ public class SeedAll
         Console.WriteLine("[SeedAll] Vendor data seeding completed.");
 
         // Seed dependent entities in correct order
+        await SeedPlatformSettings(context);
         await SeedCustomers(context);
         await SeedAddresses(context);
         await SeedBookings(context);
         await SeedVendorBookings(context);
         await SeedVendorBookingServices(context);
         await SeedInvoices(context);
+        await SeedPurchaseOrders(context);
         await SeedReviews(context);
 
         Console.WriteLine("[SeedAll] Successfully seeded all comprehensive test data!");
+    }
+
+    // ===================================================================
+    // PLATFORM SETTINGS (Zawaji company info for invoicing)
+    // ===================================================================
+
+    private static async Task SeedPlatformSettings(DataContext context)
+    {
+        if (await context.PlatformSettings.AnyAsync())
+            return;
+
+        try
+        {
+            context.PlatformSettings.Add(new PlatformSettings
+            {
+                CompanyName = "Zawaji",
+                LegalName = "Zawaji Platform for Event Services",
+                VatNumber = "300000000000003",
+                CommercialRegistrationNumber = "1010000000",
+                BuildingNumber = "2255",
+                StreetName = "King Fahad Road",
+                District = "Olaya",
+                City = "Riyadh",
+                PostalCode = "12241",
+                CountryCode = "SA",
+                Email = "info@zawaji.sa",
+                Phone = "+966 11 000 0000",
+                WhatsApp = "+966 50 000 0000",
+                Website = "https://zawaji.sa",
+                BankName = "Al Rajhi Bank",
+                BankAccountNumber = "6080000000000",
+                BankIban = "SA0380000000608000000000",
+                LogoUrl = "",
+                DefaultHallCommissionRate = 0.05m,
+                DefaultVendorCommissionRate = 0.03m,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                UpdatedBy = "System"
+            });
+
+            await context.SaveChangesAsync();
+            Console.WriteLine("[SeedAll] Created platform settings (Zawaji company info)");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SeedAll] Error seeding platform settings: {ex.Message}");
+        }
     }
 
     // ===================================================================
@@ -893,6 +943,20 @@ public class SeedAll
 
         try
         {
+            // Get PlatformSettings (Zawaji) as the seller — deemed supplier model
+            var platformSettings = await context.PlatformSettings.FirstOrDefaultAsync(ps => ps.IsActive);
+            if (platformSettings == null)
+            {
+                Console.WriteLine("[SeedAll] No platform settings found, skipping invoice creation. Seed PlatformSettings first.");
+                return;
+            }
+
+            var sellerName = platformSettings.LegalName is { Length: > 0 } ? platformSettings.LegalName : platformSettings.CompanyName;
+            var sellerVat = platformSettings.VatNumber;
+            var sellerCr = platformSettings.CommercialRegistrationNumber;
+            var sellerAddr = $"{platformSettings.BuildingNumber} {platformSettings.StreetName}, {platformSettings.District}";
+            var sellerCity = platformSettings.City;
+
             // Generate invoices for bookings that are Completed, Confirmed, or Paid with payment completed
             var paidBookings = await context.Bookings
                 .Include(b => b.Customer)
@@ -916,19 +980,10 @@ public class SeedAll
 
             foreach (var booking in paidBookings)
             {
-                var org = booking.Hall?.Organization;
                 var customer = booking.Customer;
                 var appUser = customer?.AppUser;
 
                 if (customer == null || appUser == null || booking.Hall == null) continue;
-
-                var sellerName = org?.LegalName ?? org?.Name ?? booking.Hall.Name;
-                var sellerVat = org?.VatNumber ?? booking.Hall.Vat.ToString();
-                var sellerCr = org?.CommercialRegistrationNumber ?? booking.Hall.CommercialRegistration.ToString();
-                var sellerAddr = org != null
-                    ? $"{org.BuildingNumber} {org.StreetName}, {org.District}"
-                    : booking.Hall.Location?.Address ?? "";
-                var sellerCity = org?.City ?? booking.Hall.Location?.City ?? "";
 
                 var invoiceNumber = $"INV-{year}-{invoiceCounter:D6}";
                 var zatcaUuid = Guid.NewGuid().ToString();
@@ -947,16 +1002,16 @@ public class SeedAll
                     CustomerId = customer.Id,
                     HallId = booking.HallId,
 
-                    // Seller
+                    // Seller — Zawaji (deemed supplier)
                     SellerName = sellerName,
                     SellerVatNumber = sellerVat,
                     SellerCommercialRegistrationNumber = sellerCr,
                     SellerAddress = sellerAddr,
-                    SellerBuildingNumber = org?.BuildingNumber ?? "",
-                    SellerStreetName = org?.StreetName ?? "",
-                    SellerDistrict = org?.District ?? "",
+                    SellerBuildingNumber = platformSettings.BuildingNumber,
+                    SellerStreetName = platformSettings.StreetName,
+                    SellerDistrict = platformSettings.District,
                     SellerCity = sellerCity,
-                    SellerPostalCode = org?.PostalCode ?? "",
+                    SellerPostalCode = platformSettings.PostalCode,
                     SellerCountryCode = "SA",
 
                     // Buyer
@@ -992,8 +1047,7 @@ public class SeedAll
                     ZATCA_SubmittedAt = booking.Status == "Completed" ? booking.PaidAt?.AddDays(1) : null,
                     ZATCA_Response = booking.Status == "Completed" ? "Accepted" : "",
                     InvoiceHash = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{invoiceNumber}:{sellerVat}:{totalWithTax}")),
-                    QRCode = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(
-                        $"1|{sellerName}|2|{sellerVat}|3|{(booking.PaidAt ?? DateTime.UtcNow):yyyy-MM-ddTHH:mm:ssZ}|4|{totalWithTax:F2}|5|{taxAmount:F2}")),
+                    QRCode = GenerateZatcaTlvQrCode(sellerName, sellerVat, (booking.PaidAt ?? DateTime.UtcNow), totalWithTax, taxAmount),
 
                     // Audit
                     CreatedAt = booking.PaidAt ?? DateTime.UtcNow,
@@ -1059,6 +1113,161 @@ public class SeedAll
         catch (Exception ex)
         {
             Console.WriteLine($"[SeedAll] Error seeding invoices: {ex.Message}");
+            Console.WriteLine($"[SeedAll] Stack trace: {ex.StackTrace}");
+        }
+    }
+
+    // ===================================================================
+    // PURCHASE ORDERS (supplier payouts for seeded invoices)
+    // ===================================================================
+
+    private static async Task SeedPurchaseOrders(DataContext context)
+    {
+        if (await context.PurchaseOrders.AnyAsync())
+            return;
+
+        try
+        {
+            var platformSettings = await context.PlatformSettings.FirstOrDefaultAsync(ps => ps.IsActive);
+            if (platformSettings == null)
+            {
+                Console.WriteLine("[SeedAll] No platform settings found, skipping purchase order creation");
+                return;
+            }
+
+            var invoices = await context.Invoices
+                .Include(i => i.Booking)
+                    .ThenInclude(b => b!.Hall)
+                        .ThenInclude(h => h!.Organization)
+                .Include(i => i.Booking)
+                    .ThenInclude(b => b!.VendorBookings)
+                        .ThenInclude(vb => vb.Vendor)
+                            .ThenInclude(v => v!.Organization)
+                .Where(i => i.PaymentStatus == "Paid")
+                .OrderBy(i => i.Id)
+                .ToListAsync();
+
+            if (!invoices.Any())
+            {
+                Console.WriteLine("[SeedAll] No paid invoices found, skipping purchase order creation");
+                return;
+            }
+
+            var purchaseOrders = new List<PurchaseOrder>();
+            var poCounter = 1;
+            var year = DateTime.UtcNow.Year;
+            var random = new Random(42);
+
+            foreach (var invoice in invoices)
+            {
+                var booking = invoice.Booking;
+                if (booking?.Hall == null) continue;
+
+                // PO for Hall
+                if (booking.HallCost > 0)
+                {
+                    var hallOrg = booking.Hall.Organization;
+                    var commissionRate = hallOrg?.CommissionRate ?? platformSettings.DefaultHallCommissionRate;
+                    var grossAmount = booking.HallCost;
+                    var commissionAmount = Math.Round(grossAmount * commissionRate, 2);
+                    var netAmount = grossAmount - commissionAmount;
+                    var taxAmount = Math.Round(netAmount * 0.15m, 2);
+                    var totalAmount = netAmount + taxAmount;
+
+                    // Randomly set some POs as Paid for realistic seed data
+                    var status = random.NextDouble() < 0.6 ? "Paid" : (random.NextDouble() < 0.5 ? "Approved" : "Draft");
+
+                    purchaseOrders.Add(new PurchaseOrder
+                    {
+                        PurchaseOrderNumber = $"PO-{year}-{poCounter++:D6}",
+                        InvoiceId = invoice.Id,
+                        BookingId = booking.Id,
+                        SupplierType = "Hall",
+                        SupplierId = booking.Hall.ID,
+                        SupplierOrganizationId = hallOrg?.Id,
+                        SupplierName = hallOrg?.LegalName ?? hallOrg?.Name ?? booking.Hall.Name ?? "Unknown",
+                        SupplierVatNumber = hallOrg?.VatNumber ?? "",
+                        SupplierCommercialRegistrationNumber = hallOrg?.CommercialRegistrationNumber ?? "",
+                        SupplierAddress = hallOrg != null
+                            ? $"{hallOrg.BuildingNumber} {hallOrg.StreetName}, {hallOrg.District}"
+                            : "",
+                        SupplierBankIban = hallOrg?.BankIban ?? "",
+                        SupplierBankName = hallOrg?.BankName ?? "",
+                        GrossAmount = grossAmount,
+                        CommissionRate = commissionRate,
+                        CommissionAmount = commissionAmount,
+                        NetAmount = netAmount,
+                        TaxRate = 0.15m,
+                        TaxAmount = taxAmount,
+                        TotalAmount = totalAmount,
+                        Status = status,
+                        PaymentDate = status == "Paid" ? invoice.PaymentDate?.AddDays(7) : null,
+                        PaymentReference = status == "Paid" ? $"TRF-{year}-{poCounter:D6}" : "",
+                        CreatedAt = invoice.CreatedAt,
+                        CreatedBy = "System"
+                    });
+                }
+
+                // POs for Vendor Bookings
+                if (booking.VendorBookings != null)
+                {
+                    foreach (var vb in booking.VendorBookings.Where(v => v.Status != "Rejected" && v.Status != "Cancelled"))
+                    {
+                        var vendorOrg = vb.Vendor?.Organization;
+                        var commissionRate = vendorOrg?.CommissionRate ?? platformSettings.DefaultVendorCommissionRate;
+                        var grossAmount = vb.TotalAmount;
+                        if (grossAmount <= 0) continue;
+
+                        var commissionAmount = Math.Round(grossAmount * commissionRate, 2);
+                        var netAmount = grossAmount - commissionAmount;
+                        var taxAmount = Math.Round(netAmount * 0.15m, 2);
+                        var totalAmount = netAmount + taxAmount;
+
+                        var status = random.NextDouble() < 0.5 ? "Paid" : "Approved";
+
+                        purchaseOrders.Add(new PurchaseOrder
+                        {
+                            PurchaseOrderNumber = $"PO-{year}-{poCounter++:D6}",
+                            InvoiceId = invoice.Id,
+                            BookingId = booking.Id,
+                            SupplierType = "Vendor",
+                            SupplierId = vb.VendorId,
+                            SupplierOrganizationId = vendorOrg?.Id,
+                            SupplierName = vendorOrg?.LegalName ?? vendorOrg?.Name ?? vb.Vendor?.Name ?? "Unknown",
+                            SupplierVatNumber = vendorOrg?.VatNumber ?? "",
+                            SupplierCommercialRegistrationNumber = vendorOrg?.CommercialRegistrationNumber ?? "",
+                            SupplierAddress = vendorOrg != null
+                                ? $"{vendorOrg.BuildingNumber} {vendorOrg.StreetName}, {vendorOrg.District}"
+                                : "",
+                            SupplierBankIban = vendorOrg?.BankIban ?? "",
+                            SupplierBankName = vendorOrg?.BankName ?? "",
+                            GrossAmount = grossAmount,
+                            CommissionRate = commissionRate,
+                            CommissionAmount = commissionAmount,
+                            NetAmount = netAmount,
+                            TaxRate = 0.15m,
+                            TaxAmount = taxAmount,
+                            TotalAmount = totalAmount,
+                            Status = status,
+                            PaymentDate = status == "Paid" ? invoice.PaymentDate?.AddDays(10) : null,
+                            PaymentReference = status == "Paid" ? $"TRF-{year}-{poCounter:D6}" : "",
+                            CreatedAt = invoice.CreatedAt,
+                            CreatedBy = "System"
+                        });
+                    }
+                }
+            }
+
+            if (purchaseOrders.Any())
+            {
+                await context.PurchaseOrders.AddRangeAsync(purchaseOrders);
+                await context.SaveChangesAsync();
+                Console.WriteLine($"[SeedAll] Created {purchaseOrders.Count} purchase orders (Hall: {purchaseOrders.Count(po => po.SupplierType == "Hall")}, Vendor: {purchaseOrders.Count(po => po.SupplierType == "Vendor")})");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SeedAll] Error seeding purchase orders: {ex.Message}");
             Console.WriteLine($"[SeedAll] Stack trace: {ex.StackTrace}");
         }
     }
@@ -1174,5 +1383,28 @@ public class SeedAll
         {
             Console.WriteLine($"[SeedAll] Error seeding reviews: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Generate a proper ZATCA-compliant TLV-encoded QR code (Base64).
+    /// Matches the format used by InvoiceService.GenerateZATCAQRCodeAsync.
+    /// </summary>
+    private static string GenerateZatcaTlvQrCode(string sellerName, string vatNumber, DateTime invoiceDate, decimal totalWithTax, decimal taxAmount)
+    {
+        var tlv = new List<byte>();
+        AddSeedTLV(tlv, 1, sellerName ?? string.Empty);
+        AddSeedTLV(tlv, 2, vatNumber ?? string.Empty);
+        AddSeedTLV(tlv, 3, invoiceDate.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+        AddSeedTLV(tlv, 4, totalWithTax.ToString("F2"));
+        AddSeedTLV(tlv, 5, taxAmount.ToString("F2"));
+        return Convert.ToBase64String(tlv.ToArray());
+    }
+
+    private static void AddSeedTLV(List<byte> data, byte tag, string value)
+    {
+        var valueBytes = System.Text.Encoding.UTF8.GetBytes(value);
+        data.Add(tag);
+        data.Add((byte)valueBytes.Length);
+        data.AddRange(valueBytes);
     }
 }
