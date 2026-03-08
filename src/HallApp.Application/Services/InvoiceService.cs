@@ -631,6 +631,72 @@ public class InvoiceService : IInvoiceService
         return Task.FromResult(hash);
     }
 
+    /// <summary>
+    /// Bulk regenerate QR codes for all invoices using current PlatformSettings.
+    /// This updates only the QR code and seller info — does NOT modify financial data.
+    /// Safe to run on paid/cancelled invoices since it only fixes ZATCA compliance data.
+    /// </summary>
+    public async Task<(int Updated, int Failed, List<string> Errors)> BulkRegenerateQRCodesAsync(string requestedBy)
+    {
+        _logger.LogInformation("Bulk QR code regeneration requested by {RequestedBy}", requestedBy);
+
+        // Validate PlatformSettings has required ZATCA fields before bulk operation
+        var platformSettings = await _platformSettingsService.GetSettingsAsync();
+        ValidatePlatformSettingsForZatca(platformSettings);
+
+        var sellerAddress = BuildPlatformSellerAddress(platformSettings);
+        var allInvoices = (await _unitOfWork.InvoiceRepository.GetAllAsync()).ToList();
+
+        int updated = 0;
+        int failed = 0;
+        var errors = new List<string>();
+
+        foreach (var invoice in allInvoices)
+        {
+            try
+            {
+                // Update seller info from current PlatformSettings
+                invoice.SellerName = platformSettings.LegalName is { Length: > 0 }
+                    ? platformSettings.LegalName
+                    : platformSettings.CompanyName is { Length: > 0 }
+                        ? platformSettings.CompanyName
+                        : "Zawaji";
+                invoice.SellerVatNumber = platformSettings.VatNumber;
+                invoice.SellerCommercialRegistrationNumber = platformSettings.CommercialRegistrationNumber;
+                invoice.SellerAddress = sellerAddress;
+                invoice.SellerBuildingNumber = platformSettings.BuildingNumber;
+                invoice.SellerStreetName = platformSettings.StreetName;
+                invoice.SellerDistrict = platformSettings.District;
+                invoice.SellerCity = platformSettings.City;
+                invoice.SellerPostalCode = platformSettings.PostalCode;
+                invoice.SellerCountryCode = platformSettings.CountryCode is { Length: > 0 }
+                    ? platformSettings.CountryCode : "SA";
+
+                // Regenerate QR code and hash with updated seller info
+                invoice.QRCode = await GenerateZATCAQRCodeAsync(invoice);
+                invoice.InvoiceHash = await GenerateInvoiceHashAsync(invoice);
+                invoice.UpdatedAt = DateTime.UtcNow;
+
+                _unitOfWork.InvoiceRepository.Update(invoice);
+                updated++;
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                errors.Add($"Invoice {invoice.InvoiceNumber}: {ex.Message}");
+                _logger.LogError(ex, "Failed to regenerate QR for invoice {InvoiceNumber}", invoice.InvoiceNumber);
+            }
+        }
+
+        await _unitOfWork.Complete();
+
+        _logger.LogInformation(
+            "Bulk QR regeneration complete. Updated: {Updated}, Failed: {Failed}, Total: {Total}",
+            updated, failed, allInvoices.Count);
+
+        return (updated, failed, errors);
+    }
+
     #endregion
 
     #region PDF Generation
@@ -701,15 +767,27 @@ public class InvoiceService : IInvoiceService
     /// </summary>
     private void ValidatePlatformSettingsForZatca(PlatformSettings settings)
     {
+        // ZATCA-critical: VAT number is required for valid QR codes
         if (string.IsNullOrWhiteSpace(settings.VatNumber))
-            _logger.LogWarning("PlatformSettings missing VAT number - invoices may fail ZATCA validation. " +
-                               "Configure via Admin > Settings > Platform.");
-
-        if (string.IsNullOrWhiteSpace(settings.CommercialRegistrationNumber))
-            _logger.LogWarning("PlatformSettings missing Commercial Registration number - invoices may fail ZATCA validation.");
+        {
+            _logger.LogError("PlatformSettings missing VAT number - cannot generate ZATCA-compliant invoice. " +
+                             "Configure via Admin > Settings > Platform.");
+            throw new InvalidOperationException(
+                "Cannot generate invoice: Platform VAT number is not configured. " +
+                "Please go to Admin > Settings > Platform and set the VAT Registration Number before generating invoices.");
+        }
 
         if (string.IsNullOrWhiteSpace(settings.LegalName) && string.IsNullOrWhiteSpace(settings.CompanyName))
-            _logger.LogWarning("PlatformSettings missing both LegalName and CompanyName - invoices will use 'Zawaji' as fallback.");
+        {
+            _logger.LogError("PlatformSettings missing both LegalName and CompanyName - cannot generate ZATCA-compliant invoice.");
+            throw new InvalidOperationException(
+                "Cannot generate invoice: Platform company name is not configured. " +
+                "Please go to Admin > Settings > Platform and set the Legal Name or Company Name.");
+        }
+
+        // Non-blocking warnings for recommended fields
+        if (string.IsNullOrWhiteSpace(settings.CommercialRegistrationNumber))
+            _logger.LogWarning("PlatformSettings missing Commercial Registration number - invoices may fail ZATCA validation.");
 
         if (string.IsNullOrWhiteSpace(settings.City))
             _logger.LogWarning("PlatformSettings missing City - invoices may fail ZATCA address validation.");

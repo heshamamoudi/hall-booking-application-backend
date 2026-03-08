@@ -146,6 +146,16 @@ public class BulkInvoiceFailureDto
 }
 
 /// <summary>
+/// Response DTO for bulk QR code regeneration results
+/// </summary>
+public class BulkQRRegenerateResponseDto
+{
+    public int Updated { get; set; }
+    public int Failed { get; set; }
+    public List<string> Errors { get; set; } = new();
+}
+
+/// <summary>
 /// Request DTO for cancelling an invoice with enhanced validation
 /// </summary>
 public class CancelInvoiceRequestDto

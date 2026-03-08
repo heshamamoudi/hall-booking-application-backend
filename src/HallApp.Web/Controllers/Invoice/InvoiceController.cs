@@ -750,6 +750,46 @@ public class InvoiceController : BaseApiController
     }
 
     /// <summary>
+    /// Bulk regenerate QR codes for all invoices using current PlatformSettings.
+    /// Updates only QR code and seller info — does NOT modify financial data.
+    /// Requires PlatformSettings to have VAT number and company name configured.
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpPost("bulk-regenerate-qr")]
+    public async Task<ActionResult<ApiResponse<BulkQRRegenerateResponseDto>>> BulkRegenerateQRCodes()
+    {
+        var userId = UserId;
+
+        try
+        {
+            _logger.LogInformation(
+                "Bulk QR code regeneration requested by UserId: {UserId}", userId);
+
+            var (updated, failed, errors) = await _invoiceService.BulkRegenerateQRCodesAsync(userId.ToString());
+
+            var response = new BulkQRRegenerateResponseDto
+            {
+                Updated = updated,
+                Failed = failed,
+                Errors = errors
+            };
+
+            return Success(response,
+                $"QR codes regenerated: {updated} updated, {failed} failed out of {updated + failed} total invoices.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Bulk QR regeneration blocked - PlatformSettings incomplete");
+            return Error<BulkQRRegenerateResponseDto>(ex.Message, 400);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Bulk QR regeneration failed. UserId: {UserId}", userId);
+            return Error<BulkQRRegenerateResponseDto>($"Failed to regenerate QR codes: {ex.Message}", 500);
+        }
+    }
+
+    /// <summary>
     /// Update invoice payment status (Admin only).
     /// HIGH-011: Enhanced structured logging with correlation ID.
     /// </summary>

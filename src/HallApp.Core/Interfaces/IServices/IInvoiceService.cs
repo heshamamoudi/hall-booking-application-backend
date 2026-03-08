@@ -76,6 +76,13 @@ public interface IInvoiceService
     /// </summary>
     Task<string> GenerateInvoiceHashAsync(Invoice invoice);
 
+    // Bulk QR Regeneration
+    /// <summary>
+    /// Regenerates QR codes for all invoices using current PlatformSettings.
+    /// Only updates QR code and seller info — does not modify financial data.
+    /// </summary>
+    Task<(int Updated, int Failed, List<string> Errors)> BulkRegenerateQRCodesAsync(string requestedBy);
+
     // PDF Generation
     Task<string> GenerateInvoicePdfAsync(int invoiceId);
     Task<byte[]> GetInvoicePdfBytesAsync(int invoiceId);
