@@ -106,12 +106,22 @@ public static class ApplicationServiceExtensions
             options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
         });
 
-        // AutoMapper configuration - ensure we scan all assemblies with profiles
-        services.AddAutoMapper(
-            typeof(HallApp.Application.Helpers.AutoMapperProfiles).Assembly,
-            typeof(HallApp.Web.Helpers.WebAutoMapperProfiles).Assembly,
-            typeof(Program).Assembly
-        );
+        // AutoMapper configuration - ensure we scan all assemblies with profiles.
+        // This registration runs after AddApplication's and supersedes it.
+        var autoMapperLicenseKey = config["AutoMapper:LicenseKey"];
+        services.AddAutoMapper(cfg =>
+        {
+            if (!string.IsNullOrWhiteSpace(autoMapperLicenseKey))
+            {
+                cfg.LicenseKey = autoMapperLicenseKey;
+            }
+
+            cfg.AddMaps(
+                typeof(HallApp.Application.Helpers.AutoMapperProfiles).Assembly,
+                typeof(HallApp.Web.Helpers.WebAutoMapperProfiles).Assembly,
+                typeof(Program).Assembly
+            );
+        });
 
         return services;
     }

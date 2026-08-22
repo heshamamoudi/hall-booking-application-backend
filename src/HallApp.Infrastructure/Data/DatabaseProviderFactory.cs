@@ -6,22 +6,61 @@ public static class DatabaseProviderFactory
 {
     public static void ConfigureDatabase(this DbContextOptionsBuilder options, string connectionString)
     {
-        if (string.IsNullOrEmpty(connectionString))
-            throw new ArgumentException("Connection string cannot be null or empty", nameof(connectionString));
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new ArgumentException(
+                "No connection string configured. Set ConnectionStrings__DefaultConnection " +
+                "(PostgreSQL: Host=...;Port=5432;Database=...;Username=...;Password=...).",
+                nameof(connectionString));
+        }
 
         // Detect database provider from connection string
         if (IsPostgreSqlConnectionString(connectionString))
         {
             // Convert URI format to standard connection string if needed
             var npgsqlConnectionString = ConvertToNpgsqlConnectionString(connectionString);
-            Console.WriteLine("🔍 Using PostgreSQL");
+            Console.WriteLine($"🔍 Using PostgreSQL -> {DescribeTarget(npgsqlConnectionString)}");
             options.UseNpgsql(npgsqlConnectionString);
         }
         else
         {
-            Console.WriteLine("🔍 Using SQL Server");
+            Console.WriteLine($"🔍 Using SQL Server -> {DescribeTarget(connectionString)}");
             options.UseSqlServer(connectionString);
         }
+    }
+
+    /// <summary>
+    /// Renders the server and database a connection string points at, so a deploy aimed
+    /// at the wrong target is obvious in the logs. Every other keyword is dropped, which
+    /// keeps the password out by construction rather than by remembering to strip it.
+    /// </summary>
+    internal static string DescribeTarget(string connectionString)
+    {
+        string? host = null;
+        string? database = null;
+
+        foreach (var pair in connectionString.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = pair.IndexOf('=');
+            if (separator <= 0) continue;
+
+            var key = pair[..separator].Trim();
+            var value = pair[(separator + 1)..].Trim();
+
+            if (key.Equals("Host", StringComparison.OrdinalIgnoreCase) ||
+                key.Equals("Server", StringComparison.OrdinalIgnoreCase) ||
+                key.Equals("Data Source", StringComparison.OrdinalIgnoreCase))
+            {
+                host ??= value;
+            }
+            else if (key.Equals("Database", StringComparison.OrdinalIgnoreCase) ||
+                     key.Equals("Initial Catalog", StringComparison.OrdinalIgnoreCase))
+            {
+                database ??= value;
+            }
+        }
+
+        return $"host={host ?? "(unknown)"} database={database ?? "(unknown)"}";
     }
 
     private static bool IsPostgreSqlConnectionString(string connectionString)

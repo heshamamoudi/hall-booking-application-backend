@@ -27,55 +27,11 @@ namespace HallApp.Web.Controllers
             return Redirect("/swagger");
         }
 
-        /// <summary>
-        /// Health check endpoint to verify service is running
-        /// </summary>
-        [HttpGet("/health")]
-        [ApiExplorerSettings(IgnoreApi = true)]
-        public IActionResult HealthCheck([FromServices] IConfiguration configuration)
-        {
-            var connectionString = configuration.GetConnectionString("DefaultConnection");
-            var hasConnection = !string.IsNullOrEmpty(connectionString);
-            
-            // Check JWT configuration
-            var jwtSecretKey = configuration["JWT:SecretKey"];
-            var jwtIssuer = configuration["JWT:Issuer"];
-            var jwtAudience = configuration["JWT:Audience"];
-            
-            var hasJwtConfig = !string.IsNullOrEmpty(jwtSecretKey) && 
-                               jwtSecretKey != "WILL_BE_REPLACED_BY_ENV_VAR" &&
-                               jwtSecretKey.Length >= 32;
-            
-            var configIssues = new List<string>();
-            if (string.IsNullOrEmpty(jwtSecretKey))
-                configIssues.Add("JWT:SecretKey is missing");
-            else if (jwtSecretKey == "WILL_BE_REPLACED_BY_ENV_VAR")
-                configIssues.Add("JWT:SecretKey is still set to placeholder value");
-            else if (jwtSecretKey.Length < 32)
-                configIssues.Add("JWT:SecretKey is too short (minimum 32 characters)");
-                
-            if (string.IsNullOrEmpty(jwtIssuer))
-                configIssues.Add("JWT:Issuer is missing");
-            if (string.IsNullOrEmpty(jwtAudience))
-                configIssues.Add("JWT:Audience is missing");
-            if (!hasConnection)
-                configIssues.Add("Database connection string is missing");
-            
-            return Ok(new
-            {
-                Status = configIssues.Count == 0 ? "Healthy" : "Unhealthy",
-                Timestamp = DateTime.UtcNow,
-                Environment = _env.EnvironmentName,
-                HasConnectionString = hasConnection,
-                DatabaseProvider = connectionString?.Contains("postgresql") == true ? "PostgreSQL" : "SQL Server",
-                HasValidJwtConfig = hasJwtConfig,
-                JwtIssuer = jwtIssuer,
-                JwtAudience = jwtAudience,
-                ConfigurationIssues = configIssues.Count > 0 ? configIssues : null,
-                Port = Environment.GetEnvironmentVariable("PORT"),
-                AspNetCoreEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
-            });
-        }
+        // NOTE: /health is served by ASP.NET Core health checks, mapped in
+        // EndpointExtensions. The controller action that used to live here reported
+        // environment name, JWT issuer/audience and the detected database provider
+        // to anyone who asked, which is more than an unauthenticated liveness probe
+        // should ever say.
 
 #if DEBUG
         /// <summary>

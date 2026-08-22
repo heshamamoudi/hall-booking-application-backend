@@ -45,7 +45,7 @@ namespace HallApp.Web.Extensions
 
                 if (!string.IsNullOrEmpty(certPath) && File.Exists(certPath))
                 {
-                    // Load certificate from file (e.g., mounted secret in Railway)
+                    // Load certificate from file (e.g., a mounted secret)
                     var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(
                         certPath,
                         certPassword
@@ -62,9 +62,9 @@ namespace HallApp.Web.Extensions
                 else
                 {
                     // Option 2: Rely on database encryption at rest
-                    // PostgreSQL/Railway encrypts data at rest by default
+                    // The managed PostgreSQL encrypts data at rest by default
                     Console.WriteLine("⚠️ Data Protection: No certificate configured - relying on database encryption at rest");
-                    Console.WriteLine("   To add encryption, set DataProtection:CertificatePath in Railway environment variables");
+                    Console.WriteLine("   To add encryption, set DATAPROTECTION__CERTIFICATEPATH in the deployment environment");
                     Console.WriteLine("   Keys are protected by PostgreSQL's built-in encryption and TLS in transit");
                 }
 
@@ -80,7 +80,7 @@ namespace HallApp.Web.Extensions
 
         public static IApplicationBuilder UseSecurityHeadersAndCookies(this IApplicationBuilder app, IWebHostEnvironment environment)
         {
-            // NOTE: Do NOT use UseHsts() when behind a reverse proxy like Railway/Heroku/Render.
+            // NOTE: Do NOT use UseHsts() when behind a TLS-terminating reverse proxy.
             // The proxy handles TLS termination and forwards HTTP to the app internally.
             // UseHsts() would cause an infinite redirect loop because the browser sees HSTS,
             // tries HTTPS, but the proxy always sends HTTP to the app.
@@ -97,7 +97,7 @@ namespace HallApp.Web.Extensions
             .UseXfo(options => options.Deny()); // X-Frame-Options deny to prevent clickjacking
 
             // Configure Content Security Policy - same for all environments
-            // NOTE: Do NOT use UpgradeInsecureRequests() behind a reverse proxy (Railway/Heroku/Render)
+            // NOTE: Do NOT use UpgradeInsecureRequests() behind a TLS-terminating reverse proxy
             // as it causes redirect loops similar to HSTS.
             app.UseCsp(opts => opts
                 .DefaultSources(s => s.Self())
@@ -111,7 +111,7 @@ namespace HallApp.Web.Extensions
                 .FrameAncestors(s => s.None())
                 .BaseUris(s => s.Self())
                 .FormActions(s => s.Self())
-                // No UpgradeInsecureRequests() - Railway handles HTTPS at the edge
+                // No UpgradeInsecureRequests() - TLS terminates at the edge
             );
 
             // Add Permissions-Policy header (formerly Feature-Policy)

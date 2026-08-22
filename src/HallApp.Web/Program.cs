@@ -11,7 +11,6 @@ using FluentValidation.AspNetCore;
 using HallApp.Application.Validators;
 using HallApp.Web.Validators;
 
-// FORCE RAILWAY REBUILD - All SQL Server type fixes applied: commit a79620b
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure logging to prevent duplicates
@@ -71,6 +70,12 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options 
         return new Microsoft.AspNetCore.Mvc.BadRequestObjectResult(response);
     };
 });
+
+// Health checks. The database probe is what makes this a readiness signal rather
+// than "the process started" - it is the difference between a deploy reporting
+// success when the container is up and reporting success when it can serve.
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<DataContext>("database");
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerDocumentation();
@@ -154,7 +159,7 @@ builder.Services.AddCors(options =>
                 throw new InvalidOperationException(
                     "CRITICAL: CORS__AllowedOrigins environment variable is not set in production! " +
                     "The application cannot start without proper CORS configuration. " +
-                    "Set CORS__AllowedOrigins=https://your-frontend-domain.com in Railway environment variables."
+                    "Set CORS__AllowedOrigins=https://your-frontend-domain.com in the deployment environment."
                 );
             }
         }

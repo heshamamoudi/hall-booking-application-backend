@@ -18,6 +18,11 @@ namespace HallApp.Web.Extensions
                 }).WithMetadata(new AllowAnonymousAttribute());
             }
 
+            // Liveness/readiness probe. Unauthenticated and deliberately terse: the
+            // platform and Docker poll it every 30s, and the body says nothing beyond
+            // "Healthy" / "Unhealthy". Already excluded from rate limiting.
+            app.MapHealthChecks("/health").WithMetadata(new AllowAnonymousAttribute());
+
             // Map controllers and SignalR hubs
             app.MapControllers();
             app.MapHub<HallApp.Web.Hubs.NotificationHub>("/notificationsHub")

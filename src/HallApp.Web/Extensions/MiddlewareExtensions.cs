@@ -20,8 +20,8 @@ namespace HallApp.Web.Extensions
 
         public static void ConfigureMiddlewarePipeline(this WebApplication app)
         {
-            // Forwarded headers - MUST be first for Railway/cloud proxies
-            // Railway terminates TLS at the edge and forwards HTTP internally.
+            // Forwarded headers - MUST be first when behind a proxy or tunnel
+            // TLS terminates at the edge and plain HTTP is forwarded internally.
             // This ensures the app sees the original scheme (https) and client IP.
             app.UseForwardedHeaders(new ForwardedHeadersOptions
             {

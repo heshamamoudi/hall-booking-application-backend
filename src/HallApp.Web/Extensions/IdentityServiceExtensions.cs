@@ -23,18 +23,24 @@ namespace HallApp.Web.Extensions
             // Validated here rather than inside the AddJwtBearer callback: that callback
             // is not invoked until the first request needs the options, so a bad key
             // would otherwise sail through startup and surface as a 500 on every login.
+            // Messages name the environment-variable spelling, not the configuration-key
+            // spelling: whoever reads this is editing a deployment environment, not an
+            // appsettings.json.
             var jwtSecretKey = config["JWT:SecretKey"];
             if (string.IsNullOrEmpty(jwtSecretKey))
             {
-                throw new InvalidOperationException("JWT:SecretKey configuration is required but not found. Check your environment variables.");
+                throw new InvalidOperationException(
+                    "No JWT signing key configured. Set JWT__SecretKey to at least " +
+                    $"{MinimumJwtKeyBytes} characters (openssl rand -base64 64 | tr -d '\\n').");
             }
 
             var jwtKeyBytes = Encoding.UTF8.GetByteCount(jwtSecretKey);
             if (jwtKeyBytes < MinimumJwtKeyBytes)
             {
                 throw new InvalidOperationException(
-                    $"JWT:SecretKey must be at least {MinimumJwtKeyBytes} bytes for HMAC-SHA512 signing, " +
-                    $"but the configured value is {jwtKeyBytes}. Set a longer JWT__SecretKey.");
+                    $"JWT__SecretKey must be at least {MinimumJwtKeyBytes} bytes for HMAC-SHA512 signing, " +
+                    $"but the configured value is {jwtKeyBytes}. Generate a longer one with " +
+                    "openssl rand -base64 64 | tr -d '\\n'.");
             }
 
             services.AddIdentityCore<AppUser>(opt =>

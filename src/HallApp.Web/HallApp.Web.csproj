@@ -20,7 +20,15 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="8.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.11" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="*" />
+    <!--
+      Microsoft.AspNetCore.SignalR is deliberately absent. The standalone package
+      tops out at 1.2.12 (ASP.NET Core 2.x); SignalR for .NET 8 comes from the
+      Microsoft.AspNetCore.App shared framework. It was also pinned to "*", which
+      is exactly the floating reference a lockfile exists to eliminate.
+    -->
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="8.0.11" />
+    <!-- Forces the patched build over the 8.0.2 that DataProtection pins. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="8.0.4" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
     <PackageReference Include="HtmlSanitizer" Version="9.0.892" />
     <PackageReference Include="NWebsec.AspNetCore.Middleware" Version="3.0.0" />

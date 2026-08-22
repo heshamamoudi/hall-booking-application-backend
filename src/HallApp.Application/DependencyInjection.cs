@@ -22,8 +22,20 @@ public static class DependencyInjection
         // Business Rules Configuration (HIGH-008 FIX)
         services.Configure<BusinessRulesSettings>(configuration.GetSection("BusinessRules"));
 
-        // AutoMapper
-        services.AddAutoMapper(typeof(DependencyInjection));
+        // AutoMapper. From v15 the registration takes a configuration action; the
+        // Type-marker overload no longer exists. Without a licence key it logs a
+        // warning on every start and asks for one in production - the Community
+        // tier key is free, see the note in HallApp.Application.csproj.
+        var autoMapperLicenseKey = configuration["AutoMapper:LicenseKey"];
+        services.AddAutoMapper(cfg =>
+        {
+            if (!string.IsNullOrWhiteSpace(autoMapperLicenseKey))
+            {
+                cfg.LicenseKey = autoMapperLicenseKey;
+            }
+
+            cfg.AddMaps(typeof(DependencyInjection).Assembly);
+        });
         
         // MediatR
         // services.AddMediatR(typeof(DependencyInjection));

@@ -28,10 +28,15 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<DataContex
 
         var connectionString = config.GetConnectionString("DefaultConnection");
 
-        Console.WriteLine($"[DbContextFactory] Connection String: {connectionString}");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "No connection string configured. Set ConnectionStrings__DefaultConnection " +
+                "(PostgreSQL: Host=...;Port=5432;Database=...;Username=...;Password=...).");
+        }
 
-        if (string.IsNullOrEmpty(connectionString))
-            throw new InvalidOperationException("Connection string not found.");
+        // Target only - the full string carries the password.
+        Console.WriteLine($"[DbContextFactory] Target: {DatabaseProviderFactory.DescribeTarget(connectionString)}");
 
         var optionsBuilder = new DbContextOptionsBuilder<DataContext>();
         optionsBuilder.ConfigureDatabase(connectionString);

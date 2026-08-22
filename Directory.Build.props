@@ -1,0 +1,20 @@
+<Project>
+
+  <PropertyGroup>
+    <!--
+      Write a packages.lock.json next to every project and commit it.
+
+      Two reasons. Builds become reproducible: restore resolves exactly what the
+      lockfile records instead of whatever the feed offers today. And the
+      deployment platform scans declared dependencies against OSV before it will
+      deploy, which it can only do if there is a lockfile to read.
+
+      The Dockerfile restores in locked mode, so drift between a .csproj and its
+      lockfile fails the build instead of silently resolving something else.
+      After changing any PackageReference, run `dotnet restore` and commit the
+      updated lockfiles.
+    -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+</Project>

@@ -11,11 +11,21 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        // Resolved here rather than inside the AddDbContext callback: that callback does
+        // not run until something first resolves a DataContext, which turns a missing
+        // variable into a failure much later and much further from its cause.
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "No connection string configured. Set ConnectionStrings__DefaultConnection " +
+                "(PostgreSQL: Host=...;Port=5432;Database=...;Username=...;Password=...). " +
+                "For local development, put it in appsettings.Development.json.");
+        }
+
         // Database Configuration - Auto-detect provider based on connection string
         services.AddDbContext<DataContext>(opt =>
         {
-            var connectionString = configuration.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
             opt.ConfigureDatabase(connectionString);
 
             // Configure global query splitting behavior

@@ -11,7 +11,20 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+    <!--
+      AutoMapper 12.0.1 carries CVE-2026-32933 (stack exhaustion on deeply nested
+      graphs). No fix exists below 15.1.1, so this is the smallest version that
+      clears it.
+
+      AutoMapper.Extensions.Microsoft.DependencyInjection is gone deliberately: it
+      stops at 12.0.1 because the DI extensions were folded into the main package
+      from v13 onwards.
+
+      Licensing note: v15+ is commercial. Zawaji uses the free Community tier
+      (under $5M revenue, under $10M outside capital). If either threshold is
+      crossed, a paid licence is required. See https://automapper.io
+    -->
+    <PackageReference Include="AutoMapper" Version="15.1.3" />
     <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
     <PackageReference Include="HtmlSanitizer" Version="9.0.892" />
