@@ -44,19 +44,21 @@ namespace HallApp.Web.Extensions
             // Static files - serve from wwwroot
             app.UseStaticFiles();
 
-            // Ensure uploads directory exists before configuring static files
-            var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads");
-            if (!Directory.Exists(uploadsPath))
-            {
-                Directory.CreateDirectory(uploadsPath);
-            }
+            // Ensure uploads directory exists before configuring static files.
+            // On a read-only root filesystem this is expected to fail, so skip the /uploads
+            // static file provider rather than crashing at startup.
+            var uploadsPath = HallApp.Web.Services.FileUploadService.ResolveUploadsPath(
+                app.Configuration, app.Environment.ContentRootPath);
 
-            // Serve uploaded files from wwwroot/uploads
-            app.UseStaticFiles(new StaticFileOptions
+            if (HallApp.Web.Services.FileUploadService.TryEnsureDirectory(uploadsPath))
             {
-                FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
-                RequestPath = "/uploads"
-            });
+                // Serve uploaded files from the uploads directory
+                app.UseStaticFiles(new StaticFileOptions
+                {
+                    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
+                    RequestPath = "/uploads"
+                });
+            }
 
             // Swagger - configurable via SWAGGER__ENABLED env var (defaults to true in Development)
             var swaggerEnabled = app.Configuration["Swagger:Enabled"]

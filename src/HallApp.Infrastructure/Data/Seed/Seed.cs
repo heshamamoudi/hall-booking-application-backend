@@ -10,6 +10,7 @@ using HallApp.Core.Entities.ChamperEntities.ServiceEntities;
 using HallApp.Core.Entities.VendorEntities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -53,6 +54,26 @@ public class Seed
         return candidates[0];
     }
 
+    /// <summary>
+    /// Seeds the data the application cannot run without: the role set and the
+    /// administrator account. This runs in every environment, including production,
+    /// and is idempotent -- it only creates what is missing.
+    /// </summary>
+    public static async Task SeedCoreData(
+        UserManager<AppUser> userManager,
+        RoleManager<AppRole> roleManager,
+        IConfiguration configuration,
+        ILogger logger)
+    {
+        await SeedRoles(roleManager);
+        await SeedAdminUser(userManager, configuration, logger);
+    }
+
+    /// <summary>
+    /// Seeds the demo dataset: sample users, organizations and halls. Callers gate
+    /// this on Development or an explicit opt-in -- it must never land in a real
+    /// production database by accident.
+    /// </summary>
     public static async Task SeedInformation(
         UserManager<AppUser> userManager,
         RoleManager<AppRole> roleManager,
@@ -60,37 +81,27 @@ public class Seed
         IHostEnvironment env,
         ILogger logger)
     {
-        // ---------------------------------------------------------------
-        // PRODUCTION GUARD: Never seed test data outside Development
-        // ---------------------------------------------------------------
-        if (!env.IsDevelopment())
-        {
-            logger?.LogInformation("Skipping seed data - not in Development environment (current: {Environment})", env.EnvironmentName);
-            return;
-        }
-
         Console.WriteLine("[Seed] Starting database seeding...");
 
         // ---------------------------------------------------------------
-        // 1. Seed roles (idempotent -- only creates missing roles)
+        // Roles are core data and already seeded, but re-running is cheap
+        // and keeps this method usable on its own.
         // ---------------------------------------------------------------
         await SeedRoles(roleManager);
 
         // ---------------------------------------------------------------
-        // 2. Seed users -- skip everything below if users already exist
+        // Skip user creation if the demo users are already present. The admin
+        // account is core data and is expected to exist, so it does not count.
         // ---------------------------------------------------------------
-        if (await userManager.Users.AnyAsync())
+        if (await userManager.Users.AnyAsync(u => u.UserName != AdminUserName))
         {
-            Console.WriteLine("[Seed] Users already exist, skipping user creation");
+            Console.WriteLine("[Seed] Demo users already exist, skipping user creation");
 
             // Even if users exist, ensure organizations + halls are seeded
             await SeedOrganizationsForExistingUsers(userManager, context);
             await SeedHalls(context);
             return;
         }
-
-        // -- Admin ---
-        await SeedAdminUser(userManager);
 
         // -- Customers ---
         await SeedCustomerUsers(userManager);
@@ -1104,13 +1115,50 @@ public class Seed
     // ADMIN USER
     // ===================================================================
 
-    private static async Task SeedAdminUser(UserManager<AppUser> userManager)
+    public const string AdminUserName = "admin";
+
+    private const string DefaultAdminEmail = "HeshamAmoudi.it@gmail.com";
+    private const string DefaultAdminPassword = "Pa$$w0rd";
+
+    /// <summary>
+    /// Creates the administrator account if it does not already exist. Email and
+    /// password come from Seed:AdminEmail / Seed:AdminPassword (SEED__ADMINEMAIL,
+    /// SEED__ADMINPASSWORD) so a deployment never has to ship with the built-in
+    /// development credentials.
+    /// </summary>
+    private static async Task SeedAdminUser(
+        UserManager<AppUser> userManager,
+        IConfiguration configuration,
+        ILogger logger)
     {
+        if (await userManager.FindByNameAsync(AdminUserName) is not null)
+        {
+            Console.WriteLine("[Seed] Admin user already exists, skipping");
+            return;
+        }
+
+        var email = configuration["Seed:AdminEmail"];
+        var password = configuration["Seed:AdminPassword"];
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            logger?.LogWarning(
+                "Seed:AdminPassword is not set - creating the admin account with the built-in " +
+                "development password. Set SEED__ADMINPASSWORD (and SEED__ADMINEMAIL) and change " +
+                "this password immediately.");
+            password = DefaultAdminPassword;
+        }
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            email = DefaultAdminEmail;
+        }
+
         var admin = new AppUser
         {
-            UserName = "admin",
+            UserName = AdminUserName,
             PhoneNumber = "597477814",
-            Email = "HeshamAmoudi.it@gmail.com",
+            Email = email,
             FirstName = "Hesham",
             LastName = "Amoudi",
             Gender = "Male",
@@ -1120,7 +1168,7 @@ public class Seed
             Active = true
         };
 
-        var createResult = await userManager.CreateAsync(admin, "Pa$$w0rd");
+        var createResult = await userManager.CreateAsync(admin, password);
         if (!createResult.Succeeded)
         {
             Console.WriteLine($"[Seed] ERROR creating admin user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
@@ -1134,7 +1182,7 @@ public class Seed
             return;
         }
 
-        Console.WriteLine("[Seed] Admin user created (HeshamAmoudi.it@gmail.com -> Admin, Moderator)");
+        Console.WriteLine($"[Seed] Admin user created ({email} -> Admin, Moderator)");
     }
 
     // ===================================================================

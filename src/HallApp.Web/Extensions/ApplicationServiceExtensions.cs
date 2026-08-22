@@ -42,7 +42,8 @@ public static class ApplicationServiceExtensions
         services.AddSingleton<IFileUploadService>(provider =>
         {
             var env = provider.GetRequiredService<IWebHostEnvironment>();
-            return new FileUploadService(env.ContentRootPath);
+            var config = provider.GetRequiredService<IConfiguration>();
+            return new FileUploadService(FileUploadService.ResolveUploadsPath(config, env.ContentRootPath));
         });
         
         // Validate that all required service interfaces and implementations exist

@@ -5,6 +5,7 @@ using HallApp.Core.Entities.ReviewEntities;
 using HallApp.Core.Entities.VendorEntities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -17,15 +18,40 @@ public class SeedAll
         RoleManager<AppRole> roleManager,
         DataContext context,
         IHostEnvironment env,
+        IConfiguration configuration,
         ILogger logger)
     {
         // ---------------------------------------------------------------
-        // PRODUCTION GUARD: Never seed test data outside Development
+        // CORE DATA: seeded in every environment, including production.
+        // Without roles, an administrator and the platform's own billing
+        // details, the application has nothing to run on. All of it is
+        // idempotent, so it is safe on every startup.
         // ---------------------------------------------------------------
+        await Seed.SeedCoreData(userManager, roleManager, configuration, logger);
+        await SeedPlatformSettings(context);
+        await SeedVendorTypes.SeedVendorTypesData(context);
+        await context.SaveChangesAsync();
+
+        // ---------------------------------------------------------------
+        // DEMO DATA: sample users, halls, vendors, bookings, invoices and
+        // reviews. Development gets it automatically; anywhere else it takes
+        // an explicit opt-in via Seed:DemoData (SEED__DEMODATA=true).
+        // ---------------------------------------------------------------
+        var demoDataEnabled = env.IsDevelopment()
+            || string.Equals(configuration["Seed:DemoData"], "true", StringComparison.OrdinalIgnoreCase);
+        if (!demoDataEnabled)
+        {
+            logger?.LogInformation(
+                "Core seed data applied. Skipping demo data - not in Development (current: {Environment}) " +
+                "and Seed:DemoData is not enabled.", env.EnvironmentName);
+            return;
+        }
+
         if (!env.IsDevelopment())
         {
-            logger?.LogInformation("Skipping seed data - not in Development environment (current: {Environment})", env.EnvironmentName);
-            return;
+            logger?.LogWarning(
+                "Seed:DemoData is enabled outside Development ({Environment}). Sample accounts, halls, " +
+                "vendors and bookings are being written to this database.", env.EnvironmentName);
         }
 
         // First seed users, roles, organizations, halls, and hall manager entities
@@ -37,8 +63,8 @@ public class SeedAll
         await context.SaveChangesAsync();
         Console.WriteLine("[SeedAll] Vendor data seeding completed.");
 
-        // Seed dependent entities in correct order
-        await SeedPlatformSettings(context);
+        // Seed dependent entities in correct order (platform settings are core
+        // data and have already been applied above)
         await SeedCustomers(context);
         await SeedAddresses(context);
         await SeedBookings(context);

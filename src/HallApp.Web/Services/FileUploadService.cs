@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 
 namespace HallApp.Web.Services
 {
@@ -15,10 +16,40 @@ namespace HallApp.Web.Services
         private readonly long _maxFileSize = 5 * 1024 * 1024; // 5MB
         private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
 
-        public FileUploadService(string contentRootPath)
+        /// <summary>
+        /// Resolves where uploaded images live. Defaults to {contentRoot}/wwwroot/uploads, but
+        /// Uploads:Path (UPLOADS__PATH) can point it at a writable volume — required when the
+        /// container runs on a read-only root filesystem.
+        /// </summary>
+        public static string ResolveUploadsPath(IConfiguration configuration, string contentRootPath)
         {
-            _uploadsPath = Path.Combine(contentRootPath, "wwwroot", "uploads");
-            Directory.CreateDirectory(_uploadsPath);
+            var configured = configuration["Uploads:Path"];
+            return string.IsNullOrWhiteSpace(configured)
+                ? Path.Combine(contentRootPath, "wwwroot", "uploads")
+                : configured;
+        }
+
+        /// <summary>
+        /// Creates the uploads directory when possible. A read-only filesystem must not stop the
+        /// app from starting — image uploads then fail per-request instead of at boot.
+        /// </summary>
+        public static bool TryEnsureDirectory(string path)
+        {
+            try
+            {
+                Directory.CreateDirectory(path);
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
+        public FileUploadService(string uploadsPath)
+        {
+            _uploadsPath = uploadsPath;
+            TryEnsureDirectory(_uploadsPath);
         }
 
         public async Task<string> SaveImageAsync(IFormFile file, string folder)
