@@ -15,8 +15,28 @@ namespace HallApp.Web.Extensions
 {
     public static class IdentityServiceExtensions
     {
+        // Tokens are signed with HMAC-SHA512, which requires a key of at least 512 bits.
+        private const int MinimumJwtKeyBytes = 64;
+
         public static IServiceCollection AddIdentityServices(this IServiceCollection services, IConfiguration config)
         {
+            // Validated here rather than inside the AddJwtBearer callback: that callback
+            // is not invoked until the first request needs the options, so a bad key
+            // would otherwise sail through startup and surface as a 500 on every login.
+            var jwtSecretKey = config["JWT:SecretKey"];
+            if (string.IsNullOrEmpty(jwtSecretKey))
+            {
+                throw new InvalidOperationException("JWT:SecretKey configuration is required but not found. Check your environment variables.");
+            }
+
+            var jwtKeyBytes = Encoding.UTF8.GetByteCount(jwtSecretKey);
+            if (jwtKeyBytes < MinimumJwtKeyBytes)
+            {
+                throw new InvalidOperationException(
+                    $"JWT:SecretKey must be at least {MinimumJwtKeyBytes} bytes for HMAC-SHA512 signing, " +
+                    $"but the configured value is {jwtKeyBytes}. Set a longer JWT__SecretKey.");
+            }
+
             services.AddIdentityCore<AppUser>(opt =>
             {
                 // Enhanced password security
@@ -49,12 +69,6 @@ namespace HallApp.Web.Extensions
             })
             .AddJwtBearer(options =>
             {
-                var jwtSecretKey = config["JWT:SecretKey"];
-                if (string.IsNullOrEmpty(jwtSecretKey))
-                {
-                    throw new InvalidOperationException("JWT:SecretKey configuration is required but not found. Check your environment variables.");
-                }
-
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     // Always validate the signing key
