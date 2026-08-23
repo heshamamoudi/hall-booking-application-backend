@@ -9,8 +9,12 @@ public class RegisterVendorApplicationDto
     [Required, StringLength(150, MinimumLength = 2)]
     public string BusinessName { get; set; } = string.Empty;
 
-    [Required]
-    public int VendorTypeId { get; set; }
+    /// <summary>"Hall" or "Vendor". Defaults to Vendor when omitted.</summary>
+    [StringLength(20)]
+    public string ApplicationType { get; set; } = "Vendor";
+
+    /// <summary>Required for a vendor, ignored for a hall.</summary>
+    public int? VendorTypeId { get; set; }
 
     [StringLength(1000)]
     public string Description { get; set; } = string.Empty;
@@ -63,7 +67,8 @@ public class VendorApplicationDto
 {
     public int Id { get; set; }
     public string BusinessName { get; set; } = string.Empty;
-    public int VendorTypeId { get; set; }
+    public string ApplicationType { get; set; } = string.Empty;
+    public int? VendorTypeId { get; set; }
     public string VendorTypeName { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string ContactEmail { get; set; } = string.Empty;
@@ -79,6 +84,7 @@ public class VendorApplicationDto
     public DateTime? SubmittedAt { get; set; }
     public DateTime? ReviewedAt { get; set; }
     public int? CreatedVendorId { get; set; }
+    public int? CreatedHallId { get; set; }
 
     public List<VendorDocumentDto> Documents { get; set; } = new();
 
@@ -113,7 +119,10 @@ public class RejectApplicationDto
 /// <summary>What the public registration page needs to render its category list.</summary>
 public class VendorApplicationRequirementsDto
 {
-    public int VendorTypeId { get; set; }
+    /// <summary>"Hall" or "Vendor" - which kind of business this option registers.</summary>
+    public string ApplicationType { get; set; } = string.Empty;
+
+    public int? VendorTypeId { get; set; }
     public string VendorTypeName { get; set; } = string.Empty;
     public List<string> RequiredDocuments { get; set; } = new();
 }

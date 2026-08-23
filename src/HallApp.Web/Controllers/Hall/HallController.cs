@@ -116,6 +116,17 @@ namespace HallApp.Web.Controllers.Hall
                 // Apply filtering
                 var filteredHalls = hallEntities.AsQueryable();
 
+                // Visibility. A hall approved through the registration flow is
+                // created inactive on purpose, so the owner can set up pricing,
+                // sections and photographs in private. Without this filter it was
+                // listed publicly the moment it was approved, which makes
+                // "approved but unlisted" unlisted in name only. Admins still see
+                // everything, since they need to.
+                if (!IsAdmin)
+                {
+                    filteredHalls = filteredHalls.Where(h => h.IsActive && h.IsApproved);
+                }
+
                 if (!string.IsNullOrEmpty(hallParams.SearchTerm))
                 {
                     filteredHalls = filteredHalls.Where(h =>
@@ -217,6 +228,14 @@ namespace HallApp.Web.Controllers.Hall
                 }
 
                 var hallEntities = await _hallService.SearchHallsAsync(searchTerm);
+
+                // Search had no visibility filter, so an unpublished hall was
+                // findable by name even though it appeared in no listing.
+                if (!IsAdmin)
+                {
+                    hallEntities = hallEntities.Where(h => h.IsActive && h.IsApproved).ToList();
+                }
+
                 var halls = _mapper.Map<List<HallDto>>(hallEntities);
 
                 return Success<IEnumerable<HallDto>>(halls, $"Found {halls.Count} halls matching '{searchTerm}'");

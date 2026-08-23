@@ -3,6 +3,17 @@ using System.ComponentModel.DataAnnotations;
 namespace HallApp.Core.Entities.VendorEntities;
 
 /// <summary>
+/// Which kind of business is applying. Halls and vendors join the platform the
+/// same way and are reviewed the same way; the difference is what approval
+/// creates - a Hall or a Vendor - and which organisation type owns it.
+/// </summary>
+public enum BusinessApplicationType
+{
+    Vendor = 0,
+    Hall = 1
+}
+
+/// <summary>
 /// Where a single uploaded paper stands in review. Status is per document, not per
 /// applicant: an admin can accept the commercial registration and reject the VAT
 /// certificate in the same sitting, and the applicant re-uploads only what failed.
@@ -31,11 +42,11 @@ public static class VendorDocumentTypes
     public const string OwnerIdentification = "OwnerIdentification";
     public const string MunicipalityLicence = "MunicipalityLicence";
     public const string FoodSafetyCertificate = "FoodSafetyCertificate";
+    public const string CivilDefenceCertificate = "CivilDefenceCertificate";
     public const string Other = "Other";
 
     /// <summary>
-    /// What every applicant must supply. FoodSafetyCertificate is deliberately not
-    /// here - it is added for restaurants and caterers by RequiredFor.
+    /// What every applicant must supply, whatever they do.
     /// </summary>
     public static readonly string[] AlwaysRequired =
     {
@@ -46,18 +57,34 @@ public static class VendorDocumentTypes
     };
 
     /// <summary>
-    /// The document set required of a given vendor category. Anyone handling food
-    /// is additionally asked for a food safety certificate.
+    /// The document set required of a given applicant.
+    ///
+    /// A venue is a physical premises open to the public, so it is additionally
+    /// asked for a municipality licence and a civil defence (fire safety)
+    /// certificate. Anyone handling food - a caterer, a restaurant - is asked for a
+    /// food safety certificate.
     /// </summary>
-    public static string[] RequiredFor(string? vendorTypeName)
+    public static string[] RequiredFor(BusinessApplicationType type, string? vendorTypeName)
     {
+        var required = new List<string>(AlwaysRequired);
+
+        if (type == BusinessApplicationType.Hall)
+        {
+            required.Add(MunicipalityLicence);
+            required.Add(CivilDefenceCertificate);
+            return required.ToArray();
+        }
+
         var handlesFood = vendorTypeName is not null
             && (vendorTypeName.Contains("Catering", StringComparison.OrdinalIgnoreCase)
                 || vendorTypeName.Contains("Restaurant", StringComparison.OrdinalIgnoreCase));
 
-        return handlesFood
-            ? AlwaysRequired.Append(FoodSafetyCertificate).ToArray()
-            : AlwaysRequired;
+        if (handlesFood)
+        {
+            required.Add(FoodSafetyCertificate);
+        }
+
+        return required.ToArray();
     }
 }
 

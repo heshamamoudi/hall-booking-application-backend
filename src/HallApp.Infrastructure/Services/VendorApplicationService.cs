@@ -1,6 +1,8 @@
 using HallApp.Application.DTOs.Vendors;
 using HallApp.Core.Constants;
 using HallApp.Core.Entities;
+using HallApp.Core.Entities.ChamperEntities;
+using HallApp.Core.Entities.ChamperEntities.LocationEntities;
 using HallApp.Core.Entities.VendorEntities;
 using HallApp.Application.Services;
 using HallApp.Core.Interfaces.IServices;
@@ -69,6 +71,7 @@ public class VendorApplicationService : IVendorApplicationService
     private DbSet<VendorType> VendorTypes => _context.Set<VendorType>();
     private DbSet<Vendor> Vendors => _context.Set<Vendor>();
     private DbSet<Organization> Organizations => _context.Set<Organization>();
+    private DbSet<Hall> Halls => _context.Set<Hall>();
 
     // ===================================================================
     // Public
@@ -78,19 +81,44 @@ public class VendorApplicationService : IVendorApplicationService
     {
         var types = await VendorTypes.Where(t => t.IsActive).OrderBy(t => t.SortOrder).ToListAsync(ct);
 
-        return types.Select(t => new VendorApplicationRequirementsDto
+        // A hall is offered as its own choice alongside the vendor categories, so
+        // one public registration page can serve both kinds of business.
+        var options = new List<VendorApplicationRequirementsDto>
         {
+            new()
+            {
+                ApplicationType = nameof(BusinessApplicationType.Hall),
+                VendorTypeId = null,
+                VendorTypeName = "Wedding hall or venue",
+                RequiredDocuments = VendorDocumentTypes
+                    .RequiredFor(BusinessApplicationType.Hall, null).ToList()
+            }
+        };
+
+        options.AddRange(types.Select(t => new VendorApplicationRequirementsDto
+        {
+            ApplicationType = nameof(BusinessApplicationType.Vendor),
             VendorTypeId = t.Id,
             VendorTypeName = t.Name,
-            RequiredDocuments = VendorDocumentTypes.RequiredFor(t.Name).ToList()
-        }).ToList();
+            RequiredDocuments = VendorDocumentTypes
+                .RequiredFor(BusinessApplicationType.Vendor, t.Name).ToList()
+        }));
+
+        return options;
     }
 
     public async Task<VendorApplicationResult> RegisterAsync(RegisterVendorApplicationDto dto, CancellationToken ct = default)
     {
-        var vendorType = await VendorTypes.FirstOrDefaultAsync(t => t.Id == dto.VendorTypeId, ct);
-        if (vendorType == null)
-            return VendorApplicationResult.Fail("Unknown vendor category", 400);
+        var isHall = string.Equals(dto.ApplicationType, nameof(BusinessApplicationType.Hall),
+            StringComparison.OrdinalIgnoreCase);
+
+        VendorType? vendorType = null;
+        if (!isHall)
+        {
+            vendorType = await VendorTypes.FirstOrDefaultAsync(t => t.Id == dto.VendorTypeId, ct);
+            if (vendorType == null)
+                return VendorApplicationResult.Fail("Unknown vendor category", 400);
+        }
 
         var email = dto.ContactEmail.Trim();
 
@@ -128,7 +156,8 @@ public class VendorApplicationService : IVendorApplicationService
         var application = new VendorApplication
         {
             BusinessName = dto.BusinessName.Trim(),
-            VendorTypeId = dto.VendorTypeId,
+            ApplicationType = isHall ? BusinessApplicationType.Hall : BusinessApplicationType.Vendor,
+            VendorTypeId = isHall ? null : dto.VendorTypeId,
             Description = dto.Description,
             ContactEmail = email,
             ContactPhone = dto.ContactPhone,
@@ -344,7 +373,7 @@ public class VendorApplicationService : IVendorApplicationService
     private async Task<VendorApplicationResult> ApproveAsync(
         VendorApplication application, int reviewerUserId, CancellationToken ct)
     {
-        if (application.CreatedVendorId.HasValue)
+        if (application.CreatedVendorId.HasValue || application.CreatedHallId.HasValue)
         {
             return VendorApplicationResult.Ok(await MapAsync(application, ct), "Application already approved");
         }
@@ -353,10 +382,14 @@ public class VendorApplicationService : IVendorApplicationService
         if (owner == null)
             return VendorApplicationResult.Fail("The applicant's account no longer exists", 409);
 
+        var isHall = application.ApplicationType == BusinessApplicationType.Hall;
+
         var organization = new Organization
         {
             Name = application.BusinessName,
-            Type = "VendorManagement",
+            // The organisation type decides which side of the platform the owner
+            // manages, and is what every ownership check reads.
+            Type = isHall ? "HallManagement" : "VendorManagement",
             OwnerId = application.AppUserId,
             CommercialRegistrationNumber = application.CommercialRegistrationNumber,
             VatNumber = application.VatNumber,
@@ -367,31 +400,68 @@ public class VendorApplicationService : IVendorApplicationService
         Organizations.Add(organization);
         await _context.SaveChangesAsync(ct);
 
-        var vendor = new Vendor
-        {
-            Name = application.BusinessName,
-            Description = application.Description,
-            Email = application.ContactEmail,
-            Phone = application.ContactPhone,
-            VendorTypeId = application.VendorTypeId,
-            OrganizationId = organization.Id,
-            IsApproved = true,
-            ApprovedAt = DateTime.UtcNow,
+        int createdVendorId = 0;
+        int createdHallId = 0;
 
-            // Approved but not yet listed. The owner publishes it via
-            // PUT /api/vendors/{id}/toggle-active once their profile is ready.
-            IsActive = false
-        };
-        Vendors.Add(vendor);
-        await _context.SaveChangesAsync(ct);
-
-        if (!await _userManager.IsInRoleAsync(owner, AppRoles.VendorOrganizationManager))
+        if (isHall)
         {
-            await _userManager.AddToRoleAsync(owner, AppRoles.VendorOrganizationManager);
+            var hall = new Hall
+            {
+                Name = application.BusinessName,
+                Description = application.Description,
+                Email = application.ContactEmail,
+                Phone = application.ContactPhone,
+                WhatsApp = application.ContactPhone,
+                OrganizationId = organization.Id,
+                IsApproved = true,
+                ApprovedAt = DateTime.UtcNow,
+
+                // Approved but not listed. The owner sets up pricing, sections,
+                // photographs and packages, then publishes.
+                IsActive = false,
+
+                Location = new Location
+                {
+                    City = application.City,
+                    Address = application.Address,
+                    State = string.Empty
+                }
+            };
+            Halls.Add(hall);
+            await _context.SaveChangesAsync(ct);
+            createdHallId = hall.ID;
+        }
+        else
+        {
+            var vendor = new Vendor
+            {
+                Name = application.BusinessName,
+                Description = application.Description,
+                Email = application.ContactEmail,
+                Phone = application.ContactPhone,
+                VendorTypeId = application.VendorTypeId ?? 0,
+                OrganizationId = organization.Id,
+                IsApproved = true,
+                ApprovedAt = DateTime.UtcNow,
+
+                // Approved but not yet listed. The owner publishes it via
+                // PUT /api/vendors/{id}/toggle-active once their profile is ready.
+                IsActive = false
+            };
+            Vendors.Add(vendor);
+            await _context.SaveChangesAsync(ct);
+            createdVendorId = vendor.Id;
+        }
+
+        var role = isHall ? AppRoles.HallOrganizationManager : AppRoles.VendorOrganizationManager;
+        if (!await _userManager.IsInRoleAsync(owner, role))
+        {
+            await _userManager.AddToRoleAsync(owner, role);
         }
 
         application.Status = VendorApplicationStatus.Approved;
-        application.CreatedVendorId = vendor.Id;
+        application.CreatedVendorId = createdVendorId == 0 ? null : createdVendorId;
+        application.CreatedHallId = createdHallId == 0 ? null : createdHallId;
         application.CreatedOrganizationId = organization.Id;
         application.ReviewedByUserId = reviewerUserId;
         application.ReviewedAt = DateTime.UtcNow;
@@ -399,8 +469,9 @@ public class VendorApplicationService : IVendorApplicationService
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation(
-            "Application {ApplicationId} approved: organization {OrganizationId}, vendor {VendorId}, owner {UserId}",
-            application.Id, organization.Id, vendor.Id, owner.Id);
+            "Application {ApplicationId} approved as {Type}: organization {OrganizationId}, resource {ResourceId}, owner {UserId}",
+            application.Id, application.ApplicationType, organization.Id,
+            isHall ? createdHallId : createdVendorId, owner.Id);
 
         await _emailService.SendAsync(VendorApplicationEmails.Approved(application), ct);
 
@@ -424,7 +495,7 @@ public class VendorApplicationService : IVendorApplicationService
     /// </summary>
     private static List<string> AwaitingUpload(VendorApplication application)
     {
-        var required = VendorDocumentTypes.RequiredFor(application.VendorType?.Name);
+        var required = VendorDocumentTypes.RequiredFor(application.ApplicationType, application.VendorType?.Name);
 
         return required
             .Where(type =>
@@ -441,7 +512,7 @@ public class VendorApplicationService : IVendorApplicationService
     /// </summary>
     private static List<string> AwaitingApproval(VendorApplication application)
     {
-        var required = VendorDocumentTypes.RequiredFor(application.VendorType?.Name);
+        var required = VendorDocumentTypes.RequiredFor(application.ApplicationType, application.VendorType?.Name);
 
         return required
             .Where(type => application.Documents
@@ -473,7 +544,9 @@ public class VendorApplicationService : IVendorApplicationService
             CreatedAt = application.CreatedAt,
             SubmittedAt = application.SubmittedAt,
             ReviewedAt = application.ReviewedAt,
+            ApplicationType = application.ApplicationType.ToString(),
             CreatedVendorId = application.CreatedVendorId,
+            CreatedHallId = application.CreatedHallId,
             OutstandingDocuments = outstanding,
             IsComplete = unapproved.Count == 0,
             Documents = application.Documents

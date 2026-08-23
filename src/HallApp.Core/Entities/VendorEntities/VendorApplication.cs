@@ -48,8 +48,17 @@ public class VendorApplication
     [StringLength(150)]
     public string BusinessName { get; set; } = string.Empty;
 
-    /// <summary>Catering, Photography, Restaurant, and so on.</summary>
-    public int VendorTypeId { get; set; }
+    /// <summary>
+    /// Whether this application becomes a hall or a vendor. Halls and vendors
+    /// join and are reviewed identically; only what approval creates differs.
+    /// </summary>
+    public BusinessApplicationType ApplicationType { get; set; } = BusinessApplicationType.Vendor;
+
+    /// <summary>
+    /// Catering, Photography, Restaurant, and so on. Null for a hall - a venue has
+    /// no vendor category.
+    /// </summary>
+    public int? VendorTypeId { get; set; }
     public VendorType? VendorType { get; set; }
 
     [StringLength(1000)]
@@ -98,8 +107,11 @@ public class VendorApplication
     public int? ReviewedByUserId { get; set; }
     public DateTime? ReviewedAt { get; set; }
 
-    /// <summary>Set on approval; the vendor this application became.</summary>
+    /// <summary>Set on approval of a vendor application; the vendor it became.</summary>
     public int? CreatedVendorId { get; set; }
+
+    /// <summary>Set on approval of a hall application; the hall it became.</summary>
+    public int? CreatedHallId { get; set; }
 
     /// <summary>Set on approval; the organization created to own that vendor.</summary>
     public int? CreatedOrganizationId { get; set; }
