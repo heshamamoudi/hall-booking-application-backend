@@ -606,7 +606,31 @@ public class AutoMapperProfiles : Profile
                 Phone = src.Vendor.Phone ?? "",
                 Email = src.Vendor.Email ?? "",
                 WhatsApp = ""
-            } : null));
+            } : null))
+            // Context from the parent booking. Every one of these is null-guarded:
+            // the Booking include can be absent depending on which repository
+            // method loaded the entity.
+            .ForMember(dest => dest.ServiceDate, opt => opt.MapFrom(src => src.ServiceDate))
+            .ForMember(dest => dest.ServiceType, opt => opt.MapFrom(src => src.ServiceType))
+            .ForMember(dest => dest.EventDate, opt => opt.MapFrom(src => src.Booking != null ? (DateTime?)src.Booking.EventDate : null))
+            .ForMember(dest => dest.EventType, opt => opt.MapFrom(src => src.Booking != null ? src.Booking.EventType : string.Empty))
+            .ForMember(dest => dest.GuestCount, opt => opt.MapFrom(src => src.Booking != null ? src.Booking.GuestCount : 0))
+            .ForMember(dest => dest.HallId, opt => opt.MapFrom(src => src.Booking != null ? src.Booking.HallId : 0))
+            .ForMember(dest => dest.HallName, opt => opt.MapFrom(src => src.Booking != null && src.Booking.Hall != null ? src.Booking.Hall.Name : string.Empty))
+            .ForMember(dest => dest.HallCity, opt => opt.MapFrom(src => src.Booking != null && src.Booking.Hall != null && src.Booking.Hall.Location != null ? src.Booking.Hall.Location.City : string.Empty))
+            .ForMember(dest => dest.CustomerId, opt => opt.MapFrom(src => src.Booking != null ? src.Booking.CustomerId : 0))
+            .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src =>
+                src.Booking != null && src.Booking.Customer != null && src.Booking.Customer.AppUser != null
+                    ? (src.Booking.Customer.AppUser.FirstName + " " + src.Booking.Customer.AppUser.LastName).Trim()
+                    : string.Empty))
+            .ForMember(dest => dest.CustomerEmail, opt => opt.MapFrom(src =>
+                src.Booking != null && src.Booking.Customer != null && src.Booking.Customer.AppUser != null
+                    ? (src.Booking.Customer.AppUser.Email ?? string.Empty)
+                    : string.Empty))
+            .ForMember(dest => dest.CustomerPhone, opt => opt.MapFrom(src =>
+                src.Booking != null && src.Booking.Customer != null && src.Booking.Customer.AppUser != null
+                    ? (src.Booking.Customer.AppUser.PhoneNumber ?? string.Empty)
+                    : string.Empty));
 
         // VendorBookingService to VendorBookingServiceDto mapping
         CreateMap<HallApp.Core.Entities.VendorEntities.VendorBookingService, HallApp.Application.DTOs.Vendors.VendorBookingServiceDto>()

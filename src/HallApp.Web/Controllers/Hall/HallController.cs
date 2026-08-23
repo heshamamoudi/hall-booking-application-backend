@@ -18,7 +18,6 @@ namespace HallApp.Web.Controllers.Hall
     /// Public Hall browsing and HallManager CRUD operations.
     /// Query endpoints (GET) are public. Command endpoints (POST/PUT/DELETE) require HallManager/Admin role.
     /// </summary>
-    [AllowAnonymous]
     [Route("api/halls")]
     public class HallController : BaseApiController
     {
@@ -92,6 +91,7 @@ namespace HallApp.Web.Controllers.Hall
         /// <summary>
         /// Get all halls for public browsing with pagination
         /// </summary>
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<PaginatedApiResponse<HallDto>>> GetHalls([FromQuery] HallParams hallParams)
         {
@@ -180,6 +180,7 @@ namespace HallApp.Web.Controllers.Hall
         /// <summary>
         /// Get hall by ID for public viewing
         /// </summary>
+        [AllowAnonymous]
         [HttpGet("{id:int}")]
         public async Task<ActionResult<ApiResponse<HallDto>>> GetHallById(int id)
         {
@@ -204,6 +205,7 @@ namespace HallApp.Web.Controllers.Hall
         /// <summary>
         /// Search halls by name or description
         /// </summary>
+        [AllowAnonymous]
         [HttpGet("search")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> SearchHalls([FromQuery] string searchTerm)
         {
@@ -261,6 +263,7 @@ namespace HallApp.Web.Controllers.Hall
         /// Get special offer halls (halls with active discounts/offers).
         /// PERF-001 FIX: Uses repository-level filtering instead of GetAllHallsAsync().
         /// </summary>
+        [AllowAnonymous]
         [HttpGet("special-offers")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetSpecialOfferHalls([FromQuery] int limit = 6)
         {
@@ -281,6 +284,7 @@ namespace HallApp.Web.Controllers.Hall
         /// Get featured halls.
         /// PERF-001 FIX: Uses repository-level filtering instead of GetAllHallsAsync().
         /// </summary>
+        [AllowAnonymous]
         [HttpGet("featured")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetFeaturedHalls([FromQuery] int limit = 6)
         {
@@ -301,6 +305,7 @@ namespace HallApp.Web.Controllers.Hall
         /// Get popular halls (high rating and multiple reviews).
         /// PERF-001 FIX: Uses repository-level filtering instead of GetAllHallsAsync().
         /// </summary>
+        [AllowAnonymous]
         [HttpGet("popular")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetPopularHalls([FromQuery] int limit = 6)
         {
@@ -321,6 +326,7 @@ namespace HallApp.Web.Controllers.Hall
         /// Get premium halls.
         /// PERF-001 FIX: Uses repository-level filtering instead of GetAllHallsAsync().
         /// </summary>
+        [AllowAnonymous]
         [HttpGet("premium")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetPremiumHalls([FromQuery] int limit = 6)
         {
@@ -341,6 +347,7 @@ namespace HallApp.Web.Controllers.Hall
         /// Get newly added halls (recently created halls).
         /// PERF-001 FIX: Uses repository-level filtering instead of GetAllHallsAsync().
         /// </summary>
+        [AllowAnonymous]
         [HttpGet("newly-added")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetNewlyAddedHalls([FromQuery] int limit = 6)
         {
@@ -776,7 +783,7 @@ namespace HallApp.Web.Controllers.Hall
         /// <summary>
         /// Get halls for the current hall manager
         /// </summary>
-        [Authorize(Roles = "HallOrganizationManager,HallManager")]
+        [Authorize(Roles = "HallOrganizationManager,HallManager,Admin")]
         [HttpGet("my-halls")]
         public async Task<ActionResult<ApiResponse<IEnumerable<HallDto>>>> GetMyHalls()
         {

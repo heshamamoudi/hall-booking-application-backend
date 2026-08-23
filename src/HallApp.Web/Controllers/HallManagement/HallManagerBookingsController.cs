@@ -58,6 +58,8 @@ public class HallManagerBookingsController : BaseApiController
     public async Task<ActionResult<PaginatedApiResponse<BookingDto>>> GetMyHallBookings(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] int? page = null,
+        [FromQuery] int? size = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -72,6 +74,9 @@ public class HallManagerBookingsController : BaseApiController
                     IsSuccess = false
                 });
             }
+
+            // Honour the 0-based page/size the Angular client actually sends.
+            (pageNumber, pageSize) = ResolvePaging(pageNumber, pageSize, page, size);
 
             // Clamp pagination values
             pageNumber = Math.Max(1, pageNumber);
@@ -154,6 +159,8 @@ public class HallManagerBookingsController : BaseApiController
         [FromQuery] string? city = null,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] int? page = null,
+        [FromQuery] int? size = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -168,6 +175,9 @@ public class HallManagerBookingsController : BaseApiController
                     IsSuccess = false
                 });
             }
+
+            // Honour the 0-based page/size the Angular client actually sends.
+            (pageNumber, pageSize) = ResolvePaging(pageNumber, pageSize, page, size);
 
             // Clamp pagination values
             pageNumber = Math.Max(1, pageNumber);

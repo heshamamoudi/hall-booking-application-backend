@@ -72,6 +72,10 @@ public class VendorBookingRepository : GenericRepository<VendorBooking>, IVendor
             .Include(vb => vb.Booking)
                 .ThenInclude(b => b!.Customer)
                     .ThenInclude(c => c!.AppUser)
+            // The vendor needs to know which venue the event is at, and where it is.
+            .Include(vb => vb.Booking)
+                .ThenInclude(b => b!.Hall)
+                    .ThenInclude(h => h!.Location)
             .Include(vb => vb.Services)
                 .ThenInclude(s => s.ServiceItem)
             .AsSplitQuery()

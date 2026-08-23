@@ -12,7 +12,6 @@ namespace HallApp.Web.Controllers.Vendor
     /// Vendor type management controller
     /// Handles vendor type retrieval and categorization
     /// </summary>
-    [AllowAnonymous]
     [Route("api/vendor-types")]
     public class VendorTypeController : BaseApiController
     {
@@ -29,6 +28,7 @@ namespace HallApp.Web.Controllers.Vendor
         /// Get all vendor types
         /// </summary>
         /// <returns>List of all vendor types</returns>
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<VendorTypeDto>>>> GetVendorTypes()
         {
@@ -72,6 +72,7 @@ namespace HallApp.Web.Controllers.Vendor
         /// </summary>
         /// <param name="id">Vendor type ID</param>
         /// <returns>Vendor type details</returns>
+        [AllowAnonymous]
         [HttpGet("{id:int}")]
         public async Task<ActionResult<ApiResponse<VendorTypeDto>>> GetVendorTypeById(int id)
         {
@@ -124,6 +125,7 @@ namespace HallApp.Web.Controllers.Vendor
         /// </summary>
         /// <param name="id">Vendor type ID</param>
         /// <returns>List of vendors of the specified type</returns>
+        [AllowAnonymous]
         [HttpGet("{id:int}/vendors")]
         public async Task<ActionResult<ApiResponse<IEnumerable<VendorDto>>>> GetVendorsByTypeId(int id)
         {

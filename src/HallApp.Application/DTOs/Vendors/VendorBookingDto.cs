@@ -26,6 +26,35 @@ public class VendorBookingDto
     public DateTime UpdatedAt { get; set; }
     public List<VendorBookingServiceDto> ServiceItems { get; set; } = new();
     public VendorContactInfo? ContactInfo { get; set; }
+
+    // --- Context from the parent booking -----------------------------------
+    // A vendor cannot act on a request without knowing what the event is, when
+    // it is, where it is and who booked it. Without these the bookings list
+    // shows a row of amounts and nothing to decide on.
+
+    /// <summary>When the vendor is expected to deliver the service.</summary>
+    public DateTime ServiceDate { get; set; }
+
+    /// <summary>Date of the event this service belongs to.</summary>
+    public DateTime? EventDate { get; set; }
+
+    /// <summary>Wedding, Engagement, Corporate, and so on.</summary>
+    public string EventType { get; set; } = string.Empty;
+
+    /// <summary>Expected number of guests, which drives most vendor quoting.</summary>
+    public int GuestCount { get; set; }
+
+    /// <summary>The kind of service booked, e.g. Catering or Photography.</summary>
+    public string ServiceType { get; set; } = string.Empty;
+
+    public int HallId { get; set; }
+    public string HallName { get; set; } = string.Empty;
+    public string HallCity { get; set; } = string.Empty;
+
+    public int CustomerId { get; set; }
+    public string CustomerName { get; set; } = string.Empty;
+    public string CustomerEmail { get; set; } = string.Empty;
+    public string CustomerPhone { get; set; } = string.Empty;
 }
 
 public class VendorContactInfo

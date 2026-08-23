@@ -70,6 +70,7 @@ public static class ApplicationServiceExtensions
 
             // VendorManager-specific services
             services.AddScoped<IVendorManagerDashboardService, VendorManagerDashboardService>();
+            services.AddScoped<IVendorManagerBookingService, VendorManagerBookingService>();
 
             // Hall statistics service (per-hall analytics)
             services.AddScoped<IHallStatsService, HallStatsService>();

@@ -29,6 +29,23 @@ namespace HallApp.Web.Controllers.Common
         protected string UserEmail => User.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
 
         /// <summary>
+        /// Reconciles the two paging conventions in use.
+        ///
+        /// The API was written around 1-based pageNumber/pageSize, but the Angular
+        /// clients send 0-based page/size. Model binding quietly ignored the ones it
+        /// did not recognise, so every paged list returned page 1 no matter what the
+        /// caller asked for. Both spellings are honoured here: page/size wins when
+        /// present, and is converted from 0-based to 1-based.
+        /// </summary>
+        protected static (int PageNumber, int PageSize) ResolvePaging(
+            int pageNumber, int pageSize, int? page, int? size)
+        {
+            if (page.HasValue) pageNumber = Math.Max(0, page.Value) + 1;
+            if (size.HasValue) pageSize = size.Value;
+            return (pageNumber, pageSize);
+        }
+
+        /// <summary>
         /// Gets the current user's roles from the JWT token claims
         /// </summary>
         protected IEnumerable<string> UserRoles => User.FindAll(ClaimTypes.Role).Select(c => c.Value);

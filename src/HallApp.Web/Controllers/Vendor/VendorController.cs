@@ -597,7 +597,7 @@ namespace HallApp.Web.Controllers.Vendor
         /// Get vendors for the current vendor manager
         /// </summary>
         /// <returns>List of vendors managed by the current user</returns>
-        [Authorize(Roles = "VendorOrganizationManager,VendorManager")]
+        [Authorize(Roles = "VendorOrganizationManager,VendorManager,Admin")]
         [HttpGet("my-vendors")]
         public async Task<ActionResult<ApiResponse<IEnumerable<VendorDto>>>> GetMyVendors()
         {
