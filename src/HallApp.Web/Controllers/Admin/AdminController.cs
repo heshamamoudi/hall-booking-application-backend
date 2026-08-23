@@ -433,40 +433,15 @@ namespace HallApp.Web.Controllers.Admin
         // Use /api/halls for all hall operations (GET, POST, PUT, DELETE)
         // Admin can still access halls via HallController with Admin role
 
-        /// <summary>
-        /// Get system statistics dashboard
-        /// </summary>
-        /// <returns>System statistics</returns>
-        [HttpGet("dashboard/statistics")]
-        public async Task<ActionResult<ApiResponse<object>>> GetDashboardStatistics()
-        {
-            try
-            {
-                // Get hall and booking counts using services
-                var allHalls = await _hallService.GetAllHallsAsync();
-                var allVendors = await _vendorService.GetVendorsAsync(null);
-                
-                var statistics = new
-                {
-                    TotalUsers = await _userManager.Users.CountAsync(),
-                    TotalCustomers = await _userManager.Users.Where(u => u.UserRoles.Any(ur => ur.Role.Name == "Customer")).CountAsync(),
-                    TotalVendors = await _userManager.Users.Where(u => u.UserRoles.Any(ur => ur.Role.Name == "VendorManager")).CountAsync(),
-                    TotalHallOrganizationManagers = await _userManager.Users.Where(u => u.UserRoles.Any(ur => ur.Role.Name == "HallOrganizationManager")).CountAsync(),
-                    TotalVendorOrganizationManagers = await _userManager.Users.Where(u => u.UserRoles.Any(ur => ur.Role.Name == "VendorOrganizationManager")).CountAsync(),
-                    TotalHallManagers = await _userManager.Users.Where(u => u.UserRoles.Any(ur => ur.Role.Name == "HallManager")).CountAsync(),
-                    TotalHalls = allHalls?.Count ?? 0,
-                    TotalVendorCount = allVendors?.Count() ?? 0,
-                    TotalBookings = 0, // TODO: Implement booking count when BookingService is available
-                    PendingBookings = 0, // TODO: Implement pending booking count
-                    RecentRegistrations = await _userManager.Users.Where(u => u.Created >= DateTime.UtcNow.AddDays(-7)).CountAsync()
-                };
-
-                return Success<object>(statistics, "Dashboard statistics retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                return Error<object>($"Failed to retrieve dashboard statistics: {ex.Message}", 500);
-            }
-        }
+        // NOTE: dashboard statistics live on DashboardController, routed at
+        // api/admin/dashboard, which serves the whole family the admin overview
+        // screen uses - statistics, revenue, bookings, activities and the exports.
+        //
+        // A second action here mapped to the SAME url (api/admin plus
+        // "dashboard/statistics"). Two endpoints matching one route is an
+        // AmbiguousMatchException, so the screen got a 500 instead of either
+        // implementation. The copy that used to be here was also the older one,
+        // still reporting TotalBookings = 0 behind a TODO, while the frontend
+        // expects DashboardController's DashboardStatistics shape.
     }
 }

@@ -83,6 +83,43 @@ public class AutoMapperProfiles : Profile
         CreateMap<VendorManager, VendorManagerDto>();
 
         // ServiceItem mappings
+        // --- Reviews -------------------------------------------------------
+        // These were missing entirely, so every review endpoint threw "Missing
+        // type map configuration" and returned 500: reading one review, a hall's
+        // reviews, a customer's own reviews and the admin list were all dead.
+        //
+        // The names differ either side: the entity calls the text Content, the DTO
+        // calls it Comment, and CustomerName is composed from the customer's user
+        // account, which may not be loaded on every query - hence the null guard.
+        CreateMap<HallApp.Core.Entities.ReviewEntities.Review, HallApp.Application.DTOs.Review.ReviewDto>()
+            .ForMember(dest => dest.Comment, opt => opt.MapFrom(src => src.Content))
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => (DateTime?)src.Updated))
+            .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src =>
+                src.Customer != null && src.Customer.AppUser != null
+                    ? (src.Customer.AppUser.FirstName + " " + src.Customer.AppUser.LastName).Trim()
+                    : string.Empty));
+
+        CreateMap<HallApp.Application.DTOs.Review.CreateReviewDto, HallApp.Core.Entities.ReviewEntities.Review>()
+            .ForMember(dest => dest.Content, opt => opt.MapFrom(src => src.Comment))
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.Created, opt => opt.Ignore())
+            .ForMember(dest => dest.Updated, opt => opt.Ignore())
+            .ForMember(dest => dest.Customer, opt => opt.Ignore())
+            .ForMember(dest => dest.Hall, opt => opt.Ignore())
+            .ForMember(dest => dest.Vendor, opt => opt.Ignore())
+            .ForMember(dest => dest.HallId, opt => opt.MapFrom(src => src.HallId ?? 0))
+            .ForMember(dest => dest.ManagerResponder, opt => opt.Ignore())
+            .ForMember(dest => dest.FlaggedByUser, opt => opt.Ignore());
+
+        CreateMap<HallApp.Application.DTOs.Review.ReviewDto, HallApp.Core.Entities.ReviewEntities.Review>()
+            .ForMember(dest => dest.Content, opt => opt.MapFrom(src => src.Comment))
+            .ForMember(dest => dest.Updated, opt => opt.Ignore())
+            .ForMember(dest => dest.Customer, opt => opt.Ignore())
+            .ForMember(dest => dest.Hall, opt => opt.Ignore())
+            .ForMember(dest => dest.Vendor, opt => opt.Ignore())
+            .ForMember(dest => dest.ManagerResponder, opt => opt.Ignore())
+            .ForMember(dest => dest.FlaggedByUser, opt => opt.Ignore());
+
         CreateMap<ServiceItem, ServiceItemDto>();
 
         // Inbound: creating a service item. VendorId is ignored because the route
