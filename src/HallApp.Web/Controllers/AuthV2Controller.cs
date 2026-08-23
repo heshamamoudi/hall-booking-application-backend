@@ -468,8 +468,9 @@ public class AuthV2Controller : ControllerBase
                 }
             }
 
-            // Save new photo to "avatars" folder
-            var photoUrl = await _fileUploadService.SaveImageAsync(photo, "avatars");
+            // Filed under avatars/{userId} so a user's files stay together
+            var photoUrl = await _fileUploadService.SaveImageAsync(
+                photo, UploadCategories.Avatars, user.Id);
 
             // Update user record
             user.PhotoUrl = photoUrl;

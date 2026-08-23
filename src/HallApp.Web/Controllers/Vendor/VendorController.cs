@@ -31,6 +31,44 @@ namespace HallApp.Web.Controllers.Vendor
         }
 
         /// <summary>
+        /// Whether the caller may modify this vendor.
+        ///
+        /// The vendor counterpart of HallController.UserOwnsHall, and deliberately the
+        /// same shape. Membership of the owning organization used to be the only test,
+        /// which meant any VendorManager could edit or delete every vendor in the
+        /// organization - including ones assigned to a colleague. Halls have never
+        /// worked that way, and Vendor.AssignedToVendorManagerId already existed to
+        /// express the narrower rule; nothing was reading it.
+        /// </summary>
+        private async Task<bool> UserOwnsVendor(int vendorId)
+        {
+            if (IsAdmin) return true;
+
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return false;
+
+            // Check 1: VendorManager team members - vendors assigned to them
+            var assigned = await _vendorService.GetVendorsByManagerIdAsync(userId);
+            if (assigned.Any(v => v.Id == vendorId))
+                return true;
+
+            // Check 2: VendorOrganizationManager owners - every vendor in the
+            // organization they own. Owners have no VendorManager record of their own.
+            if (User.IsInRole("VendorOrganizationManager"))
+            {
+                var organization = await _organizationService.GetOrganizationByOwnerId(UserId);
+                if (organization != null && organization.Type == "VendorManagement")
+                {
+                    var vendor = await _vendorService.GetVendorByIdAsync(vendorId);
+                    if (vendor != null && vendor.OrganizationId == organization.Id)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Get vendor categories for customer selection
         /// </summary>
         /// <returns>List of vendor types/categories</returns>
@@ -457,18 +495,12 @@ namespace HallApp.Web.Controllers.Vendor
                 // OrganizationId is IMMUTABLE after creation and must never change via updates.
                 var originalOrganizationId = existingVendor.OrganizationId;
 
-                // Verify non-admin users belong to the vendor's organization
-                if (!IsAdmin)
+                // A manager may only touch vendors assigned to them; an organization
+                // owner may touch any vendor in their organization.
+                if (!await UserOwnsVendor(id))
                 {
-                    var organization = await _organizationService.GetOrganizationByOwnerId(UserId);
-
-                    if (organization == null
-                        || organization.Type != "VendorManagement"
-                        || existingVendor.OrganizationId != organization.Id)
-                    {
-                        return Error<VendorDto>(
-                            "You do not have permission to update this vendor", 403);
-                    }
+                    return Error<VendorDto>(
+                        "You do not have permission to update this vendor", 403);
                 }
 
                 var vendorEntity = _mapper.Map<HallApp.Core.Entities.VendorEntities.Vendor>(updateDto);
@@ -524,7 +556,6 @@ namespace HallApp.Web.Controllers.Vendor
         {
             try
             {
-                // Organization authorization check for non-admin users
                 if (!IsAdmin)
                 {
                     var existingVendor = await _vendorService.GetVendorByIdAsync(id);
@@ -533,8 +564,7 @@ namespace HallApp.Web.Controllers.Vendor
                         return Error("Vendor not found", 404);
                     }
 
-                    var organization = await _organizationService.GetOrganizationByOwnerId(UserId);
-                    if (organization == null || organization.Type != "VendorManagement" || existingVendor.OrganizationId != organization.Id)
+                    if (!await UserOwnsVendor(id))
                     {
                         return Error("You do not have permission to delete this vendor", 403);
                     }
@@ -571,14 +601,9 @@ namespace HallApp.Web.Controllers.Vendor
                     return Error<VendorDto>("Vendor not found", 404);
                 }
 
-                // Organization authorization check for non-admin users
-                if (!IsAdmin)
+                if (!await UserOwnsVendor(id))
                 {
-                    var organization = await _organizationService.GetOrganizationByOwnerId(UserId);
-                    if (organization == null || organization.Type != "VendorManagement" || existingVendor.OrganizationId != organization.Id)
-                    {
-                        return Error<VendorDto>("You do not have permission to modify this vendor", 403);
-                    }
+                    return Error<VendorDto>("You do not have permission to modify this vendor", 403);
                 }
 
                 existingVendor.IsActive = active;
@@ -610,7 +635,21 @@ namespace HallApp.Web.Controllers.Vendor
                     return Error<IEnumerable<VendorDto>>("User not authenticated", 401);
                 }
 
+                // Assigned vendors, for a VendorManager team member.
                 var vendors = await _vendorService.GetVendorsByManagerIdAsync(userId);
+
+                // An organization owner has no VendorManager record of their own, so
+                // the lookup above finds nothing for them and this screen came back
+                // empty. Fall back to everything the organization owns.
+                if (vendors.Count == 0)
+                {
+                    var organization = await _organizationService.GetOrganizationByOwnerId(UserId);
+                    if (organization != null && organization.Type == "VendorManagement")
+                    {
+                        vendors = await _vendorService.GetOrganizationVendorsAsync(organization.Id);
+                    }
+                }
+
                 var vendorDtos = _mapper.Map<List<VendorDto>>(vendors);
 
                 return Success<IEnumerable<VendorDto>>(vendorDtos, $"Found {vendorDtos.Count} vendors for manager");

@@ -84,6 +84,21 @@ public class AutoMapperProfiles : Profile
 
         // ServiceItem mappings
         CreateMap<ServiceItem, ServiceItemDto>();
+
+        // Inbound: creating a service item. VendorId is ignored because the route
+        // supplies it - taking it from the body would let a caller file an item
+        // against a vendor they do not manage. Identity and audit fields are set by
+        // the service layer, never by the client.
+        CreateMap<HallApp.Application.DTOs.Vendors.CreateServiceItemDto, ServiceItem>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.VendorId, opt => opt.Ignore())
+            .ForMember(dest => dest.Vendor, opt => opt.Ignore())
+            .ForMember(dest => dest.VendorType, opt => opt.Ignore())
+            .ForMember(dest => dest.VendorTypeId, opt => opt.Ignore())
+            .ForMember(dest => dest.Images, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.IsActive, opt => opt.Ignore());
         CreateMap<ServiceItemDto, ServiceItem>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))

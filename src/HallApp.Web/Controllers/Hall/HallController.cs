@@ -667,9 +667,11 @@ namespace HallApp.Web.Controllers.Hall
 
                 if (hallUpdateDto.NewImages != null && hallUpdateDto.NewImages.Any())
                 {
+                    // Filed under halls/{hallId} so every image of one hall lives together
                     var uploadedUrls = await _fileUploadService.SaveImagesAsync(
                         hallUpdateDto.NewImages.ToList(),
-                        "halls");
+                        UploadCategories.Halls,
+                        hallEntity.ID);
                     allImageUrls.AddRange(uploadedUrls);
                 }
 
@@ -795,7 +797,22 @@ namespace HallApp.Web.Controllers.Hall
                     return Error<IEnumerable<HallDto>>("User not authenticated", 401);
                 }
 
+                // Assigned halls, for a HallManager team member.
                 var halls = await _hallService.GetHallsByManagerAsync(userId);
+
+                // An organization owner has no HallManager record of their own, so the
+                // lookup above finds nothing for them and this screen came back empty.
+                // Fall back to everything the organization owns - the same two-step
+                // UserOwnsHall already uses.
+                if (halls.Count == 0)
+                {
+                    var organization = await _organizationService.GetOrganizationByOwnerId(UserId);
+                    if (organization != null)
+                    {
+                        halls = await _hallService.GetOrganizationHallsAsync(organization.Id);
+                    }
+                }
+
                 var hallDtos = _mapper.Map<List<HallDto>>(halls);
 
                 return Success<IEnumerable<HallDto>>(hallDtos, $"Found {hallDtos.Count} halls for manager");
