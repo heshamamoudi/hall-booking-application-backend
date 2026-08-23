@@ -36,6 +36,26 @@ public interface IDataRetentionService
     Task<int> ProcessPendingDeletionRequestsAsync();
 
     /// <summary>
+    /// Approves one pending request and anonymises the user immediately, rather than
+    /// waiting for the next scheduled retention cycle. This is what the Approve
+    /// button on the admin GDPR screen calls.
+    /// </summary>
+    /// <param name="requestId">The request to approve.</param>
+    /// <param name="processedByUserId">The administrator approving it.</param>
+    /// <returns>The updated request, or null when no such request exists.</returns>
+    Task<DataRetentionRequest?> ApproveRequestAsync(int requestId, int processedByUserId);
+
+    /// <summary>
+    /// Rejects one pending request. A reason is required: a subject whose erasure
+    /// request is refused is entitled to know why.
+    /// </summary>
+    /// <param name="requestId">The request to reject.</param>
+    /// <param name="processedByUserId">The administrator rejecting it.</param>
+    /// <param name="reason">Why it was refused.</param>
+    /// <returns>The updated request, or null when no such request exists.</returns>
+    Task<DataRetentionRequest?> RejectRequestAsync(int requestId, int processedByUserId, string reason);
+
+    /// <summary>
     /// Processes users whose data retention period has expired based on their policy.
     /// Called by the background service on a scheduled basis.
     /// </summary>

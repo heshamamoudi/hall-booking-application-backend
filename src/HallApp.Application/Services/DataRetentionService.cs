@@ -304,6 +304,89 @@ public class DataRetentionService : IDataRetentionService
     }
 
     /// <inheritdoc />
+    /// <inheritdoc />
+    public async Task<DataRetentionRequest?> ApproveRequestAsync(int requestId, int processedByUserId)
+    {
+        var request = await _unitOfWork.DataRetentionRequestRepository.GetByIdAsync(requestId);
+        if (request == null)
+        {
+            return null;
+        }
+
+        if (request.Status != GdprRequestStatus.Pending)
+        {
+            _logger.LogWarning(
+                "GDPR request {RequestId} cannot be approved from status {Status}",
+                requestId, request.Status);
+            return request;
+        }
+
+        request.Status = GdprRequestStatus.Processing;
+        request.ProcessedByUserId = processedByUserId;
+        request.ProcessedAt = DateTime.UtcNow;
+        _unitOfWork.DataRetentionRequestRepository.Update(request);
+        await _unitOfWork.Complete();
+
+        // Same anonymisation the scheduled cycle performs - approving simply runs
+        // it now instead of waiting for the next pass.
+        var result = await AnonymizeUserDataAsync(request.UserId, processedByUserId);
+
+        if (result.Success)
+        {
+            request.Status = GdprRequestStatus.Completed;
+            request.CompletedAt = DateTime.UtcNow;
+            request.AffectedEntityCount = result.AffectedEntities;
+            request.AffectedDataSummary = result.Summary;
+        }
+        else
+        {
+            // Something blocks erasure - an open booking, a retention hold. The
+            // request stays on the books with the reason rather than disappearing.
+            request.Status = GdprRequestStatus.Blocked;
+            request.RejectionReason = result.Message;
+        }
+
+        _unitOfWork.DataRetentionRequestRepository.Update(request);
+        await _unitOfWork.Complete();
+
+        _logger.LogInformation(
+            "GDPR request {RequestId} approved by {AdminId} - final status {Status}",
+            requestId, processedByUserId, request.Status);
+
+        return request;
+    }
+
+    /// <inheritdoc />
+    public async Task<DataRetentionRequest?> RejectRequestAsync(int requestId, int processedByUserId, string reason)
+    {
+        var request = await _unitOfWork.DataRetentionRequestRepository.GetByIdAsync(requestId);
+        if (request == null)
+        {
+            return null;
+        }
+
+        if (request.Status != GdprRequestStatus.Pending)
+        {
+            _logger.LogWarning(
+                "GDPR request {RequestId} cannot be rejected from status {Status}",
+                requestId, request.Status);
+            return request;
+        }
+
+        request.Status = GdprRequestStatus.Rejected;
+        request.RejectionReason = reason;
+        request.ProcessedByUserId = processedByUserId;
+        request.ProcessedAt = DateTime.UtcNow;
+
+        _unitOfWork.DataRetentionRequestRepository.Update(request);
+        await _unitOfWork.Complete();
+
+        _logger.LogInformation(
+            "GDPR request {RequestId} rejected by {AdminId}", requestId, processedByUserId);
+
+        return request;
+    }
+
     public async Task<int> ProcessPendingDeletionRequestsAsync()
     {
         _logger.LogInformation("HIGH-012: Processing pending GDPR deletion requests");

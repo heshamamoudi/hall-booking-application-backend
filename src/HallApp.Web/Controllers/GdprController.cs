@@ -213,6 +213,92 @@ public class GdprController : BaseApiController
     /// Admin: Get all pending GDPR data retention requests.
     /// </summary>
     [Authorize(Roles = "Admin")]
+    /// <summary>
+    /// Approve a pending erasure request and anonymise the user now.
+    /// </summary>
+    /// <remarks>
+    /// The admin GDPR screen has had Approve and Reject buttons for some time, but
+    /// no endpoint behind either of them - both returned 404. Approving runs the
+    /// same anonymisation the scheduled retention cycle performs, immediately.
+    ///
+    /// Requires: Admin role
+    /// </remarks>
+    /// <response code="200">The updated request</response>
+    /// <response code="404">No request with that id</response>
+    [HttpPost("requests/{requestId:int}/approve")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApiResponse<GdprRequestResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<GdprRequestResponseDto>>> ApproveRequest(int requestId)
+    {
+        try
+        {
+            var request = await _retentionService.ApproveRequestAsync(requestId, UserId);
+            if (request == null)
+            {
+                return Error<GdprRequestResponseDto>($"Request {requestId} not found", 404);
+            }
+
+            return Success(ToDto(request), $"Request {requestId} is now {request.Status}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to approve GDPR request {RequestId}", requestId);
+            return Error<GdprRequestResponseDto>("Failed to approve the request", 500);
+        }
+    }
+
+    /// <summary>
+    /// Reject a pending erasure request.
+    /// </summary>
+    /// <remarks>
+    /// A reason is required - a subject whose erasure request is refused is
+    /// entitled to know why.
+    ///
+    /// Requires: Admin role
+    /// </remarks>
+    [HttpPost("requests/{requestId:int}/reject")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApiResponse<GdprRequestResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponse<GdprRequestResponseDto>>> RejectRequest(
+        int requestId, [FromBody] GdprRejectRequestDto dto)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(dto?.Reason))
+            {
+                return Error<GdprRequestResponseDto>("A reason is required to reject a request", 400);
+            }
+
+            var request = await _retentionService.RejectRequestAsync(requestId, UserId, dto.Reason);
+            if (request == null)
+            {
+                return Error<GdprRequestResponseDto>($"Request {requestId} not found", 404);
+            }
+
+            return Success(ToDto(request), $"Request {requestId} is now {request.Status}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to reject GDPR request {RequestId}", requestId);
+            return Error<GdprRequestResponseDto>("Failed to reject the request", 500);
+        }
+    }
+
+    private static GdprRequestResponseDto ToDto(Core.Entities.GdprEntities.DataRetentionRequest r) => new()
+    {
+        RequestId = r.Id,
+        Status = r.Status,
+        RequestType = r.RequestType,
+        RequestedAt = r.RequestedAt,
+        UserId = r.UserId,
+        Reason = r.Reason,
+        Message = string.IsNullOrWhiteSpace(r.RejectionReason)
+            ? $"Request for user {r.UserId}"
+            : r.RejectionReason
+    };
+
     [HttpGet("requests/pending")]
     public async Task<ActionResult<ApiResponse<IEnumerable<GdprRequestResponseDto>>>> GetPendingRequests()
     {
@@ -372,3 +458,14 @@ public class UpdateRetentionPolicyDto
 }
 
 #endregion
+
+/// <summary>
+/// An administrator refusing a GDPR erasure request. The reason is mandatory:
+/// a data subject whose request is declined is entitled to be told why.
+/// </summary>
+public class GdprRejectRequestDto
+{
+    [System.ComponentModel.DataAnnotations.Required]
+    [System.ComponentModel.DataAnnotations.StringLength(1000, MinimumLength = 3)]
+    public string Reason { get; set; } = string.Empty;
+}
