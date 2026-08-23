@@ -27,6 +27,11 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer.NetTopologySuite" Version="8.0.11" />
     <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.10" />
+    <!-- Outbound email. MailKit speaks SMTP incl. STARTTLS + SASL XOAUTH2;
+         Microsoft.Identity.Client fetches the Entra ID token that Microsoft 365
+         tenants with SMTP basic auth disabled require. -->
+    <PackageReference Include="MailKit" Version="4.17.0" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.88.0" />
     <!--
       Transitive via Microsoft.AspNetCore.DataProtection, which pins 8.0.2. That
       version carries seven known high-severity advisories in XML signature and

@@ -30,6 +30,13 @@ namespace HallApp.Web.Services
         /// </summary>
         Task<List<string>> SaveImagesAsync(List<IFormFile> files, string category, int ownerId);
 
+        /// <summary>
+        /// Saves a supporting document under {category}/{ownerId}/. Separate from
+        /// SaveImageAsync because papers are usually PDFs and are allowed to be
+        /// larger than a photograph.
+        /// </summary>
+        Task<string> SaveDocumentAsync(IFormFile file, string category, int ownerId);
+
         /// <summary>Deletes a file by the public URL previously returned.</summary>
         Task<bool> DeleteImageAsync(string filePath);
 
@@ -48,6 +55,11 @@ namespace HallApp.Web.Services
         private readonly string _uploadsPath;
         private readonly long _maxFileSize = 5 * 1024 * 1024; // 5MB
         private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+
+        // Legal papers arrive as PDFs or scans, and scans of a stamped certificate
+        // run larger than a listing photograph.
+        private readonly long _maxDocumentSize = 10 * 1024 * 1024; // 10MB
+        private readonly string[] _allowedDocumentExtensions = { ".pdf", ".jpg", ".jpeg", ".png", ".webp" };
 
         /// <summary>
         /// Categories a caller is allowed to write to. Anything else is rejected
@@ -99,16 +111,25 @@ namespace HallApp.Web.Services
             TryEnsureDirectory(_uploadsPath);
         }
 
-        public async Task<string> SaveImageAsync(IFormFile file, string category, int ownerId)
+        public Task<string> SaveImageAsync(IFormFile file, string category, int ownerId) =>
+            SaveFileAsync(file, category, ownerId, _allowedExtensions, _maxFileSize);
+
+        /// <summary>
+        /// The one place a file is written. Extension and size limits are passed in
+        /// so images and documents can differ without duplicating the path building,
+        /// the directory guard or the GUID naming.
+        /// </summary>
+        private async Task<string> SaveFileAsync(
+            IFormFile file, string category, int ownerId, string[] allowedExtensions, long maxBytes)
         {
             if (file == null || file.Length == 0)
                 throw new ArgumentException("File is empty");
 
-            if (file.Length > _maxFileSize)
-                throw new ArgumentException($"File size exceeds maximum allowed size of {_maxFileSize / 1024 / 1024}MB");
+            if (file.Length > maxBytes)
+                throw new ArgumentException($"File size exceeds maximum allowed size of {maxBytes / 1024 / 1024}MB");
 
             var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-            if (!_allowedExtensions.Contains(extension))
+            if (!allowedExtensions.Contains(extension))
                 throw new ArgumentException($"File type {extension} not allowed");
 
             var relativeDirectory = BuildRelativeDirectory(category, ownerId);
@@ -129,6 +150,9 @@ namespace HallApp.Web.Services
 
             return $"/uploads/{relativeDirectory.Replace(Path.DirectorySeparatorChar, '/')}/{fileName}";
         }
+
+        public Task<string> SaveDocumentAsync(IFormFile file, string category, int ownerId) =>
+            SaveFileAsync(file, category, ownerId, _allowedDocumentExtensions, _maxDocumentSize);
 
         public async Task<List<string>> SaveImagesAsync(List<IFormFile> files, string category, int ownerId)
         {

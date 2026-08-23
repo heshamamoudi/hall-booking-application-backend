@@ -71,6 +71,15 @@ public static class ApplicationServiceExtensions
             // VendorManager-specific services
             services.AddScoped<IVendorManagerDashboardService, VendorManagerDashboardService>();
             services.AddScoped<IVendorManagerBookingService, VendorManagerBookingService>();
+            // Was implemented but never registered, so nothing could resolve it and
+            // the business hours and blocked dates in the database were unreachable.
+            services.AddScoped<IVendorAvailabilityService, VendorAvailabilityService>();
+
+            // Vendor registration and admin document review.
+            services.Configure<HallApp.Application.Configuration.EmailSettings>(
+                config.GetSection(HallApp.Application.Configuration.EmailSettings.SectionName));
+            services.AddScoped<IEmailService, HallApp.Infrastructure.Services.SmtpEmailService>();
+            services.AddScoped<HallApp.Infrastructure.Services.IVendorApplicationService, HallApp.Infrastructure.Services.VendorApplicationService>();
 
             // Hall statistics service (per-hall analytics)
             services.AddScoped<IHallStatsService, HallStatsService>();

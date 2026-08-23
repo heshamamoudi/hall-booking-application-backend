@@ -46,6 +46,22 @@ namespace HallApp.Web.Controllers.Common
         }
 
         /// <summary>
+        /// Normalises an inbound date to UTC.
+        ///
+        /// Dates bound from a query string or JSON body arrive with
+        /// Kind=Unspecified, and Npgsql refuses to write anything but UTC into a
+        /// timestamptz column - it throws rather than guessing. A naive value is
+        /// treated as already being UTC rather than shifted by the server's
+        /// timezone, which would silently move the caller's date.
+        /// </summary>
+        protected static DateTime AsUtc(DateTime value) => value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+        };
+
+        /// <summary>
         /// Gets the current user's roles from the JWT token claims
         /// </summary>
         protected IEnumerable<string> UserRoles => User.FindAll(ClaimTypes.Role).Select(c => c.Value);

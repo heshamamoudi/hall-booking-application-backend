@@ -18,15 +18,18 @@ namespace HallApp.Web.Controllers.Vendor
     {
         private readonly IVendorService _vendorService;
         private readonly IOrganizationService _organizationService;
+        private readonly IVendorAvailabilityService _availabilityService;
         private readonly IMapper _mapper;
 
         public VendorController(
             IVendorService vendorService,
             IOrganizationService organizationService,
+            IVendorAvailabilityService availabilityService,
             IMapper mapper)
         {
             _vendorService = vendorService;
             _organizationService = organizationService;
+            _availabilityService = availabilityService;
             _mapper = mapper;
         }
 
@@ -168,6 +171,9 @@ namespace HallApp.Web.Controllers.Vendor
                     return Error<IEnumerable<VendorListDto>>("Invalid category ID", 400);
                 }
 
+                // Query-string dates bind as Kind=Unspecified, which Npgsql rejects.
+                eventDate = AsUtc(eventDate);
+
                 var vendors = await _vendorService.GetVendorsByTypeAsync(categoryId);
                 var availableVendors = new List<HallApp.Core.Entities.VendorEntities.Vendor>();
                 
@@ -180,9 +186,13 @@ namespace HallApp.Web.Controllers.Vendor
                     // Skip inactive vendors
                     if (!vendor.IsActive)
                         continue;
-                    
-                    // TODO: Add vendor availability check for the specific date
-                    // For now, assume all active vendors are available
+
+                    // Only offer vendors that can actually take the date. Suggesting
+                    // one that is closed, blocked out or already booked just moves the
+                    // rejection one step further down the line.
+                    if (!await _availabilityService.IsVendorAvailableAsync(vendor.Id, eventDate))
+                        continue;
+
                     availableVendors.Add(vendor);
                 }
                 
@@ -224,9 +234,21 @@ namespace HallApp.Web.Controllers.Vendor
                     filteredVendors = filteredVendors.Where(v => v.VendorTypeId == vendorParams.VendorTypeId);
                 }
                 
-                if (vendorParams.IsActive.HasValue)
+                // Visibility. This used to filter on IsActive only when the caller
+                // asked, which meant a deactivated or not-yet-approved vendor was
+                // listed publicly by default. A newly approved applicant is created
+                // inactive precisely so they can set their profile up in private, so
+                // the public list must exclude anything not published.
+                if (IsAdmin)
                 {
-                    filteredVendors = filteredVendors.Where(v => v.IsActive == vendorParams.IsActive.Value);
+                    if (vendorParams.IsActive.HasValue)
+                    {
+                        filteredVendors = filteredVendors.Where(v => v.IsActive == vendorParams.IsActive.Value);
+                    }
+                }
+                else
+                {
+                    filteredVendors = filteredVendors.Where(v => v.IsActive && v.IsApproved);
                 }
                 
                 // Apply sorting
@@ -384,6 +406,14 @@ namespace HallApp.Web.Controllers.Vendor
                 }
 
                 var vendors = await _vendorService.SearchVendorsAsync(searchTerm);
+
+                // Search had no visibility filter at all, so an unpublished vendor
+                // was findable by name even though it was absent from every listing.
+                if (!IsAdmin)
+                {
+                    vendors = vendors.Where(v => v.IsActive && v.IsApproved).ToList();
+                }
+
                 var vendorDtos = _mapper.Map<IEnumerable<VendorDto>>(vendors);
                 return Ok(new ApiResponse<IEnumerable<VendorDto>>
                 {

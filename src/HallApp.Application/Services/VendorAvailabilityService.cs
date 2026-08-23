@@ -92,7 +92,18 @@ public class VendorAvailabilityService : IVendorAvailabilityService
     // Availability Checks
     public async Task<bool> IsVendorAvailableAsync(int vendorId, DateTime date)
     {
-        return await _unitOfWork.VendorAvailabilityRepository.IsVendorAvailableAsync(vendorId, date, TimeSpan.Zero, TimeSpan.FromHours(24));
+        // "Available on this date" means the vendor is open that day and has not
+        // blocked it out - NOT that it is free for all 24 hours. This used to ask
+        // for a 00:00-24:00 window, which cannot fit inside any real set of
+        // business hours, so every whole-day question answered "unavailable".
+        var blocked = await _unitOfWork.VendorAvailabilityRepository.GetBlockedDateAsync(vendorId, date);
+        if (blocked != null)
+            return false;
+
+        var businessHour = await _unitOfWork.VendorAvailabilityRepository
+            .GetBusinessHourAsync(vendorId, (int)date.DayOfWeek);
+
+        return businessHour is { IsClosed: false };
     }
 
     public async Task<bool> IsVendorAvailableAsync(int vendorId, DateTime date, TimeSpan startTime, TimeSpan endTime)

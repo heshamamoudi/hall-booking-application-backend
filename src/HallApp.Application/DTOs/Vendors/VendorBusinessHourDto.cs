@@ -29,3 +29,16 @@ public class CreateVendorBusinessHourDto
     [StringLength(200)]
     public string SpecialNote { get; set; } = string.Empty;
 }
+
+/// <summary>
+/// Answer to "can this vendor take work then?". StartTime/EndTime are echoed back
+/// so a caller can tell a whole-day answer from a windowed one.
+/// </summary>
+public class VendorAvailabilityDto
+{
+    public int VendorId { get; set; }
+    public DateTime Date { get; set; }
+    public TimeSpan? StartTime { get; set; }
+    public TimeSpan? EndTime { get; set; }
+    public bool IsAvailable { get; set; }
+}

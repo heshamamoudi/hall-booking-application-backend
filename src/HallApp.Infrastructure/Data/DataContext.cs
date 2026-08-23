@@ -38,6 +38,10 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
     public DbSet<VendorBooking> VendorBookings { get; set; }
     public DbSet<VendorBookingService> VendorBookingServices { get; set; }
 
+    // Businesses applying to join, and the papers backing each application.
+    public DbSet<VendorApplication> VendorApplications { get; set; }
+    public DbSet<VendorDocument> VendorDocuments { get; set; }
+
     // Hall Entities
     public DbSet<Hall> Halls { get; set; }
     public DbSet<HallManager> HallManagers { get; set; }
@@ -95,6 +99,41 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, int,
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        // --- Vendor applications ------------------------------------------
+        builder.Entity<VendorApplication>(entity =>
+        {
+            // The admin queue is filtered by status and ordered by submission.
+            entity.HasIndex(a => a.Status);
+            entity.HasIndex(a => a.ContactEmail);
+
+            // One application per account: a second one would leave the approval
+            // step unable to tell which to turn into a vendor.
+            entity.HasIndex(a => a.AppUserId).IsUnique();
+
+            entity.HasMany(a => a.Documents)
+                .WithOne(d => d.VendorApplication)
+                .HasForeignKey(d => d.VendorApplicationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(a => a.VendorType)
+                .WithMany()
+                .HasForeignKey(a => a.VendorTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(a => a.AppUser)
+                .WithMany()
+                .HasForeignKey(a => a.AppUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<VendorDocument>(entity =>
+        {
+            // One row per document type per application: re-uploading a rejected
+            // paper updates the row rather than adding a second one.
+            entity.HasIndex(d => new { d.VendorApplicationId, d.DocumentType }).IsUnique();
+            entity.HasIndex(d => d.Status);
+        });
 
         // CRIT-001 FIX: Database sequence for atomic invoice number generation
         builder.HasSequence<int>("invoice_number_seq")
