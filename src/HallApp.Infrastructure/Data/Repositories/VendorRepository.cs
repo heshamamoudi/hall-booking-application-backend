@@ -199,17 +199,16 @@ public class VendorRepository : GenericRepository<Vendor>, IVendorRepository
     }
 
     /// <inheritdoc />
+    // Returns whole vendors, not a three-field projection. The old projection was
+    // enough for an assignment dropdown, but this also backs "My Vendors" and the
+    // organization screens, where every card came out with no type, no description
+    // and a rating of zero because those columns were never selected.
     public async Task<List<Vendor>> GetVendorsByOrganizationIdAsync(int organizationId)
     {
         return await _context.Vendors
+            .IncludeBasicRelations()
             .Where(v => v.OrganizationId == organizationId)
             .AsNoTracking()
-            .Select(v => new Vendor
-            {
-                Id = v.Id,
-                Name = v.Name,
-                AssignedToVendorManagerId = v.AssignedToVendorManagerId
-            })
             .ToListAsync();
     }
 }

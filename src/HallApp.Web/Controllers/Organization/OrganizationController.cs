@@ -10,6 +10,7 @@ using HallEntity = HallApp.Core.Entities.ChamperEntities.Hall;
 using VendorEntity = HallApp.Core.Entities.VendorEntities.Vendor;
 using AutoMapper;
 using HallApp.Application.DTOs.Halls.Hall;
+using HallApp.Application.DTOs.Vendors;
 using HallApp.Application.Services;
 
 namespace HallApp.Web.Controllers.Organization;
@@ -647,35 +648,35 @@ public class OrganizationController : BaseApiController
     /// Only members, the owner, or admins can view an organization's vendors.
     /// </summary>
     [Authorize(Roles = "VendorOrganizationManager,VendorManager")]
+    // Returns whole vendors, the way the halls endpoint above returns whole halls.
+    // This backs the "All Organization Vendors" listing, and an AssignedResourceDto
+    // carries only an id and a name, so every card rendered with no type, no
+    // description and a rating of zero.
     [HttpGet("{id:int}/vendors")]
-    public async Task<ActionResult<ApiResponse<List<AssignedResourceDto>>>> GetOrganizationVendors(int id)
+    public async Task<ActionResult<ApiResponse<List<VendorDto>>>> GetOrganizationVendors(int id)
     {
         try
         {
             var org = await _organizationService.GetOrganizationById(id);
             if (org == null)
             {
-                return Error<List<AssignedResourceDto>>("Organization not found", 404);
+                return Error<List<VendorDto>>("Organization not found", 404);
             }
 
             var isMember = org.Members?.Any(m => m.AppUserId == UserId) ?? false;
             if (!isMember && org.OwnerId != UserId && !User.IsInRole("Admin"))
             {
-                return Error<List<AssignedResourceDto>>("You do not have access to this organization", 403);
+                return Error<List<VendorDto>>("You do not have access to this organization", 403);
             }
 
             var vendors = await _vendorService.GetOrganizationVendorsAsync(id);
-            var dtos = vendors.Select(v => new AssignedResourceDto
-            {
-                Id = v.Id,
-                Name = v.Name
-            }).ToList();
+            var dtos = _mapper.Map<List<VendorDto>>(vendors);
 
             return Success(dtos, $"Found {dtos.Count} vendors");
         }
         catch (Exception ex)
         {
-            return Error<List<AssignedResourceDto>>($"Failed to retrieve organization vendors: {ex.Message}", 500);
+            return Error<List<VendorDto>>($"Failed to retrieve organization vendors: {ex.Message}", 500);
         }
     }
 

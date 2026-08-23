@@ -151,8 +151,8 @@ public class VendorAvailabilityController : BaseApiController
     /// <summary>Dates the vendor has blocked out, optionally within a range.</summary>
     [AllowAnonymous]
     [HttpGet("{vendorId:int}/blocked-dates")]
-    [ProducesResponseType(typeof(ApiResponse<List<VendorBlockedDate>>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ApiResponse<List<VendorBlockedDate>>>> GetBlockedDates(
+    [ProducesResponseType(typeof(ApiResponse<List<VendorBlockedDateDto>>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<List<VendorBlockedDateDto>>>> GetBlockedDates(
         int vendorId, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
     {
         try
@@ -161,29 +161,30 @@ public class VendorAvailabilityController : BaseApiController
                 ? await _availabilityService.GetBlockedDatesAsync(vendorId, AsUtc(from.Value), AsUtc(to.Value))
                 : await _availabilityService.GetBlockedDatesAsync(vendorId);
 
-            return Success(blocked, $"Found {blocked.Count} blocked period(s)");
+            var dtos = _mapper.Map<List<VendorBlockedDateDto>>(blocked);
+            return Success(dtos, $"Found {dtos.Count} blocked period(s)");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error reading blocked dates for vendor {VendorId}", vendorId);
-            return Error<List<VendorBlockedDate>>("An error occurred while reading blocked dates", 500);
+            return Error<List<VendorBlockedDateDto>>("An error occurred while reading blocked dates", 500);
         }
     }
 
     /// <summary>Block a date range - holidays, maintenance, a private booking.</summary>
     [Authorize(Roles = "Admin,VendorOrganizationManager,VendorManager")]
     [HttpPost("{vendorId:int}/blocked-dates")]
-    [ProducesResponseType(typeof(ApiResponse<VendorBlockedDate>), StatusCodes.Status201Created)]
-    public async Task<ActionResult<ApiResponse<VendorBlockedDate>>> AddBlockedDate(
+    [ProducesResponseType(typeof(ApiResponse<VendorBlockedDateDto>), StatusCodes.Status201Created)]
+    public async Task<ActionResult<ApiResponse<VendorBlockedDateDto>>> AddBlockedDate(
         int vendorId, [FromBody] VendorBlockedDateDto dto)
     {
         try
         {
             if (!await UserOwnsVendor(vendorId))
-                return Error<VendorBlockedDate>("You do not have permission to manage this vendor", 403);
+                return Error<VendorBlockedDateDto>("You do not have permission to manage this vendor", 403);
 
             if (dto.EndDate < dto.StartDate)
-                return Error<VendorBlockedDate>("EndDate cannot be before StartDate", 400);
+                return Error<VendorBlockedDateDto>("EndDate cannot be before StartDate", 400);
 
             // The route decides which vendor this belongs to, not the body.
             var blockedDate = new VendorBlockedDate
@@ -196,18 +197,18 @@ public class VendorAvailabilityController : BaseApiController
 
             var created = await _availabilityService.AddBlockedDateAsync(vendorId, blockedDate);
 
-            return StatusCode(201, new ApiResponse<VendorBlockedDate>
+            return StatusCode(201, new ApiResponse<VendorBlockedDateDto>
             {
                 StatusCode = 201,
                 Message = "Blocked period added",
                 IsSuccess = true,
-                Data = created
+                Data = _mapper.Map<VendorBlockedDateDto>(created)
             });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error adding blocked date for vendor {VendorId}", vendorId);
-            return Error<VendorBlockedDate>("An error occurred while adding the blocked period", 500);
+            return Error<VendorBlockedDateDto>("An error occurred while adding the blocked period", 500);
         }
     }
 

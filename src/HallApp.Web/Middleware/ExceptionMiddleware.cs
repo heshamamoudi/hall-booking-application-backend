@@ -50,6 +50,22 @@ public class ExceptionMiddleware
             context.Request.Method,
             context.Connection.RemoteIpAddress);
 
+        // Once the response has started the headers are read-only, and setting
+        // ContentType below throws InvalidOperationException - which then replaces
+        // the real exception in the logs with a misleading one and leaves the client
+        // holding a half-written body. This happens when serialization itself throws
+        // partway through writing. Fail the connection instead: a client that sees a
+        // dropped connection retries, one that sees truncated JSON does not.
+        if (context.Response.HasStarted)
+        {
+            _logger.LogError(ex,
+                "Exception after the response started; cannot write an error body. " +
+                "CorrelationId: {CorrelationId}",
+                correlationId);
+            context.Abort();
+            return;
+        }
+
         context.Response.ContentType = "application/json";
 
         // Determine status code based on exception type
