@@ -34,6 +34,7 @@ public class BookingController_OwnershipTests
     private readonly Mock<IHallService> _hallService = new();
     private readonly Mock<IHallManagerService> _hallManagerService = new();
     private readonly Mock<IVendorManagerService> _vendorManagerService = new();
+    private readonly Mock<IOrganizationService> _organizationService = new();
     private readonly Mock<ILogger<BookingController>> _logger = new();
 
     // --- actors ---
@@ -58,6 +59,7 @@ public class BookingController_OwnershipTests
             _hallService.Object,
             _hallManagerService.Object,
             _vendorManagerService.Object,
+            _organizationService.Object,
             _logger.Object);
     }
 

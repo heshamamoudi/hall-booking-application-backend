@@ -23,6 +23,7 @@ public class HallController_OwnershipTests
     private readonly Mock<IHallService> _hallService = new();
     private readonly Mock<IMapper> _mapper = new();
     private readonly Mock<IFileUploadService> _fileUploadService = new();
+    private readonly Mock<IOrganizationService> _organizationService = new();
     private readonly Mock<ILogger<HallController>> _logger = new();
 
     // --- actors ---
@@ -37,6 +38,7 @@ public class HallController_OwnershipTests
             _hallService.Object,
             _mapper.Object,
             _fileUploadService.Object,
+            _organizationService.Object,
             _logger.Object);
     }
 

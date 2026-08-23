@@ -5,6 +5,7 @@ using HallApp.Core.Entities.BookingEntities;
 using HallApp.Core.Entities.ChamperEntities;
 using HallApp.Core.Entities.VendorEntities;
 using HallApp.Core.Exceptions;
+using HallApp.Core.Interfaces;
 using HallApp.Core.Interfaces.IServices;
 using HallApp.Tests.Helpers;
 using HallApp.Web.Controllers.Invoice;
@@ -25,6 +26,10 @@ public class InvoiceController_OwnershipTests
     private readonly Mock<ILogger<InvoiceController>> _logger = new();
     private readonly Mock<IHallManagerService> _hallManagerService = new();
     private readonly Mock<IVendorManagerService> _vendorManagerService = new();
+    private readonly Mock<IOrganizationService> _organizationService = new();
+    private readonly Mock<IHallService> _hallService = new();
+    private readonly Mock<IFinancialAuditService> _financialAuditService = new();
+    private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     private const int ManagerAUserId = 10;
     private const int ManagerBUserId = 20;
@@ -36,8 +41,13 @@ public class InvoiceController_OwnershipTests
     {
         return new InvoiceController(
             _invoiceService.Object,
+            _hallManagerService.Object,
+            _organizationService.Object,
+            _hallService.Object,
             _mapper.Object,
-            _logger.Object);
+            _logger.Object,
+            _financialAuditService.Object,
+            _unitOfWork.Object);
     }
 
     private void SetupInvoiceData()
@@ -62,21 +72,28 @@ public class InvoiceController_OwnershipTests
                 Halls = new List<Hall> { new() { ID = HallOwnedByB, Name = "Hall B", Description = "desc" } }
             });
 
-        // Invoices for Hall A
-        _invoiceService
-            .Setup(s => s.GetInvoicesByHallIdAsync(HallOwnedByA))
-            .ReturnsAsync(new List<Invoice>
-            {
-                new() { Id = 1, InvoiceNumber = "INV-2025-000001", BookingId = 1, CustomerId = CustomerUserId, HallId = HallOwnedByA }
-            });
+        // GetMyInvoices collects every hall the caller can reach - organization
+        // halls plus directly assigned ones - and asks for them in one call, so the
+        // mock is on the plural GetInvoicesByHallIdsAsync rather than the singular
+        // lookup this test used to stub.
+        var invoicesByHall = new Dictionary<int, Invoice>
+        {
+            [HallOwnedByA] = new() { Id = 1, InvoiceNumber = "INV-2025-000001", BookingId = 1, CustomerId = CustomerUserId, HallId = HallOwnedByA },
+            [HallOwnedByB] = new() { Id = 2, InvoiceNumber = "INV-2025-000002", BookingId = 2, CustomerId = CustomerUserId, HallId = HallOwnedByB },
+        };
 
-        // Invoices for Hall B
         _invoiceService
-            .Setup(s => s.GetInvoicesByHallIdAsync(HallOwnedByB))
-            .ReturnsAsync(new List<Invoice>
-            {
-                new() { Id = 2, InvoiceNumber = "INV-2025-000002", BookingId = 2, CustomerId = CustomerUserId, HallId = HallOwnedByB }
-            });
+            .Setup(s => s.GetInvoicesByHallIdsAsync(It.IsAny<List<int>>()))
+            .ReturnsAsync((List<int> hallIds) => hallIds
+                .Where(invoicesByHall.ContainsKey)
+                .Select(id => invoicesByHall[id])
+                .ToList());
+
+        _invoiceService
+            .Setup(s => s.GetInvoicesByHallIdAsync(It.IsAny<int>()))
+            .ReturnsAsync((int hallId) => invoicesByHall.TryGetValue(hallId, out var invoice)
+                ? new List<Invoice> { invoice }
+                : new List<Invoice>());
     }
 
     // ==============================
@@ -167,6 +184,7 @@ public class InvoiceController_OwnershipTests
             Id = 1, InvoiceNumber = "INV-2025-000001",
             CustomerId = CustomerUserId, HallId = HallOwnedByA
         };
+        SetupInvoiceData();
         _invoiceService.Setup(s => s.GetInvoiceByIdAsync(1)).ReturnsAsync(invoice);
         _mapper.Setup(m => m.Map<InvoiceDto>(It.IsAny<Invoice>()))
             .Returns(new InvoiceDto { Id = 1, InvoiceNumber = "INV-2025-000001" });
@@ -238,6 +256,9 @@ public class InvoiceController_OwnershipTests
             Id = 1, InvoiceNumber = "INV-2025-000001",
             CustomerId = CustomerUserId, HallId = HallOwnedByA
         };
+        // Ownership is checked before the PDF is produced, so the manager's halls
+        // have to be wired up or the request is correctly refused.
+        SetupInvoiceData();
         _invoiceService.Setup(s => s.GetInvoiceByIdAsync(1)).ReturnsAsync(invoice);
         _invoiceService.Setup(s => s.GetInvoicePdfBytesAsync(1))
             .ReturnsAsync(new byte[] { 0x25, 0x50, 0x44, 0x46 }); // %PDF header
@@ -301,20 +322,18 @@ public class InvoiceController_OwnershipTests
                 }
             });
 
-        _invoiceService
-            .Setup(s => s.GetInvoicesByHallIdAsync(hallId3))
-            .ReturnsAsync(new List<Invoice>
-            {
-                new() { Id = 10, InvoiceNumber = "INV-2025-000010", HallId = hallId3, CustomerId = 1 },
-                new() { Id = 11, InvoiceNumber = "INV-2025-000011", HallId = hallId3, CustomerId = 2 }
-            });
+        // One call for every hall the manager can reach, not one call per hall.
+        var acrossBothHalls = new List<Invoice>
+        {
+            new() { Id = 10, InvoiceNumber = "INV-2025-000010", HallId = hallId3, CustomerId = 1 },
+            new() { Id = 11, InvoiceNumber = "INV-2025-000011", HallId = hallId3, CustomerId = 2 },
+            new() { Id = 12, InvoiceNumber = "INV-2025-000012", HallId = hallId4, CustomerId = 3 }
+        };
 
         _invoiceService
-            .Setup(s => s.GetInvoicesByHallIdAsync(hallId4))
-            .ReturnsAsync(new List<Invoice>
-            {
-                new() { Id = 12, InvoiceNumber = "INV-2025-000012", HallId = hallId4, CustomerId = 3 }
-            });
+            .Setup(s => s.GetInvoicesByHallIdsAsync(It.IsAny<List<int>>()))
+            .ReturnsAsync((List<int> hallIds) =>
+                acrossBothHalls.Where(i => i.HallId.HasValue && hallIds.Contains(i.HallId.Value)).ToList());
 
         _mapper.Setup(m => m.Map<IEnumerable<InvoiceListDto>>(It.IsAny<IEnumerable<Invoice>>()))
             .Returns<IEnumerable<Invoice>>(invoices =>

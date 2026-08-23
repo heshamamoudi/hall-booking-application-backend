@@ -56,6 +56,56 @@ public class DataIsolation_SecurityTests
     private readonly Mock<ILogger<BookingApprovalController>> _approvalLogger = new();
     private readonly Mock<IInvoiceService> _invoiceService = new();
     private readonly Mock<ILogger<InvoiceController>> _invoiceLogger = new();
+    private readonly Mock<IOrganizationService> _organizationService = new();
+    private readonly Mock<IFinancialAuditService> _financialAuditService = new();
+
+    // --- controller factories ---
+    //
+    // These used to be constructed inline at every call site, so adding a
+    // dependency to any of these controllers broke a dozen tests at once and the
+    // whole project stopped compiling. One place per controller means the next
+    // constructor change is a one-line fix.
+
+    private HallController CreateHallController() => new(
+        _hallService.Object,
+        _mapper.Object,
+        _fileUploadService.Object,
+        _organizationService.Object,
+        _hallLogger.Object);
+
+    private BookingController CreateBookingController() => new(
+        _bookingService.Object,
+        _mapper.Object,
+        _serviceItemService.Object,
+        _notificationService.Object,
+        _financialService.Object,
+        _availabilityService.Object,
+        _priceCalculationService.Object,
+        _customerService.Object,
+        _hallService.Object,
+        _hallManagerService.Object,
+        _vendorManagerService.Object,
+        _organizationService.Object,
+        _bookingLogger.Object);
+
+    private BookingApprovalController CreateApprovalController() => new(
+        _unitOfWork.Object,
+        _hallManagerService.Object,
+        _vendorManagerService.Object,
+        _organizationService.Object,
+        _hallService.Object,
+        _notificationService.Object,
+        _approvalLogger.Object);
+
+    private InvoiceController CreateInvoiceController() => new(
+        _invoiceService.Object,
+        _hallManagerService.Object,
+        _organizationService.Object,
+        _hallService.Object,
+        _mapper.Object,
+        _invoiceLogger.Object,
+        _financialAuditService.Object,
+        _unitOfWork.Object);
 
     // --- actors ---
     private const int ManagerA_UserId = 10;
@@ -125,7 +175,7 @@ public class DataIsolation_SecurityTests
     {
         // Arrange
         SetupFullIsolation();
-        var hallController = new HallController(_hallService.Object, _mapper.Object, _fileUploadService.Object, _hallLogger.Object);
+        var hallController = CreateHallController();
         ControllerTestSetup.SetUser(hallController, TestClaimsPrincipalBuilder.CreateHallManager(ManagerA_UserId));
 
         // Act
@@ -147,7 +197,7 @@ public class DataIsolation_SecurityTests
     {
         // Arrange
         SetupFullIsolation();
-        var hallController = new HallController(_hallService.Object, _mapper.Object, _fileUploadService.Object, _hallLogger.Object);
+        var hallController = CreateHallController();
         ControllerTestSetup.SetUser(hallController, TestClaimsPrincipalBuilder.CreateHallManager(ManagerA_UserId));
 
         // Act
@@ -176,7 +226,7 @@ public class DataIsolation_SecurityTests
         };
         _bookingRepository.Setup(r => r.GetBookingWithDetailsAsync(5)).ReturnsAsync(bookingForHallB);
 
-        var approvalController = new BookingApprovalController(_unitOfWork.Object, _hallManagerService.Object, _vendorManagerService.Object, _approvalLogger.Object);
+        var approvalController = CreateApprovalController();
         ControllerTestSetup.SetUser(approvalController, TestClaimsPrincipalBuilder.CreateHallManager(ManagerA_UserId));
 
         // Act
@@ -198,11 +248,7 @@ public class DataIsolation_SecurityTests
     {
         // Arrange
         SetupFullIsolation();
-        var bookingController = new BookingController(
-            _bookingService.Object, _mapper.Object, _serviceItemService.Object,
-            _notificationService.Object, _financialService.Object, _availabilityService.Object,
-            _priceCalculationService.Object, _customerService.Object, _hallService.Object,
-            _hallManagerService.Object, _vendorManagerService.Object, _bookingLogger.Object);
+        var bookingController = CreateBookingController();
         ControllerTestSetup.SetUser(bookingController, TestClaimsPrincipalBuilder.CreateHallManager(ManagerA_UserId));
 
         // Act
@@ -231,11 +277,7 @@ public class DataIsolation_SecurityTests
         };
         _bookingService.Setup(s => s.GetBookingByIdAsync(10)).ReturnsAsync(customerBBooking);
 
-        var bookingController = new BookingController(
-            _bookingService.Object, _mapper.Object, _serviceItemService.Object,
-            _notificationService.Object, _financialService.Object, _availabilityService.Object,
-            _priceCalculationService.Object, _customerService.Object, _hallService.Object,
-            _hallManagerService.Object, _vendorManagerService.Object, _bookingLogger.Object);
+        var bookingController = CreateBookingController();
         ControllerTestSetup.SetUser(bookingController, TestClaimsPrincipalBuilder.CreateCustomer(CustomerA_UserId));
 
         // Act
@@ -257,7 +299,7 @@ public class DataIsolation_SecurityTests
     {
         // Arrange
         SetupFullIsolation();
-        var hallController = new HallController(_hallService.Object, _mapper.Object, _fileUploadService.Object, _hallLogger.Object);
+        var hallController = CreateHallController();
         ControllerTestSetup.SetUser(hallController, TestClaimsPrincipalBuilder.CreateHallManager(ManagerA_UserId));
 
         // Act
@@ -282,7 +324,7 @@ public class DataIsolation_SecurityTests
         };
         _bookingRepository.Setup(r => r.GetBookingWithDetailsAsync(5)).ReturnsAsync(bookingForHallB);
 
-        var approvalController = new BookingApprovalController(_unitOfWork.Object, _hallManagerService.Object, _vendorManagerService.Object, _approvalLogger.Object);
+        var approvalController = CreateApprovalController();
         ControllerTestSetup.SetUser(approvalController, TestClaimsPrincipalBuilder.CreateHallManager(ManagerA_UserId));
 
         // Act
@@ -311,11 +353,7 @@ public class DataIsolation_SecurityTests
         };
         _bookingService.Setup(s => s.GetBookingByIdAsync(10)).ReturnsAsync(customerBBooking);
 
-        var bookingController = new BookingController(
-            _bookingService.Object, _mapper.Object, _serviceItemService.Object,
-            _notificationService.Object, _financialService.Object, _availabilityService.Object,
-            _priceCalculationService.Object, _customerService.Object, _hallService.Object,
-            _hallManagerService.Object, _vendorManagerService.Object, _bookingLogger.Object);
+        var bookingController = CreateBookingController();
         ControllerTestSetup.SetUser(bookingController, TestClaimsPrincipalBuilder.CreateCustomer(CustomerA_UserId));
 
         // Act
@@ -340,7 +378,7 @@ public class DataIsolation_SecurityTests
         };
         _invoiceService.Setup(s => s.GetInvoiceByIdAsync(1)).ReturnsAsync(customerBInvoice);
 
-        var invoiceController = new InvoiceController(_invoiceService.Object, _mapper.Object, _invoiceLogger.Object);
+        var invoiceController = CreateInvoiceController();
         ControllerTestSetup.SetUser(invoiceController, TestClaimsPrincipalBuilder.CreateCustomer(CustomerA_UserId));
 
         // Act
@@ -368,7 +406,7 @@ public class DataIsolation_SecurityTests
         _mapper.Setup(m => m.Map<HallDto>(It.IsAny<Hall>()))
             .Returns(new HallDto { ID = Hall_B, Name = "Admin Updated" });
 
-        var hallController = new HallController(_hallService.Object, _mapper.Object, _fileUploadService.Object, _hallLogger.Object);
+        var hallController = CreateHallController();
         ControllerTestSetup.SetUser(hallController, TestClaimsPrincipalBuilder.CreateAdmin());
 
         // Act
@@ -392,7 +430,7 @@ public class DataIsolation_SecurityTests
         _bookingRepository.Setup(r => r.GetBookingWithDetailsAsync(5)).ReturnsAsync(booking);
         _unitOfWork.Setup(u => u.Complete()).ReturnsAsync(1);
 
-        var approvalController = new BookingApprovalController(_unitOfWork.Object, _hallManagerService.Object, _vendorManagerService.Object, _approvalLogger.Object);
+        var approvalController = CreateApprovalController();
         ControllerTestSetup.SetUser(approvalController, TestClaimsPrincipalBuilder.CreateAdmin());
 
         // Act
