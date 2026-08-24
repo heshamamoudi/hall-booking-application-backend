@@ -72,6 +72,50 @@ namespace HallApp.Web.Controllers.Admin
         }
 
         /// <summary>
+        /// The domain records attached to a login: their customer profile, and any
+        /// hall- or vendor-manager record. The user detail panel renders these as
+        /// links across to those entities.
+        /// </summary>
+        /// <remarks>
+        /// The panel has always asked for this; the endpoint simply did not exist, so
+        /// every user opened logged a 404 and the section stayed empty.
+        /// </remarks>
+        [HttpGet("users/{userId:int}/linked-entities")]
+        [ProducesResponseType(typeof(ApiResponse<LinkedEntitiesDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<ApiResponse<LinkedEntitiesDto>>> GetLinkedEntities(int userId)
+        {
+            try
+            {
+                if (!await _userManager.Users.AnyAsync(u => u.Id == userId))
+                {
+                    return Error<LinkedEntitiesDto>("User not found", 404);
+                }
+
+                var linked = new LinkedEntitiesDto
+                {
+                    CustomerId = await _context.Customers
+                        .Where(c => c.AppUserId == userId)
+                        .Select(c => (int?)c.Id)
+                        .FirstOrDefaultAsync(),
+                    HallManagerId = await _context.HallManagers
+                        .Where(m => m.AppUserId == userId)
+                        .Select(m => (int?)m.Id)
+                        .FirstOrDefaultAsync(),
+                    VendorManagerId = await _context.VendorManagers
+                        .Where(m => m.AppUserId == userId)
+                        .Select(m => (int?)m.Id)
+                        .FirstOrDefaultAsync(),
+                };
+
+                return Success(linked, "Linked entities retrieved");
+            }
+            catch (Exception ex)
+            {
+                return Error<LinkedEntitiesDto>($"An error occurred while reading linked entities: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
         /// Get all users with their roles
         /// </summary>
         /// <returns>List of users with roles</returns>

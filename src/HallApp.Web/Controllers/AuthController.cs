@@ -72,7 +72,7 @@ namespace HallApp.Web.Controllers
                     LastName = registerDto.LastName,
                     PhoneNumber = registerDto.PhoneNumber,
                     Gender = registerDto.Gender ?? "NotSpecified", // Provide default value if not specified
-                    DOB = registerDto.DOB ?? new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    DOB = AsUtc(registerDto.DOB ?? new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
                     Created = DateTime.UtcNow,
                     Updated = DateTime.UtcNow,
                     Active = true
@@ -165,7 +165,7 @@ namespace HallApp.Web.Controllers
                     LastName = registerDto.LastName,
                     PhoneNumber = registerDto.PhoneNumber,
                     Gender = registerDto.Gender ?? "NotSpecified",
-                    DOB = registerDto.DOB ?? new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    DOB = AsUtc(registerDto.DOB ?? new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
                     Created = DateTime.UtcNow,
                     Updated = DateTime.UtcNow,
                     Active = true
@@ -457,7 +457,7 @@ namespace HallApp.Web.Controllers
                     LastName = createUserDto.LastName,
                     PhoneNumber = createUserDto.PhoneNumber,
                     Gender = createUserDto.Gender,
-                    DOB = createUserDto.DOB ?? new DateTime(1900, 1, 1),
+                    DOB = AsUtc(createUserDto.DOB ?? new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
                     Created = DateTime.UtcNow,
                     Updated = DateTime.UtcNow
                 };
@@ -472,31 +472,39 @@ namespace HallApp.Web.Controllers
                 // Add the specified role (Admin, HallOrganizationManager, HallManager, VendorOrganizationManager, or VendorManager)
                 await _userManager.AddToRoleAsync(user, createUserDto.Role);
 
-                // Generate tokens
-                var accessToken = await _tokenService.CreateToken(user);
-                var refreshToken = await _tokenService.CreateRefreshToken(user);
-
-                var response = new AuthResponseDto
+                // No tokens are minted here. This endpoint creates an account on
+                // someone else's behalf, and it previously returned a working access
+                // and refresh token for the new user to whoever called it - letting an
+                // administrator act as that user without ever knowing their password.
+                // An admin creating an account has no business holding its session.
+                var created = new UserDto
                 {
-                    AccessToken = accessToken,
-                    RefreshToken = refreshToken,
-                    ExpiresAt = DateTime.UtcNow.AddHours(1), // Match TokenService expiry
-                    User = new UserDto
-                    {
-                        Id = user.Id,
-                        UserName = user.UserName ?? string.Empty,
-                        Email = user.Email ?? string.Empty,
-                        FirstName = user.FirstName,
-                        LastName = user.LastName,
-                        PhoneNumber = user.PhoneNumber ?? string.Empty,
-                        EmailConfirmed = user.EmailConfirmed,
-                        Created = user.Created,
-                        Updated = user.Updated
-                    }
+                    Id = user.Id,
+                    UserName = user.UserName ?? string.Empty,
+                    Email = user.Email ?? string.Empty,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    PhoneNumber = user.PhoneNumber ?? string.Empty,
+                    EmailConfirmed = user.EmailConfirmed,
+                    Gender = user.Gender ?? string.Empty,
+                    DOB = user.DOB,
+                    Created = user.Created,
+                    Updated = user.Updated,
+                    Roles = (await _userManager.GetRolesAsync(user)).ToList()
                 };
 
                 _logger.LogInformation("User {Email} created successfully with role {Role} by admin", user.Email, createUserDto.Role);
-                return CreatedAtAction(nameof(GetCurrentUser), response);
+
+                // Wrapped like the rest of the API, so the client's response.data
+                // actually contains something - it was reading .data off a bare
+                // AuthResponseDto and getting undefined.
+                return StatusCode(201, new ApiResponse<UserDto>
+                {
+                    StatusCode = 201,
+                    Message = "User created",
+                    IsSuccess = true,
+                    Data = created
+                });
             }
             catch (Exception ex)
             {

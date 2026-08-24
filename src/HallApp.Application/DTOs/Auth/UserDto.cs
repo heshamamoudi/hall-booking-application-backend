@@ -15,5 +15,8 @@ namespace HallApp.Application.DTOs.Auth
         public DateTime Updated { get; set; }
         public string Token { get; set; } = string.Empty;
         public string RefreshToken { get; set; } = string.Empty;
+
+        /// <summary>Roles assigned to the user. Empty when the caller did not ask for them.</summary>
+        public List<string> Roles { get; set; } = new();
     }
 }

@@ -82,4 +82,18 @@ public static class AppRoles
     /// All manager-level roles that can participate in chat and approvals.
     /// </summary>
     public const string AllManagerRoles = $"{HallOrganizationManager},{HallManager},{VendorOrganizationManager},{VendorManager}";
+
+    /// <summary>
+    /// Validation pattern for the role an administrator may assign when creating a
+    /// user. Built from the constants above so it cannot drift from the real role
+    /// list - it previously hard-coded "^(Admin|HallManager)$", which rejected four
+    /// of the six roles the admin panel offers and made those users impossible to
+    /// create.
+    /// </summary>
+    public const string AssignableRolePattern =
+        $"^({Admin}|{Moderator}|{HallOrganizationManager}|{HallManager}|{VendorOrganizationManager}|{VendorManager}|{Customer})$";
+
+    /// <summary>Human-readable companion to <see cref="AssignableRolePattern"/>.</summary>
+    public const string AssignableRolesList =
+        $"{Admin}, {Moderator}, {HallOrganizationManager}, {HallManager}, {VendorOrganizationManager}, {VendorManager} or {Customer}";
 }

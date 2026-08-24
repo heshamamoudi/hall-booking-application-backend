@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using HallApp.Core.Constants;
 
 namespace HallApp.Application.DTOs.Auth
 {
@@ -64,7 +65,8 @@ namespace HallApp.Application.DTOs.Auth
         public DateTime? DOB { get; set; }
 
         [Required]
-        [RegularExpression("^(Admin|HallManager)$", ErrorMessage = "Role must be Admin or HallManager")]
+        [RegularExpression(AppRoles.AssignableRolePattern,
+            ErrorMessage = "Role must be one of: " + AppRoles.AssignableRolesList)]
         public string Role { get; set; } = string.Empty;
     }
 }
