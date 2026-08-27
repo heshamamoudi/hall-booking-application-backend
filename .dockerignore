@@ -1,34 +1,47 @@
-# Git
-.git
-.gitignore
+# Keeps the build context small and keeps out anything that must never reach an
+# image. This Dockerfile contains `COPY . .`, so the context IS the image's
+# build stage - every exclusion below is load-bearing, not tidiness.
+#
+# ---- secrets ---------------------------------------------------------------
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.template
+!**/.env.template
+!.env.example
+!**/.env.example
 
-# Build outputs
+# ---- build output ----------------------------------------------------------
 **/bin/
 **/obj/
 **/out/
+**/node_modules/
 
-# IDE
+# ---- vcs, editors ----------------------------------------------------------
+.git
+.git/
+**/.git/
+.gitignore
 .vs/
+**/.vs/
 .vscode/
 .idea/
 *.user
 *.suo
 
-# Documentation
+# ---- documentation, tests --------------------------------------------------
 *.md
 docs/
-
-# Tests
 tests/
 
-# Local settings
+# ---- local settings --------------------------------------------------------
 appsettings.Development.json
 appsettings.*.json
 !appsettings.json
 !appsettings.Production.template.json
 
-# Other
-.env*
+# ---- other -----------------------------------------------------------------
 *.log
 logs/
 DataProtection-Keys/

@@ -11,6 +11,44 @@ using FluentValidation.AspNetCore;
 using HallApp.Application.Validators;
 using HallApp.Web.Validators;
 
+/* ------------------------------------------------------------- healthcheck --
+ *
+ * The runtime image is chiselled: no shell, no curl, no wget, and no package
+ * manager to install one with. That is the point of it - the image went from
+ * 420 MB to 254 MB and there is nothing left in it for a foothold to run - but
+ * it also means the old `curl -fsS http://127.0.0.1:8080/health` HEALTHCHECK
+ * has nothing to execute with. The probe therefore has to be this binary.
+ *
+ * This branch must stay ABOVE everything that builds a host. Without it the
+ * flag is ignored and every probe starts a SECOND copy of the application:
+ * it runs the migrations again, fails to bind a port the first copy already
+ * holds, and aborts - so Docker reports the container unhealthy while the app
+ * is serving perfectly.
+ *
+ * It matters more than it looks: the platform's agent treats a container with
+ * no health state at all as merely `running`, so an app that quietly loses its
+ * healthcheck also quietly loses its deploy gate and its rollback trigger.
+ */
+if (args.Contains("--healthcheck"))
+{
+    // Over loopback, so this answers "is this container serving HTTP right now"
+    // rather than the much weaker "does a process exist". /health runs the
+    // DbContext probe, so a database it cannot reach reports unhealthy.
+    var probePort = Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_PORTS") is { Length: > 0 } pp
+        ? pp.Split(';')[0]
+        : "8080";
+    using var probe = new HttpClient { Timeout = TimeSpan.FromSeconds(4) };
+    try
+    {
+        var reply = await probe.GetAsync($"http://127.0.0.1:{probePort}/health");
+        return reply.IsSuccessStatusCode ? 0 : 1;
+    }
+    catch
+    {
+        return 1;   // not answering yet, or not answering any more
+    }
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure logging to prevent duplicates
@@ -201,3 +239,7 @@ catch (Exception ex)
 
 logger?.LogInformation("Starting web server...");
 app.Run();
+
+// The --healthcheck branch at the top of this file returns an exit code, which
+// makes this program's entry point return int - so every path has to.
+return 0;
