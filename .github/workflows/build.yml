@@ -1,0 +1,128 @@
+# Build this API's image, so the host pulls a package instead of compiling.
+#
+# WHY. Until now the production machine ran `docker compose up --build`: the
+# 1.2 GB .NET SDK compiled this application on the box that serves live
+# traffic, and a deploy competed with real requests for CPU. It also made a
+# second host impossible in principle — the PC is amd64 and the planned standby
+# is arm64, and the same source compiled on two machines is two artefacts, not
+# one. Build once here, pull the identical bytes anywhere.
+#
+# CREDENTIALS: the built-in GITHUB_TOKEN, minted per run, scoped to this
+# repository, expiring with the job. Nothing to create, nothing to rotate. The
+# HOST pulls with a classic token carrying `read:packages` — GitHub Packages
+# does not accept fine-grained tokens — which the platform already holds as
+# GitHub__Token and the agent already reads.
+#
+# This does NOT deploy. Nothing from GitHub can reach the host: no webhook, no
+# runner, no inbound connection, and that property is deliberate. The control
+# panel polls, sees a new commit, and queues the deploy itself.
+
+name: build
+
+on:
+  push:
+    branches: [main]
+    # A commit touching only these cannot change the image: .dockerignore
+    # already keeps every one of them out of the build context, so building
+    # would produce an identical artefact and then cost a pull on the host.
+    #
+    # KEEP IN STEP WITH .dockerignore. The drift is silent in the dangerous
+    # direction — a path listed here but not excluded there is a real change
+    # that never gets built, and the site quietly keeps running old code.
+    paths-ignore:
+      - 'docs/**'
+      - 'tests/**'
+      - '**/*.md'
+      - '.gitignore'
+      - '.github/**'
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/heshamamoudi/zawaji-api
+
+jobs:
+  amd64:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # `:latest` is the tag the host deploys, so moving it is a production
+      # action. The push trigger is limited to main; workflow_dispatch is not,
+      # and can be run against any branch from the Actions tab. Off main this
+      # still builds and still publishes `:sha-<commit>` so a branch build is
+      # pullable for testing — only the pointer the host follows is left alone.
+      - id: tags
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.ref }}" != 'refs/heads/main' ]; then
+            echo "::notice::${{ github.ref_name }} is not main - building, but leaving :latest where it is"
+          fi
+
+          {
+            echo 'list<<TAGS'
+            if [ "${{ github.ref }}" = 'refs/heads/main' ]; then
+              echo "${IMAGE}:latest"
+            fi
+            echo "${IMAGE}:sha-${{ github.sha }}"
+            echo 'TAGS'
+          } >> "$GITHUB_OUTPUT"
+
+      - id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.tags.outputs.list }}
+
+          # The revision label is load-bearing. With no source checkout on the
+          # host for a pulled app, it is the only honest answer to "which commit
+          # is running": the agent reads it off the image into
+          # DeployRecords.CommitSha, and the auto-deploy poller compares that
+          # against the branch head. Without it the poller would redeploy the
+          # same commit every cycle, for ever.
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+          # Cache in the Actions cache, not the registry. `type=registry` writes
+          # blobs into GitHub Packages, which shares a 500 MB storage and 1 GB
+          # monthly transfer quota with the images themselves. The Actions cache
+          # is a separate 10 GB allowance. mode=min, because a .NET build with
+          # every intermediate layer cached will fill 10 GB and evict itself.
+          cache-from: type=gha,scope=amd64
+          cache-to: type=gha,scope=amd64,mode=min
+
+          # buildx otherwise attaches provenance and an SBOM, turning a plain
+          # image into an index with an extra unknown/unknown child: more
+          # storage against the quota, and a digest in the registry UI that is
+          # not the digest a single-platform pull resolves to.
+          provenance: false
+          sbom: false
+
+      - name: Record the digest
+        run: |
+          {
+            echo "### amd64 — the host will pull this"
+            echo ""
+            echo '```'
+            echo "${{ env.IMAGE }}@${{ steps.build.outputs.digest }}"
+            echo '```'
+            echo ""
+            echo "built from \`${{ github.sha }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

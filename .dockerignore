@@ -45,3 +45,7 @@ appsettings.*.json
 *.log
 logs/
 DataProtection-Keys/
+
+# CI definitions are not part of the image. Kept in step with the
+# paths-ignore list in .github/workflows/build.yml.
+.github/
